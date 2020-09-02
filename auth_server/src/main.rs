@@ -5,6 +5,7 @@ use anyhow::*;
 
 mod constants;
 mod auth;
+mod realms;
 
 #[async_std::main]
 async fn main() -> Result<()> 
@@ -51,7 +52,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, database_pool:std::sy
             }
             else if buf[0] == 16
             {
-                println!("realm list request");
+                realms::handle_realmlist_request(&mut stream, &database_pool).await.unwrap();
             }
             else
             {

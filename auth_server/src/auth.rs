@@ -257,7 +257,7 @@ pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata :
     hasher.update(&k.to_bytes_le()); 
     let m_bytes = hasher.finalize_reset();
     let m = BigUint::from_bytes_le(&m_bytes);
-    let m1 = BigUint::from_bytes_le(&m_one_bytes);
+    let _m1 = BigUint::from_bytes_le(&m_one_bytes);
 
     hasher.update(&a_bytes);
     hasher.update(&m_bytes);
