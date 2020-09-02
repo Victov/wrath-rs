@@ -74,7 +74,7 @@ pub async fn handle_logon_challenge(stream : &mut TcpStream, buf : &[u8], databa
     let n_bytes = logindata.n.to_bytes_le();
     assert!(n_bytes.len() == 32);
 
-    if account.v.is_empty() || account.s.is_empty() || true
+    if account.v.is_empty() || account.s.is_empty()
     {
         let (v, s) = generate_vs(&account.sha_pass_hash, &logindata.g, &logindata.n).await?;
         sqlx::query!("UPDATE accounts SET v = ?, s = ? WHERE id = ?", v.to_str_radix(16), s.to_str_radix(16), account.id)
@@ -162,7 +162,7 @@ async fn reject_login(stream : &mut TcpStream, reason: constants::AuthResult) ->
     Ok(())
 }
 
-pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata : &LoginNumbers) -> Result<()>
+pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata : &LoginNumbers, database_pool:&sqlx::MySqlPool) -> Result<()>
 {
     println!("logon proof");
     if logindata.n.is_zero()
@@ -270,9 +270,10 @@ pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata :
     {
         stream.write(&[1, constants::AuthResult::FailNoAccess as u8, 3, 0]).await?;
         stream.flush().await?;
-        //return Err(anyhow!("Wrong password"));
-        return Ok(());
+        return Err(anyhow!("Wrong password"));
     }
+
+    save_session_key(&logindata.username, &k, database_pool).await?;
 
     let write_buf = Vec::<u8>::new();
     let mut writer = std::io::Cursor::new(write_buf);
@@ -284,6 +285,23 @@ pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata :
     writer.write_u16::<LittleEndian>(0u16)?;
     stream.write(&writer.into_inner()).await?;
     stream.flush().await?;
+
+    Ok(())
+}
+
+async fn save_session_key(username : &String, session_key : &BigUint, database_pool : &sqlx::MySqlPool) -> Result<()>
+{
+    sqlx::query!("UPDATE accounts SET sessionkey = ? WHERE username = ?;", session_key.to_str_radix(16), username)
+        .execute(database_pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn remove_session_key(username : &String, database_pool : &sqlx::MySqlPool) -> Result<()>
+{
+    sqlx::query!("UPDATE accounts SET sessionkey = '' WHERE username = ?;", username)
+        .execute(database_pool)
+        .await?;
 
     Ok(())
 }

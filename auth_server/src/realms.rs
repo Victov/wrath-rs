@@ -16,12 +16,18 @@ pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, d
 
     let realms_info  = Vec::<u8>::new();
     let mut writer = std::io::Cursor::new(realms_info);
-    
+
     for realm in &realms
     {
+        let mut realm_flags = realm.flags as u8;
+        if realm.online == 0
+        {
+            realm_flags |= constants::RealmFlags::Offline as u8;
+        }
+
         writer.write_u8(realm.realm_type as u8)?;
         writer.write_u8(0)?; //realm locked
-        writer.write_u8(realm.flags as u8)?;
+        writer.write_u8(realm_flags)?;
         writer.write(realm.name.as_bytes())?;
         writer.write_u8(0)?; //string terminator
         writer.write(realm.ip.as_bytes())?;
@@ -38,8 +44,6 @@ pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, d
     let realms_info_length = writer.get_ref().len();
     let num_realms = realms.len();
 
-    println!("realms_info_length: {}, num_realms: {}", realms_info_length, num_realms);
-
     let return_packet = Vec::<u8>::new();
     let mut packet_writer = std::io::Cursor::new(return_packet);
     packet_writer.write_u8(16)?; //REALM_LIST
@@ -48,8 +52,7 @@ pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, d
     packet_writer.write_u16::<podio::LittleEndian>(num_realms as u16)?;
     packet_writer.write(&writer.get_ref())?;
 
-    let written_length = stream.write(&packet_writer.into_inner()).await?;
-    println!("written length = {}", written_length);
+    stream.write(&packet_writer.into_inner()).await?;
     stream.flush().await?;
 
     Ok(())

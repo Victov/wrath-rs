@@ -44,7 +44,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, database_pool:std::sy
             }
             else if buf[0] == 1
             {
-                auth::handle_logon_proof(&mut stream, &buf, &logindata).await.unwrap();
+                auth::handle_logon_proof(&mut stream, &buf, &logindata, &database_pool).await.unwrap();
             }
             else if buf[0] == 2
             {
@@ -64,6 +64,10 @@ async fn handle_incoming_connection(mut stream: TcpStream, database_pool:std::sy
         {
             println!("disconnect");
             stream.shutdown(async_std::net::Shutdown::Both)?;
+            if !logindata.username.is_empty()
+            {
+                auth::remove_session_key(&logindata.username, &database_pool).await?;
+            }
             break;
         }
     }

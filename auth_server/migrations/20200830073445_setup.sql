@@ -24,8 +24,9 @@ CREATE TABLE `realms`
   `ip` varchar(50) NOT NULL DEFAULT '0',
   `population` float NOT NULL DEFAULT '0',
   `timezone` tinyint NOT NULL DEFAULT '1',
+  `online` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 INSERT INTO realms VALUES
-(NULL, 'testrealm', 0, 0, "127.0.0.1:8085", 0.0, 1)
+(NULL, 'testrealm', 0, 0, "127.0.0.1:8085", 0.0, 1, 0)
