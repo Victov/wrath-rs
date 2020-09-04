@@ -1,9 +1,14 @@
 [package]
-name = "world_server"
+name = "wrath-worldserver"
 version = "0.1.0"
-authors = ["Victov <victor.veldstra@gmail.com>"]
+authors = ["victov <victor.veldstra@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-std = {version="*", features=["attributes"] }
+anyhow = { version = "*" }
+podio = { version = "*" } 
+sqlx = { version = "0.4.0-beta.1", features=["mysql"] }
+dotenv = { version="*" }

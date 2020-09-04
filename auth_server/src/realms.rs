@@ -1,8 +1,29 @@
 use anyhow::Result;
 use sqlx::MySqlPool;
-use podio::WritePodExt;
+use podio::{ReadPodExt, WritePodExt, BigEndian};
 use async_std::prelude::*;
 use super::constants;
+
+pub async fn receive_realm_pings(database_pool: std::sync::Arc<MySqlPool>) -> Result<()>
+{
+    let socket = async_std::net::UdpSocket::bind("127.0.0.1:1234").await?;
+    let mut buffer = Vec::<u8>::new();
+    buffer.resize(128, 0);
+    loop
+    {
+        let _length = socket.recv(&mut buffer).await?;
+        let mut reader = std::io::Cursor::new(&buffer);
+        let cmd = reader.read_u8()?;
+        if cmd == 0 //HEARTBEAT
+        {
+            let realm_id = reader.read_u8()?;
+            let realm_population_count = reader.read_u32::<BigEndian>()?;
+            //TODO databas management and count missed heartbeats
+            println!("received heartbeat from realm {} which has {} players online", realm_id, realm_population_count);
+        }
+    }
+}
+
 
 pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, database_pool: &MySqlPool) -> Result<()>
 {

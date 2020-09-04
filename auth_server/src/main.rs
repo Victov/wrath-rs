@@ -17,6 +17,7 @@ async fn main() -> Result<()>
         .connect(&std::env::var("DATABASE_URL")?).await?;
 
     let db_arc = std::sync::Arc::new(database_pool);
+    realms::receive_realm_pings(db_arc.clone()).await.unwrap();
 
     let tcp_listener = TcpListener::bind("127.0.0.1:3724").await?;
     loop 
