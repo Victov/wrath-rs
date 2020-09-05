@@ -3,23 +3,60 @@ use sqlx::MySqlPool;
 use podio::{ReadPodExt, WritePodExt, BigEndian};
 use async_std::prelude::*;
 use super::constants;
+use std::time::{Instant};
+
+const HEARTBEAT_TIMEOUT_SECONDS : u64 = 15;
+const REALM_MAX_POPULATION : f32 = 1000.0;
 
 pub async fn receive_realm_pings(database_pool: std::sync::Arc<MySqlPool>) -> Result<()>
 {
+    let realms = sqlx::query!("SELECT * FROM realms")
+        .fetch_all(&(*database_pool))
+        .await?;
+
     let socket = async_std::net::UdpSocket::bind("127.0.0.1:1234").await?;
     let mut buffer = Vec::<u8>::new();
     buffer.resize(128, 0);
+
+    let mut latest_heartbeats = std::collections::HashMap::new();
+    for realm in realms
+    {
+        latest_heartbeats.insert(realm.id, Instant::now());
+    }
+    let heartbeats_rwlock = std::sync::Arc::new(std::sync::RwLock::new(latest_heartbeats));
+    let hbwrlock_copy = heartbeats_rwlock.clone();
+    let db_pool_clone = database_pool.clone();
+    async_std::task::spawn(async move { 
+        let mut heartbeat_interval = async_std::stream::interval(std::time::Duration::from_secs(5));
+        while let Some(_) = heartbeat_interval.next().await
+        {
+            let hashtable = hbwrlock_copy.read().unwrap().clone();
+            for (&realm_id, &heartbeat) in &hashtable
+            {
+                if Instant::now().duration_since(heartbeat).as_secs() > HEARTBEAT_TIMEOUT_SECONDS
+                {
+                    sqlx::query!("UPDATE realms SET online = '0' WHERE id = ?", realm_id)
+                        .execute(&(*db_pool_clone))
+                        .await.unwrap();
+                }
+            }
+        }
+    });
+
     loop
     {
-        let _length = socket.recv(&mut buffer).await?;
+        let _ = socket.recv(&mut buffer).await?;
         let mut reader = std::io::Cursor::new(&buffer);
         let cmd = reader.read_u8()?;
         if cmd == 0 //HEARTBEAT
         {
             let realm_id = reader.read_u8()?;
             let realm_population_count = reader.read_u32::<BigEndian>()?;
-            //TODO databas management and count missed heartbeats
-            println!("received heartbeat from realm {} which has {} players online", realm_id, realm_population_count);
+            let realm_pop_current : f32 = realm_population_count as f32 / REALM_MAX_POPULATION;
+            (*heartbeats_rwlock.write().unwrap()).insert(realm_id as i32, Instant::now()); 
+            sqlx::query!("UPDATE realms SET online = '1', population = ? WHERE id = ?", realm_pop_current, realm_id)
+                .execute(&(*database_pool))
+                .await?;
         }
     }
 }
