@@ -4,7 +4,6 @@ use async_std::net::{UdpSocket};
 
 pub async fn auth_server_heartbeats() -> Result<()>
 {
-
     let socket = UdpSocket::bind("127.0.0.1:0").await?;
     socket.connect("127.0.0.1:1234").await?;
     let num_players_online = 10u32;
