@@ -12,3 +12,6 @@ anyhow = { version = "*" }
 podio = { version = "*" } 
 sqlx = { version = "0.4.0-beta.1", features=["mysql"] }
 dotenv = { version="*" }
+rand = { version = "0.7" } 
+num-bigint = { version = "0.3", features=["rand"] } 
+num-traits = { version = "0.2.12" } 

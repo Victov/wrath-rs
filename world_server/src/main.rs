@@ -4,6 +4,8 @@ use anyhow::Result;
 mod auth;
 mod realm_socket;
 mod auth_database;
+mod opcodes;
+mod client;
 
 #[async_std::main]
 async fn main() -> Result<()> {
@@ -14,7 +16,6 @@ async fn main() -> Result<()> {
     let auth_database_ref = std::sync::Arc::new(auth_database);
 
     task::spawn(auth::auth_server_heartbeats());
-
 
     let auth_db_for_realm_socket = auth_database_ref.clone();
     task::block_on(async move {

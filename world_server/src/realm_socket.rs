@@ -1,7 +1,9 @@
 use anyhow::Result;
+use async_std::task;
 use async_std::net::{TcpListener};
 use async_std::stream::{StreamExt};
 use super::auth_database::AuthDatabase;
+use super::client::*;
 
 pub async fn accept_realm_connections(auth_db : &std::sync::Arc<AuthDatabase>) -> Result<()>
 {
@@ -14,6 +16,19 @@ pub async fn accept_realm_connections(auth_db : &std::sync::Arc<AuthDatabase>) -
     while let Some(tcp_stream) = incoming_connections.next().await {
         let stream = tcp_stream?;
         println!("new connection!");
+        let mut client = Client::new(stream);
+        task::spawn(async move {
+            client.send_auth_challenge().await.unwrap_or_else(|e|
+                                                       {
+                                                           println!("Error while sending auth challenge: {:?}", e);
+                                                           return;
+                                                       });
+            client.handle_incoming_packets().await.unwrap_or_else(|e|
+                                                                  {
+                                                                      println!("Error while handling packet {:?}", e);
+                                                                  });
+
+        });
     }
 
     Ok(())

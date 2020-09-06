@@ -10,7 +10,6 @@ impl AuthDatabase
 {
     pub async fn new(conn_string : &String) -> Result<Self>
     {
-        println!("Connecting to auth database at {}", conn_string);
         let pool = sqlx::mysql::MySqlPoolOptions::new()
             .max_connections(5)
             .connect(conn_string.as_str())
