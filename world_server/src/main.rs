@@ -6,6 +6,7 @@ mod realm_socket;
 mod auth_database;
 mod opcodes;
 mod client;
+mod packet;
 
 #[async_std::main]
 async fn main() -> Result<()> {
