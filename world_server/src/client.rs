@@ -1,14 +1,12 @@
 use anyhow::Result;
 use async_std::prelude::*;
 use async_std::net::{TcpStream};
-use rand::RngCore;
 use num_bigint::RandBigInt;
 use super::packet::*;
 
 pub struct Client
 {
     socket: TcpStream, 
-    seed: u32,
 }
 
 impl Client
@@ -18,11 +16,10 @@ impl Client
         Self
         {
             socket: socket,
-            seed: rand::thread_rng().next_u32(),
         }
     }
 
-    pub async fn send_auth_challenge(&mut self) -> Result<()>
+    pub async fn send_auth_challenge(&mut self, realm_seed: u32) -> Result<()>
     {
         use std::io::Write;
         use podio::{LittleEndian, WritePodExt};
@@ -30,7 +27,7 @@ impl Client
         
         let (header, mut writer) = create_packet(Opcodes::SMSG_AUTH_CHALLENGE, 44);
         writer.write_u32::<LittleEndian>(1)?;
-        writer.write_u32::<LittleEndian>(self.seed)?;
+        writer.write_u32::<LittleEndian>(realm_seed)?;
         let seed1 = rand::thread_rng().gen_biguint(32*8);
         writer.write(&seed1.to_bytes_le())?;
 

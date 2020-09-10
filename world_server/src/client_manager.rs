@@ -5,10 +5,12 @@ use async_std::stream::{StreamExt};
 use super::auth_database::AuthDatabase;
 use super::client::*;
 use std::sync::Arc;
+use rand::RngCore;
 
 pub struct ClientManager
 {
     auth_db : Arc<AuthDatabase>,
+    realm_seed : u32,
 }
 
 impl ClientManager
@@ -17,7 +19,8 @@ impl ClientManager
     {
         Self
         {
-            auth_db
+            auth_db,
+            realm_seed : rand::thread_rng().next_u32(),
         }
     }
 
@@ -33,9 +36,10 @@ impl ClientManager
 
             let stream = tcp_stream?;
             let mut client = Client::new(stream);
+            let realm_seed = self.realm_seed;
 
             task::spawn(async move {
-                client.send_auth_challenge()
+                client.send_auth_challenge(realm_seed)
                     .await
                     .unwrap_or_else(|e| {
                         println!("Error while sending auth challenge: {:?}", e);
