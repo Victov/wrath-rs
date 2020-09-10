@@ -1,5 +1,9 @@
+use num_enum::TryFromPrimitive;
+
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
+#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u32)]
 pub enum Opcodes
 {
     MSG_NULL_ACTION                                 = 0x000,

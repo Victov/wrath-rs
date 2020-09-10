@@ -2,11 +2,26 @@ use super::opcodes::{Opcodes};
 use anyhow::{anyhow, Result};
 use async_std::net::TcpStream;
 use async_std::prelude::*;
+use std::convert::TryFrom;
 
 pub struct ServerPacketHeader
 {
     opcode: u16,
     _length: u16,
+}
+
+pub struct ClientPacketHeader
+{
+    pub opcode: u32,
+    pub length: u16,
+}
+
+impl ClientPacketHeader
+{
+    pub fn get_cmd(&self) -> Result<Opcodes>
+    {
+        Ok(Opcodes::try_from(self.opcode)?)
+    }
 }
 
 pub fn create_packet(opcode: Opcodes, allocate_size:usize) -> (ServerPacketHeader, std::io::Cursor<Vec<u8>>)
@@ -43,4 +58,26 @@ pub async fn send_packet(socket: &mut TcpStream, payload: &std::io::Cursor<Vec<u
     }
 
     Ok(())
+}
+
+pub fn read_header(bytes: &Vec<u8>, _packet_length: usize, is_encrypted: bool) -> Result<ClientPacketHeader>
+{
+    use podio::{LittleEndian, BigEndian, ReadPodExt};
+
+    if is_encrypted
+    {
+        return Err(anyhow!("Path not implemented"));
+    }
+
+    let mut reader = std::io::Cursor::new(bytes);
+    let packet_len = reader.read_u16::<BigEndian>()?;
+    let opcode_u32 = reader.read_u32::<LittleEndian>()?;
+
+    let header = ClientPacketHeader
+    {
+        opcode: opcode_u32,
+        length: packet_len
+    };
+
+    Ok(header)
 }
