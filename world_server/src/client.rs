@@ -2,6 +2,8 @@ use anyhow::{anyhow, Result};
 use async_std::prelude::*;
 use async_std::net::{TcpStream};
 use num_bigint::RandBigInt;
+use std::sync::mpsc::{Sender};
+use super::packet_handler::{PacketToHandle};
 use super::packet::*;
 use super::opcodes::Opcodes;
 
@@ -15,17 +17,19 @@ enum ClientState
 pub struct Client
 {
     socket: TcpStream, 
-    client_state : ClientState
+    client_state : ClientState,
+    packet_channel: Sender<PacketToHandle>,
 }
 
 impl Client
 {
-    pub fn new(socket : TcpStream) -> Self
+    pub fn new(socket : TcpStream, packet_channel: Sender<PacketToHandle>) -> Self
     {
         Self
         {
             socket: socket,
             client_state : ClientState::PreLogin,
+            packet_channel,
         }
     }
 
@@ -59,11 +63,12 @@ impl Client
             let header = read_header(&buf, length, false)?;
 
             println!("Opcode = {:?}, length = {}", header.get_cmd(), header.length);
-            
-            if header.get_cmd()? == Opcodes::CMSG_AUTH_SESSION
+            self.packet_channel.send(PacketToHandle { header });
+
+            /*if header.get_cmd()? == Opcodes::CMSG_AUTH_SESSION
             {
                 self.handle_auth_session(&buf).await?
-            }
+            }*/
         }
 
         Ok(())

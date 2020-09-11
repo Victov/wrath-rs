@@ -5,6 +5,8 @@ use async_std::stream::{StreamExt};
 use wrath_auth_db::{AuthDatabase};
 use super::client::*;
 use std::sync::Arc;
+use std::sync::mpsc::{Sender};
+use super::packet_handler::{PacketToHandle};
 use rand::RngCore;
 
 pub struct ClientManager
@@ -24,7 +26,7 @@ impl ClientManager
         }
     }
 
-    pub async fn accept_realm_connections(&self) -> Result<()>
+    pub async fn accept_realm_connections(&self, packet_handle_sender: Sender<PacketToHandle>) -> Result<()>
     {
         let realm_id : i32 = std::env::var("REALM_ID")?.parse()?;
         let bind_ip = self.auth_db.get_realm_bind_ip(realm_id).await?;
@@ -35,7 +37,7 @@ impl ClientManager
             println!("new connection!");
 
             let stream = tcp_stream?;
-            let mut client = Client::new(stream);
+            let mut client = Client::new(stream, packet_handle_sender.clone());
             let realm_seed = self.realm_seed;
 
             task::spawn(async move {
