@@ -2,6 +2,7 @@ use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
 use async_std::task;
 use anyhow::*;
+use wrath_auth_db::AuthDatabase;
 
 mod constants;
 mod auth;
@@ -11,24 +12,21 @@ mod realms;
 async fn main() -> Result<()> 
 {
     dotenv::dotenv().ok();
+    let connect_string = &std::env::var("AUTH_DATABASE_URL")?;
+    let auth_db = std::sync::Arc::new(AuthDatabase::new(&connect_string).await?);
 
-    let database_pool = sqlx::mysql::MySqlPoolOptions::new()
-        .max_connections(5)
-        .connect(&std::env::var("DATABASE_URL")?).await?;
-
-    let db_arc = std::sync::Arc::new(database_pool);
-    task::spawn(realms::receive_realm_pings(db_arc.clone()));
+    task::spawn(realms::receive_realm_pings(auth_db.clone()));
 
     let tcp_listener = TcpListener::bind("127.0.0.1:3724").await?;
     loop 
     {
         let (stream, _) = tcp_listener.accept().await?;
-        task::spawn(handle_incoming_connection(stream, db_arc.clone()));
+        task::spawn(handle_incoming_connection(stream, auth_db.clone()));
     }
 }
 
 
-async fn handle_incoming_connection(mut stream: TcpStream, database_pool:std::sync::Arc<sqlx::MySqlPool>) -> Result<()>
+async fn handle_incoming_connection(mut stream: TcpStream, auth_database: std::sync::Arc<AuthDatabase>) -> Result<()>
 {
     println!("incoming on address {}", stream.local_addr()?.to_string());
     let mut logindata = auth::LoginNumbers::default();
@@ -41,11 +39,11 @@ async fn handle_incoming_connection(mut stream: TcpStream, database_pool:std::sy
         {
             if buf[0] == 0
             {
-                logindata = auth::handle_logon_challenge(&mut stream, &buf, &database_pool).await.unwrap();
+                logindata = auth::handle_logon_challenge(&mut stream, &buf, &auth_database).await.unwrap();
             }
             else if buf[0] == 1
             {
-                auth::handle_logon_proof(&mut stream, &buf, &logindata, &database_pool).await.unwrap();
+                auth::handle_logon_proof(&mut stream, &buf, &logindata, &auth_database).await.unwrap();
             }
             else if buf[0] == 2
             {
@@ -53,7 +51,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, database_pool:std::sy
             }
             else if buf[0] == 16
             {
-                realms::handle_realmlist_request(&mut stream, &database_pool).await.unwrap();
+                realms::handle_realmlist_request(&mut stream, &auth_database).await.unwrap();
             }
             else
             {
@@ -65,10 +63,6 @@ async fn handle_incoming_connection(mut stream: TcpStream, database_pool:std::sy
         {
             println!("disconnect");
             stream.shutdown(async_std::net::Shutdown::Both)?;
-            if !logindata.username.is_empty()
-            {
-                auth::remove_session_key(&logindata.username, &database_pool).await?;
-            }
             break;
         }
     }

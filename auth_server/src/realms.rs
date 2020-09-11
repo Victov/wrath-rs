@@ -1,19 +1,16 @@
 use anyhow::Result;
-use sqlx::MySqlPool;
 use podio::{ReadPodExt, WritePodExt, BigEndian};
 use async_std::prelude::*;
 use super::constants;
 use std::time::{Instant};
+use wrath_auth_db::AuthDatabase;
 
 const HEARTBEAT_TIMEOUT_SECONDS : u64 = 15;
 const REALM_MAX_POPULATION : f32 = 1000.0;
 
-pub async fn receive_realm_pings(database_pool: std::sync::Arc<MySqlPool>) -> Result<()>
+pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Result<()>
 {
-    let realms = sqlx::query!("SELECT * FROM realms")
-        .fetch_all(&(*database_pool))
-        .await?;
-
+    let realms = (*auth_db).get_all_realms().await?;
     let socket = async_std::net::UdpSocket::bind("127.0.0.1:1234").await?;
     let mut buffer = Vec::<u8>::new();
     buffer.resize(128, 0);
@@ -25,7 +22,7 @@ pub async fn receive_realm_pings(database_pool: std::sync::Arc<MySqlPool>) -> Re
     }
     let heartbeats_rwlock = std::sync::Arc::new(std::sync::RwLock::new(latest_heartbeats));
     let hbwrlock_copy = heartbeats_rwlock.clone();
-    let db_pool_clone = database_pool.clone();
+    let auth_db_handle = auth_db.clone();
     async_std::task::spawn(async move { 
         let mut heartbeat_interval = async_std::stream::interval(std::time::Duration::from_secs(5));
         while let Some(_) = heartbeat_interval.next().await
@@ -35,9 +32,9 @@ pub async fn receive_realm_pings(database_pool: std::sync::Arc<MySqlPool>) -> Re
             {
                 if Instant::now().duration_since(heartbeat).as_secs() > HEARTBEAT_TIMEOUT_SECONDS
                 {
-                    sqlx::query!("UPDATE realms SET online = '0' WHERE id = ?", realm_id)
-                        .execute(&(*db_pool_clone))
-                        .await.unwrap();
+                    (*auth_db_handle).set_realm_online_status(realm_id, false).await.unwrap_or_else(|_| {
+                        println!("Couldnt set realm status to online!");
+                    });
                 }
             }
         }
@@ -53,24 +50,25 @@ pub async fn receive_realm_pings(database_pool: std::sync::Arc<MySqlPool>) -> Re
             let realm_id = reader.read_u8()?;
             let realm_population_count = reader.read_u32::<BigEndian>()?;
             let realm_pop_current : f32 = realm_population_count as f32 / REALM_MAX_POPULATION;
-            (*heartbeats_rwlock.write().unwrap()).insert(realm_id as i32, Instant::now()); 
-            sqlx::query!("UPDATE realms SET online = '1', population = ? WHERE id = ?", realm_pop_current, realm_id)
-                .execute(&(*database_pool))
-                .await?;
+            (*heartbeats_rwlock.write().unwrap()).insert(realm_id as u32, Instant::now()); 
+            (*auth_db).set_realm_online_status(realm_id as u32, true).await.unwrap_or_else(|e| {
+                println!("Failed to set realm online: {}", e);
+            });
+            (*auth_db).set_realm_population(realm_id as u32, realm_pop_current).await.unwrap_or_else(|e| {
+                println!("Error while writing realm population: {}", e);
+            });
         }
     }
 }
 
 
-pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, database_pool: &MySqlPool) -> Result<()>
+pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, auth_database: &std::sync::Arc<AuthDatabase>) -> Result<()>
 {
     use std::io::Write;
 
     println!("realmlist request");
-
-    let realms = sqlx::query!("SELECT * FROM realms")
-        .fetch_all(database_pool)
-        .await?;
+    
+    let realms = (*auth_database).get_all_realms().await?;
 
     let realms_info  = Vec::<u8>::new();
     let mut writer = std::io::Cursor::new(realms_info);

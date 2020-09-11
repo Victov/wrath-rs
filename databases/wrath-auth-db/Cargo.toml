@@ -1,7 +1,7 @@
 [package]
-name = "wrath-worldserver"
+name = "wrath-auth-db"
 version = "0.1.0"
-authors = ["victov <victor.veldstra@gmail.com>"]
+authors = ["Victov <victor.veldstra@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,11 +9,5 @@ edition = "2018"
 [dependencies]
 async-std = {version="*", features=["attributes"] }
 anyhow = { version = "1.0.32" }
-podio = { version = "*" } 
 sqlx = { version = "0.4.0-beta.1", features=["mysql"] }
 dotenv = { version="*" }
-rand = { version = "0.7" } 
-num-bigint = { version = "0.3", features=["rand"] } 
-num-traits = { version = "0.2.12" } 
-rust-crypto = { version="0.2.36" } 
-num_enum = { version="0.5.1" } 

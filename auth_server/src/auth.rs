@@ -1,7 +1,6 @@
 use async_std::net::{TcpStream};
 use async_std::prelude::*;
 use podio::{ReadPodExt, WritePodExt, LittleEndian};
-use std::ops::Deref;
 use std::io::Write;
 use num_bigint::{BigUint};
 use num_traits::{Zero};
@@ -9,6 +8,7 @@ use anyhow::*;
 use num_bigint::RandBigInt;
 use sha1::Digest;
 use super::constants;
+use wrath_auth_db::AuthDatabase;
 
 #[derive(Default, Clone)]
 pub struct LoginNumbers
@@ -22,7 +22,7 @@ pub struct LoginNumbers
     pub username : String,
 }
 
-pub async fn handle_logon_challenge(stream : &mut TcpStream, buf : &[u8], database_pool:&std::sync::Arc<sqlx::MySqlPool>)
+pub async fn handle_logon_challenge(stream : &mut TcpStream, buf : &[u8], auth_database:&std::sync::Arc<AuthDatabase>)
     -> Result<LoginNumbers>
 {
     use num_traits::cast::FromPrimitive;
@@ -50,9 +50,7 @@ pub async fn handle_logon_challenge(stream : &mut TcpStream, buf : &[u8], databa
 
     println!("logon challenge for user {} on ip {}.{}.{}.{}, version {}.{}.{}:{}", username, ip[0], ip[1], ip[2], ip[3], version1, version2, version3, build);
 
-    let account = sqlx::query!("SELECT * FROM accounts WHERE username = ?", username)
-        .fetch_one(database_pool.deref())
-        .await;
+    let account = (*auth_database).get_account_by_username(&username).await;
 
     if account.is_err()
     {
@@ -77,9 +75,8 @@ pub async fn handle_logon_challenge(stream : &mut TcpStream, buf : &[u8], databa
     if account.v.is_empty() || account.s.is_empty()
     {
         let (v, s) = generate_vs(&account.sha_pass_hash, &logindata.g, &logindata.n).await?;
-        sqlx::query!("UPDATE accounts SET v = ?, s = ? WHERE id = ?", v.to_str_radix(16), s.to_str_radix(16), account.id)
-            .execute(database_pool.deref())
-            .await?;
+        (*auth_database).set_account_v_s(account.id, &v.to_str_radix(16), &s.to_str_radix(16)).await?;
+
         logindata.v = v;
         logindata.s = s;
 
@@ -162,7 +159,7 @@ async fn reject_login(stream : &mut TcpStream, reason: constants::AuthResult) ->
     Ok(())
 }
 
-pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata : &LoginNumbers, database_pool:&sqlx::MySqlPool) -> Result<()>
+pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata : &LoginNumbers, auth_database: &std::sync::Arc<AuthDatabase>) -> Result<()>
 {
     println!("logon proof");
     if logindata.n.is_zero()
@@ -272,8 +269,8 @@ pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata :
         stream.flush().await?;
         return Err(anyhow!("Wrong password"));
     }
-
-    save_session_key(&logindata.username, &k, database_pool).await?;
+    
+    (*auth_database).set_account_sessionkey(&logindata.username, &k.to_str_radix(16)).await?;
 
     let write_buf = Vec::<u8>::new();
     let mut writer = std::io::Cursor::new(write_buf);
@@ -285,23 +282,6 @@ pub async fn handle_logon_proof(stream : &mut TcpStream, buf: &[u8], logindata :
     writer.write_u16::<LittleEndian>(0u16)?;
     stream.write(&writer.into_inner()).await?;
     stream.flush().await?;
-
-    Ok(())
-}
-
-async fn save_session_key(username : &String, session_key : &BigUint, database_pool : &sqlx::MySqlPool) -> Result<()>
-{
-    sqlx::query!("UPDATE accounts SET sessionkey = ? WHERE username = ?;", session_key.to_str_radix(16), username)
-        .execute(database_pool)
-        .await?;
-    Ok(())
-}
-
-pub async fn remove_session_key(username : &String, database_pool : &sqlx::MySqlPool) -> Result<()>
-{
-    sqlx::query!("UPDATE accounts SET sessionkey = '' WHERE username = ?;", username)
-        .execute(database_pool)
-        .await?;
 
     Ok(())
 }
