@@ -1,8 +1,8 @@
 use async_std::task;
 use anyhow::Result;
+use wrath_auth_db::{AuthDatabase};
 
 mod auth;
-mod auth_database;
 mod opcodes;
 mod client;
 mod packet;
@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
     println!("Starting World Server");
     dotenv::dotenv().ok();
     
-    let auth_database = auth_database::AuthDatabase::new(&std::env::var("AUTH_DATABASE_URL")?).await?;
+    let auth_database = AuthDatabase::new(&std::env::var("AUTH_DATABASE_URL")?).await?;
     let auth_database_ref = std::sync::Arc::new(auth_database);
 
     task::spawn(auth::auth_server_heartbeats());

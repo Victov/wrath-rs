@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_std::task;
 use async_std::net::{TcpListener};
 use async_std::stream::{StreamExt};
-use super::auth_database::AuthDatabase;
+use wrath_auth_db::{AuthDatabase};
 use super::client::*;
 use std::sync::Arc;
 use rand::RngCore;
