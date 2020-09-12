@@ -1,12 +1,9 @@
 use anyhow::{Result};
-use async_std::prelude::*;
 use async_std::net::{TcpStream};
 use async_std::sync::{RwLock};
 use num_bigint::RandBigInt;
 use rand::RngCore;
-use std::sync::mpsc::{Sender};
 use std::sync::{Arc};
-use super::packet_handler::{PacketToHandle};
 use super::packet::*;
 use super::opcodes::Opcodes;
 
@@ -21,7 +18,7 @@ pub struct Client
 {
     socket: Arc<RwLock<TcpStream>>, 
     client_state : ClientState,
-    id: u64,
+    pub id: u64,
 }
 
 impl Client
@@ -48,36 +45,6 @@ impl Client
         writer.write(&seed1.to_bytes_le())?;
 
         send_packet(self.socket.clone(), &writer, header).await?;
-        Ok(())
-    }
-
-    pub async fn handle_incoming_packets(&self, packet_channel: Sender<PacketToHandle>) -> Result<()>
-    {
-        let mut buf = vec![0u8; 1024];
-        let mut read_length;
-        loop
-        {
-            {
-                let mut write_socket = self.socket.write().await;
-                read_length = write_socket.read(&mut buf).await?;
-                if read_length == 0
-                {
-                    println!("disconnect");
-                    write_socket.shutdown(async_std::net::Shutdown::Both)?;
-                    break;
-                }
-            }
-            let header = read_header(&buf, read_length, false)?;
-
-            println!("Opcode = {:?}, length = {}", header.get_cmd(), header.length);
-            packet_channel.send(PacketToHandle { client_id: self.id, header })?;
-
-            /*if header.get_cmd()? == Opcodes::CMSG_AUTH_SESSION
-            {
-                self.handle_auth_session(&buf).await?
-            }*/
-        }
-
         Ok(())
     }
 

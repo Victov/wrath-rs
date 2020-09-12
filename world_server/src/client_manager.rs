@@ -1,19 +1,22 @@
 use anyhow::Result;
 use async_std::task;
-use async_std::net::{TcpListener};
+use async_std::net::{TcpListener, TcpStream};
 use async_std::stream::{StreamExt};
+use async_std::prelude::*;
 use async_std::sync::RwLock;
 use wrath_auth_db::{AuthDatabase};
 use super::client::*;
 use std::sync::Arc;
 use std::sync::mpsc::{Sender};
 use super::packet_handler::{PacketToHandle};
+use std::collections::HashMap;
 use rand::RngCore;
 
 pub struct ClientManager
 {
     auth_db : Arc<AuthDatabase>,
     realm_seed : u32,
+    clients: RwLock<HashMap<u64, Arc<RwLock<Client>>>>,
 }
 
 impl ClientManager
@@ -24,6 +27,7 @@ impl ClientManager
         {
             auth_db,
             realm_seed : rand::thread_rng().next_u32(),
+            clients: RwLock::new(HashMap::new()),
         }
     }
 
@@ -36,14 +40,20 @@ impl ClientManager
 
         while let Some(tcp_stream) = incoming_connections.next().await {
             println!("new connection!");
-
             let stream = tcp_stream?;
             let socket_wrapped = Arc::new(RwLock::new(stream));
-            let client = Client::new(socket_wrapped);
+            let client_lock = Arc::new(RwLock::new(Client::new(socket_wrapped.clone())));
+            let client_id = client_lock.read().await.id;
+            
+            {
+                let mut hashmap = self.clients.write().await;
+                hashmap.insert(client_id, client_lock.clone());
+            }
+
             let realm_seed = self.realm_seed;
             let packet_channel_for_client = packet_handle_sender.clone();
 
-            client.send_auth_challenge(realm_seed)
+            client_lock.read().await.send_auth_challenge(realm_seed)
                 .await
                 .unwrap_or_else(|e| {
                     println!("Error while sending auth challenge: {:?}", e);
@@ -51,7 +61,7 @@ impl ClientManager
                 });
 
             task::spawn(async move {
-                client.handle_incoming_packets(packet_channel_for_client)
+                handle_incoming_packets(client_id, socket_wrapped, packet_channel_for_client)
                     .await
                     .unwrap_or_else(|e| {
                         println!("Error while handling packet {:?}", e);
@@ -61,5 +71,36 @@ impl ClientManager
 
         Ok(())
     }
-
 }
+
+async fn handle_incoming_packets(client_id: u64, socket: Arc<RwLock<TcpStream>>, packet_channel: Sender<PacketToHandle>) -> Result<()>
+{
+    let mut buf = vec![0u8; 1024];
+    let mut read_length;
+    loop
+    {
+        {
+            let mut write_socket = socket.write().await;
+            read_length = write_socket.read(&mut buf).await?;
+            if read_length == 0
+            {
+                println!("disconnect");
+                write_socket.shutdown(async_std::net::Shutdown::Both)?;
+                break;
+            }
+        }
+        let header = super::packet::read_header(&buf, read_length, false)?;
+
+        println!("Opcode = {:?}, length = {}", header.get_cmd(), header.length);
+        packet_channel.send(PacketToHandle { client_id, header })?;
+
+        /*if header.get_cmd()? == Opcodes::CMSG_AUTH_SESSION
+          {
+          self.handle_auth_session(&buf).await?
+          }*/
+    }
+
+    Ok(())
+}
+
+
