@@ -38,6 +38,4 @@ async fn main() -> Result<()> {
         realm_packet_handler.handle_queue().await?;
         task::sleep(std::time::Duration::from_millis(100)).await;
     }
-    
-    Ok(())
 }

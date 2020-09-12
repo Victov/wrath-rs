@@ -1,8 +1,6 @@
 use std::sync::mpsc::{Receiver};
-use std::sync::{Arc};
 use anyhow::Result;
 use super::packet::{ClientPacketHeader};
-use super::client::{Client};
 
 pub struct PacketToHandle
 {

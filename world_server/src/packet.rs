@@ -1,8 +1,10 @@
 use super::opcodes::{Opcodes};
 use anyhow::{anyhow, Result};
 use async_std::net::TcpStream;
+use async_std::sync::RwLock;
 use async_std::prelude::*;
 use std::convert::TryFrom;
+use std::sync::Arc;
 
 pub struct ServerPacketHeader
 {
@@ -37,7 +39,7 @@ pub fn create_packet(opcode: Opcodes, allocate_size:usize) -> (ServerPacketHeade
     (header, writer)
 }
 
-pub async fn send_packet(socket: &mut TcpStream, payload: &std::io::Cursor<Vec<u8>>, header: ServerPacketHeader) -> Result<()>
+pub async fn send_packet(socket: Arc<RwLock<TcpStream>>, payload: &std::io::Cursor<Vec<u8>>, header: ServerPacketHeader) -> Result<()>
 {
     use podio::{LittleEndian, BigEndian, WritePodExt};
     use std::io::Write;
@@ -49,12 +51,15 @@ pub async fn send_packet(socket: &mut TcpStream, payload: &std::io::Cursor<Vec<u
     final_writer.write_u16::<LittleEndian>(header.opcode)?;
     final_writer.write(&payload.get_ref())?;
 
-    let written_len = socket.write(&final_writer.into_inner()).await?;
-    socket.flush().await?;
-
-    if written_len != payload_length + 4
     {
-        return Err(anyhow!("Wrong written length while sending packet"));
+        let mut write_socket = socket.write().await;
+        let written_len = write_socket.write(&final_writer.into_inner()).await?;
+        write_socket.flush().await?;
+
+        if written_len != payload_length + 4
+        {
+            return Err(anyhow!("Wrong written length while sending packet"));
+        }
     }
 
     Ok(())

@@ -1,8 +1,10 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result};
 use async_std::prelude::*;
 use async_std::net::{TcpStream};
+use async_std::sync::{RwLock};
 use num_bigint::RandBigInt;
 use std::sync::mpsc::{Sender};
+use std::sync::{Arc};
 use super::packet_handler::{PacketToHandle};
 use super::packet::*;
 use super::opcodes::Opcodes;
@@ -16,24 +18,22 @@ enum ClientState
 
 pub struct Client
 {
-    socket: TcpStream, 
+    socket: Arc<RwLock<TcpStream>>, 
     client_state : ClientState,
-    packet_channel: Sender<PacketToHandle>,
 }
 
 impl Client
 {
-    pub fn new(socket : TcpStream, packet_channel: Sender<PacketToHandle>) -> Self
+    pub fn new(socket : Arc<RwLock<TcpStream>>) -> Self
     {
         Self
         {
             socket: socket,
             client_state : ClientState::PreLogin,
-            packet_channel,
         }
     }
 
-    pub async fn send_auth_challenge(&mut self, realm_seed: u32) -> Result<()>
+    pub async fn send_auth_challenge(&self, realm_seed: u32) -> Result<()>
     {
         use podio::{LittleEndian, WritePodExt};
         use std::io::Write;
@@ -44,26 +44,27 @@ impl Client
         let seed1 = rand::thread_rng().gen_biguint(32*8);
         writer.write(&seed1.to_bytes_le())?;
 
-        send_packet(&mut self.socket, &writer, header).await?;
+        send_packet(self.socket.clone(), &writer, header).await?;
         Ok(())
     }
 
-    pub async fn handle_incoming_packets(&mut self) -> Result<()>
+    pub async fn handle_incoming_packets(&mut self, packet_channel: Sender<PacketToHandle>) -> Result<()>
     {
         let mut buf = vec![0u8; 1024];
         loop
         {
-            let length = self.socket.read(&mut buf).await?;
+            let mut write_socket = self.socket.write().await;
+            let length = write_socket.read(&mut buf).await?;
             if length == 0
             {
                 println!("disconnect");
-                self.socket.shutdown(async_std::net::Shutdown::Both)?;
+                write_socket.shutdown(async_std::net::Shutdown::Both)?;
                 break;
             }
             let header = read_header(&buf, length, false)?;
 
             println!("Opcode = {:?}, length = {}", header.get_cmd(), header.length);
-            self.packet_channel.send(PacketToHandle { header });
+            packet_channel.send(PacketToHandle { header })?;
 
             /*if header.get_cmd()? == Opcodes::CMSG_AUTH_SESSION
             {
@@ -74,6 +75,7 @@ impl Client
         Ok(())
     }
 
+    /*
     pub async fn handle_auth_session(&mut self, packet: &[u8]) -> Result<()>
     {
         use podio::{ReadPodExt, LittleEndian};
@@ -104,5 +106,5 @@ impl Client
 
 
         Ok(())
-    }
+    }*/
 }

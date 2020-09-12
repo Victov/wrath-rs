@@ -2,6 +2,7 @@ use anyhow::Result;
 use async_std::task;
 use async_std::net::{TcpListener};
 use async_std::stream::{StreamExt};
+use async_std::sync::RwLock;
 use wrath_auth_db::{AuthDatabase};
 use super::client::*;
 use std::sync::Arc;
@@ -37,18 +38,20 @@ impl ClientManager
             println!("new connection!");
 
             let stream = tcp_stream?;
-            let mut client = Client::new(stream, packet_handle_sender.clone());
+            let socket_wrapped = Arc::new(RwLock::new(stream));
+            let mut client = Client::new(socket_wrapped);
             let realm_seed = self.realm_seed;
+            let packet_channel_for_client = packet_handle_sender.clone();
+
+            client.send_auth_challenge(realm_seed)
+                .await
+                .unwrap_or_else(|e| {
+                    println!("Error while sending auth challenge: {:?}", e);
+                    return;
+                });
 
             task::spawn(async move {
-                client.send_auth_challenge(realm_seed)
-                    .await
-                    .unwrap_or_else(|e| {
-                        println!("Error while sending auth challenge: {:?}", e);
-                        return;
-                    });
-
-                client.handle_incoming_packets()
+                client.handle_incoming_packets(packet_channel_for_client)
                     .await
                     .unwrap_or_else(|e| {
                         println!("Error while handling packet {:?}", e);
