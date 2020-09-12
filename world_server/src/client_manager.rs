@@ -98,7 +98,7 @@ async fn handle_incoming_packets(client_id: u64, socket: Arc<RwLock<TcpStream>>,
             }
         }
         let header = super::packet::read_header(&buf, read_length, false)?;
-        let shrunk_buf = buf.iter().take(read_length as usize).map(|a| *a).collect();
+        let shrunk_buf = buf.iter().skip(6).take(read_length - 6 as usize).map(|a| *a).collect();
         packet_channel.send(PacketToHandle { client_id, header, payload: shrunk_buf })?;
     }
 
