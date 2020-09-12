@@ -25,17 +25,18 @@ async fn main() -> Result<()> {
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver);
     
-    let client_manager = ClientManager::new(auth_database_ref.clone());
-    
+    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone()));
+    let client_manager_for_acceptloop = client_manager.clone();
+
     task::spawn(async move {
-        client_manager.accept_realm_connections(sender).await.unwrap_or_else(|e| {
+        client_manager_for_acceptloop.accept_realm_connections(sender).await.unwrap_or_else(|e| {
             println!("Error in realm_socket::accept_realm_connections: {:?}", e)
         })
     });
 
     loop
     {
-        realm_packet_handler.handle_queue().await?;
+        realm_packet_handler.handle_queue(&client_manager).await?;
         task::sleep(std::time::Duration::from_millis(100)).await;
     }
 }

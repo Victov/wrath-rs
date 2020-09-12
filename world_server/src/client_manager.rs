@@ -66,10 +66,18 @@ impl ClientManager
                     .unwrap_or_else(|e| {
                         println!("Error while handling packet {:?}", e);
                     });
+                //Client stopped handling packets. Probably disconnected. Remove from client list?
             });
         }
 
         Ok(())
+    }
+
+    pub async fn get_client(&self, id: u64) -> Result<Arc<RwLock<Client>>>
+    {
+        let hashmap = self.clients.read().await;
+        let clientlock = hashmap.get(&id).ok_or_else(|| anyhow::anyhow!("Failed to get client for client id: {}", id))?;
+        Ok(clientlock.clone())
     }
 }
 
@@ -90,14 +98,8 @@ async fn handle_incoming_packets(client_id: u64, socket: Arc<RwLock<TcpStream>>,
             }
         }
         let header = super::packet::read_header(&buf, read_length, false)?;
-
-        println!("Opcode = {:?}, length = {}", header.get_cmd(), header.length);
-        packet_channel.send(PacketToHandle { client_id, header })?;
-
-        /*if header.get_cmd()? == Opcodes::CMSG_AUTH_SESSION
-          {
-          self.handle_auth_session(&buf).await?
-          }*/
+        let shrunk_buf = buf.iter().take(header.length as usize).map(|a| *a).collect();
+        packet_channel.send(PacketToHandle { client_id, header, payload: shrunk_buf })?;
     }
 
     Ok(())
