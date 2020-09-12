@@ -8,13 +8,17 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
 {
     use podio::{ReadPodExt, LittleEndian};
     use std::io::{BufRead, Seek, SeekFrom};
+    use num_bigint::BigUint;
+    use num_traits::Num;
 
     let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
-    if client.client_state != ClientState::PreLogin
     {
-        return Err(anyhow!("Client sent auth session but was already logged in"));
-        //Disconnect hacker?
+        let client = client_lock.read().await;
+        if client.client_state != ClientState::PreLogin
+        {
+            return Err(anyhow!("Client sent auth session but was already logged in"));
+            //Disconnect hacker?
+        }
     }
     
     let mut reader = std::io::Cursor::new(&packet.payload);
@@ -38,6 +42,15 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     let _compressed_addon_data = reader.read_exact(packet.header.length as usize - reader.position() as usize - 4)?;
     let db_account = client_manager.auth_db.get_account_by_username(&name).await?;
     println!("user {} has sessionkey {}", db_account.username, db_account.sessionkey);
+    
+    let sessionkey = BigUint::from_str_radix(&db_account.sessionkey, 16)?;
+    let sesskey_bytes = sessionkey.to_bytes_le();
+
+    assert_eq!(sesskey_bytes.len(), 40);
+    {
+        let mut client = client_lock.write().await;
+        client.init_crypto(sesskey_bytes.as_slice())?;
+    }
 
     Ok(())
 }
