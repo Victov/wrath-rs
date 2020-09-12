@@ -8,16 +8,15 @@ use super::packet::*;
 use super::opcodes::Opcodes;
 
 #[derive(PartialEq)]
-enum ClientState
+pub enum ClientState
 {
     PreLogin,
-    InWorld
 }
 
 pub struct Client
 {
-    socket: Arc<RwLock<TcpStream>>, 
-    client_state : ClientState,
+    pub socket: Arc<RwLock<TcpStream>>, 
+    pub client_state : ClientState,
     pub id: u64,
 }
 
@@ -47,37 +46,4 @@ impl Client
         send_packet(self.socket.clone(), &writer, header).await?;
         Ok(())
     }
-
-    /*
-    pub async fn handle_auth_session(&mut self, packet: &[u8]) -> Result<()>
-    {
-        use podio::{ReadPodExt, LittleEndian};
-        use std::io::{BufRead, Seek, SeekFrom};
-
-        if self.client_state != ClientState::PreLogin
-        {
-            return Err(anyhow!("Client sent auth session but was already logged in"));
-        }
-        
-        let mut reader = std::io::Cursor::new(packet);
-        reader.seek(std::io::SeekFrom::Start(6))?; //skip header
-        let build_number = reader.read_u32::<LittleEndian>()?;
-        let _unknown1  = reader.read_u32::<LittleEndian>()?;
-        let mut name = Vec::new();
-        reader.read_until(0, &mut name)?;
-        let name = String::from_utf8(name)?;
-        let _unknown2 = reader.read_u32::<LittleEndian>()?;
-        let _client_seed = reader.read_u32::<LittleEndian>()?;
-        reader.seek(SeekFrom::Current(20))?; //skip unknown bytes
-        let client_digest = reader.read_exact(20)?;
-        let compressed_addon_data_length = reader.read_u32::<LittleEndian>()?;
-        let _compressed_addon_data = reader.read_exact(compressed_addon_data_length as usize)?;
-
-        println!("user {} connecting from buildnumer {}", name, build_number);
-        println!("digest: {:?}", client_digest);
-        println!("also {} bytes of addon data", compressed_addon_data_length);
-
-
-        Ok(())
-    }*/
 }

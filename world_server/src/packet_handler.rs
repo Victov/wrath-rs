@@ -3,6 +3,8 @@ use anyhow::Result;
 use super::client_manager::ClientManager;
 use super::packet::{ClientPacketHeader};
 use std::sync::Arc;
+use super::handlers::*;
+use super::opcodes::Opcodes;
 
 pub struct PacketToHandle
 {
@@ -30,12 +32,18 @@ impl PacketHandler
     {
         while let Ok(packet) = self.receive_channel.try_recv()
         {
-            println!("message received to handle: {:?}", packet.header.get_cmd()?);
-            let client_lock = client_manager.get_client(packet.client_id).await?;
-            let client = client_lock.read().await;
-            println!("Retrieved client {}, with payload size: {} ", client.id, packet.payload.len());
+            self.handle_packet(client_manager, &packet).await?;
         }
 
         Ok(())
+    }
+
+    async fn handle_packet(&self, client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
+    {
+        match packet.header.get_cmd()?
+        {
+            Opcodes::CMSG_AUTH_SESSION => handle_cmsg_auth_session(client_manager, packet).await,
+            _ => Err(anyhow::anyhow!("Unhandled opcode"))
+        }
     }
 }

@@ -8,6 +8,7 @@ mod client;
 mod packet;
 mod client_manager;
 mod packet_handler;
+mod handlers;
 
 use packet_handler::{PacketToHandle, PacketHandler};
 use client_manager::ClientManager;
