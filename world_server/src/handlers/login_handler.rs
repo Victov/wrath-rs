@@ -10,6 +10,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     use std::io::{BufRead, Seek, SeekFrom};
     use num_bigint::BigUint;
     use num_traits::Num;
+    use crypto::digest::Digest;
 
     let client_lock = client_manager.get_client(packet.client_id).await?;
     {
@@ -33,15 +34,14 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     println!("user {} connecting with buildnumber {}", name, build_number);
     
     let _unknown2 = reader.read_u32::<LittleEndian>()?;
-    let _client_seed = reader.read_u32::<LittleEndian>()?;
+    let client_seed = reader.read_u32::<LittleEndian>()?;
 
     reader.seek(SeekFrom::Current(20))?; //Skip unknown data
 
-    let _client_digest = reader.read_exact(20)?;
+    let client_digest = reader.read_exact(20)?;
     let _decompressed_addon_data_length = reader.read_u32::<LittleEndian>()?;
     let _compressed_addon_data = reader.read_exact(packet.header.length as usize - reader.position() as usize - 4)?;
     let db_account = client_manager.auth_db.get_account_by_username(&name).await?;
-    println!("user {} has sessionkey {}", db_account.username, db_account.sessionkey);
     
     let sessionkey = BigUint::from_str_radix(&db_account.sessionkey, 16)?;
     let sesskey_bytes = sessionkey.to_bytes_le();
@@ -51,6 +51,27 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
         let mut client = client_lock.write().await;
         client.init_crypto(sesskey_bytes.as_slice())?;
     }
+
+    let mut sha1 = crypto::sha1::Sha1::new();
+    sha1.input(&name.as_bytes());
+    sha1.input(&[0u8;4]);
+    sha1.input(&client_seed.to_le_bytes());
+    sha1.input(&client_manager.realm_seed.to_le_bytes());
+    sha1.input(&sesskey_bytes);
+    let mut out_buf = [0u8;20];
+    sha1.result(&mut out_buf);
+
+    let a = BigUint::from_bytes_le(&client_digest);
+    let b = BigUint::from_bytes_le(&out_buf);
+    if a != b
+    {
+        //Send failed auth response here
+        return Err(anyhow::anyhow!("Failed auth attempt, rejecting"));
+    }
+
+    //Handle full world queuing here
+    
+    
 
     Ok(())
 }
