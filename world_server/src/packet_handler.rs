@@ -5,6 +5,7 @@ use super::packet::{ClientPacketHeader};
 pub struct PacketToHandle
 {
     pub header: ClientPacketHeader,
+    pub client_id: u64,
 }
 
 pub struct PacketHandler

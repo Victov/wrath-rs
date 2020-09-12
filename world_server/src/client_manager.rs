@@ -39,7 +39,7 @@ impl ClientManager
 
             let stream = tcp_stream?;
             let socket_wrapped = Arc::new(RwLock::new(stream));
-            let mut client = Client::new(socket_wrapped);
+            let client = Client::new(socket_wrapped);
             let realm_seed = self.realm_seed;
             let packet_channel_for_client = packet_handle_sender.clone();
 
