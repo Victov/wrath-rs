@@ -14,8 +14,8 @@ use rand::RngCore;
 
 pub struct ClientManager
 {
-    auth_db : Arc<AuthDatabase>,
-    realm_seed : u32,
+    pub auth_db : Arc<AuthDatabase>,
+    pub realm_seed : u32,
     clients: RwLock<HashMap<u64, Arc<RwLock<Client>>>>,
 }
 
