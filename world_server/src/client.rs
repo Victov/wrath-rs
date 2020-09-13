@@ -19,7 +19,7 @@ pub struct Client
     pub socket: Arc<RwLock<TcpStream>>, 
     pub client_state : ClientState,
     pub id: u64,
-    crypto: ClientCrypto
+    pub crypto: RwLock<ClientCrypto>
 }
 
 impl Client
@@ -31,7 +31,7 @@ impl Client
             socket: socket,
             client_state : ClientState::PreLogin,
             id: rand::thread_rng().next_u64(),
-            crypto: ClientCrypto::new(),
+            crypto: RwLock::new(ClientCrypto::new()),
         }
     }
 
@@ -50,9 +50,4 @@ impl Client
         Ok(())
     }
 
-    pub fn init_crypto(&mut self, sess_key: &[u8]) -> Result<()>
-    {
-        self.crypto.initialize(sess_key)?;
-        Ok(())
-    }
 }

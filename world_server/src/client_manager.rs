@@ -61,7 +61,7 @@ impl ClientManager
                 });
 
             task::spawn(async move {
-                handle_incoming_packets(client_id, socket_wrapped, packet_channel_for_client)
+                handle_incoming_packets(client_lock, socket_wrapped, packet_channel_for_client)
                     .await
                     .unwrap_or_else(|e| {
                         println!("Error while handling packet {:?}", e);
@@ -81,7 +81,7 @@ impl ClientManager
     }
 }
 
-async fn handle_incoming_packets(client_id: u64, socket: Arc<RwLock<TcpStream>>, packet_channel: Sender<PacketToHandle>) -> Result<()>
+async fn handle_incoming_packets(client_lock: Arc<RwLock<Client>>, socket: Arc<RwLock<TcpStream>>, packet_channel: Sender<PacketToHandle>) -> Result<()>
 {
     use async_std::io::timeout;
     use std::time::Duration;
@@ -107,12 +107,11 @@ async fn handle_incoming_packets(client_id: u64, socket: Arc<RwLock<TcpStream>>,
                 break;
             }
         }
-        let header = super::packet::read_header(&buf, read_length, false)?;
+        let client = client_lock.read().await;
+        let header = super::packet::read_header(&mut buf, &client).await?;
         let shrunk_buf = buf.iter().skip(6).take(read_length - 6 as usize).map(|a| *a).collect();
-        packet_channel.send(PacketToHandle { client_id, header, payload: shrunk_buf })?;
+        packet_channel.send(PacketToHandle { client_id: client.id, header, payload: shrunk_buf })?;
     }
-
     Ok(())
 }
-
 

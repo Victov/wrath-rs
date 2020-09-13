@@ -46,13 +46,21 @@ pub async fn send_packet(client: &Client, header: ServerPacketHeader, payload: &
 {
     use std::io::Write;
 
-    //todo encrypt if encryption is available
-
     let payload_length = payload.get_ref().len();
+
+    let mut header_buffer = Vec::<u8>::new();
+    let mut header_writer = std::io::Cursor::new(&mut header_buffer);
+    header_writer.write_u16::<BigEndian>(payload_length as u16)?;
+    header_writer.write_u16::<LittleEndian>(header.opcode)?;
+
+    if client.crypto.read().await.is_initialized()
+    {
+        client.crypto.write().await.encrypt(&mut header_buffer)?;
+    }
+
     let final_buf = vec![0u8; payload_length + 4];
     let mut final_writer = std::io::Cursor::new(final_buf);
-    final_writer.write_u16::<BigEndian>(payload_length as u16)?;
-    final_writer.write_u16::<LittleEndian>(header.opcode)?;
+    final_writer.write(&header_buffer)?;
     final_writer.write(&payload.get_ref())?;
 
     {
@@ -94,16 +102,21 @@ pub async fn send_packet_unencrypted(socket: Arc<RwLock<TcpStream>>, payload: &C
     Ok(())
 }
 
-pub fn read_header(bytes: &Vec<u8>, _packet_length: usize, is_encrypted: bool) -> Result<ClientPacketHeader>
+pub async fn read_header(bytes: &mut Vec<u8>, client: &Client) -> Result<ClientPacketHeader>
 {
     use podio::{ReadPodExt};
 
-    if is_encrypted
-    {
-        return Err(anyhow!("Path not implemented"));
-    }
+    let mut header = bytes.iter().take(6).map(|a| *a).collect::<Vec<u8>>();
 
-    let mut reader = std::io::Cursor::new(bytes);
+    println!("before: {:?}", &header);
+    if client.crypto.read().await.is_initialized()
+    {
+        println!("decrypting!");
+        client.crypto.write().await.decrypt(&mut header)?;
+    }
+    println!("after: {:?}", &header);
+
+    let mut reader = std::io::Cursor::new(header);
     let packet_len = reader.read_u16::<BigEndian>()?;
     let opcode_u32 = reader.read_u32::<LittleEndian>()?;
 

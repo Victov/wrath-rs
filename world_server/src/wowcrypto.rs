@@ -4,6 +4,7 @@ use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::digest::Digest;
 use crypto::rc4::Rc4;
+use crypto::symmetriccipher::SynchronousStreamCipher;
 
 static S: [u8; 16] = [ 0xC2, 0xB3, 0x72, 0x3C, 0xC6, 0xAE, 0xD9, 0xB5, 0x34, 0x3C, 0x53, 0xEE, 0x2F, 0x43, 0x67, 0xCE ];
 static R: [u8; 16] = [ 0xCC, 0x98, 0xAE, 0x04, 0xE8, 0x97, 0xEA, 0xCA, 0x12, 0xDD, 0xC0, 0x93, 0x42, 0x91, 0x53, 0x57 ];
@@ -49,7 +50,26 @@ impl ClientCrypto
 
         self.encrypter = Some(Rc4::new(encrypt_hash));
         self.decrypter = Some(Rc4::new(decrypt_hash));
+    
+        //Process some zero bytes to prevent some attack idk
+        let mut void_output = [0u8; 1024];
+        self.encrypter.unwrap().process(&[0;1024], &mut void_output);
+        self.decrypter.unwrap().process(&[0;1024], &mut void_output);
 
+        Ok(())
+    }
+
+    pub fn encrypt(&mut self, data: &mut Vec<u8>) -> Result<()>
+    {
+        let input = data.clone();
+        self.encrypter.unwrap().process(&input, data);
+        Ok(())
+    }
+
+    pub fn decrypt(&mut self, data: &mut Vec<u8>) -> Result<()>
+    {
+        let input = data.clone();
+        self.decrypter.unwrap().process(&input, data);
         Ok(())
     }
 }

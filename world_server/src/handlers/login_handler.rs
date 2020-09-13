@@ -80,8 +80,8 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
 
     assert_eq!(sesskey_bytes.len(), 40);
     {
-        let mut client = client_lock.write().await;
-        client.init_crypto(sesskey_bytes.as_slice())?;
+        let client = client_lock.read().await;
+        client.crypto.write().await.initialize(sesskey_bytes.as_slice())?;
     }
 
     let mut sha1 = crypto::sha1::Sha1::new();
@@ -102,29 +102,65 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
         return Err(anyhow::anyhow!("Failed auth attempt, rejecting"));
     }
     //Handle full world queuing here
-    
-    let client = client_lock.read().await;
-    send_auth_response(AuthResponse::AuthOk, &client).await?;
+   
+    {
+        let client = client_lock.read().await;
+        send_auth_response(AuthResponse::AuthOk, &client).await?;
+    }
 
+    let mut decompressed_addon_data = Vec::<u8>::new();
     {
         use flate2::read::ZlibDecoder;
         use std::io::Read;
 
         let mut addon_data_decoder = ZlibDecoder::new(compressed_addon_data.as_slice());
-        let mut decompressed_addon_data = Vec::<u8>::new();
         addon_data_decoder.read_to_end(&mut decompressed_addon_data)?;
         if decompressed_addon_data.len() != decompressed_addon_data_length as usize
         {
             return Err(anyhow::anyhow!("decompressed addon data length didn't match expectation"));
         }
-        //Parse decompressed addon data and send Addon packet
     }
+    
+    let mut addon_reader = std::io::Cursor::new(decompressed_addon_data);
+    let num_addons = addon_reader.read_u32::<LittleEndian>()?;
+
+    let (addon_packet_header, mut addon_packet_writer) = create_packet(Opcodes::SMSG_ADDON_INFO, 1024);
+    for _ in 0 .. num_addons
+    {
+        let mut addon_name_buf = Vec::new();
+        addon_reader.read_until(0, &mut addon_name_buf)?;
+        addon_name_buf.truncate(addon_name_buf.len()-1);
+        let addon_name = String::from_utf8(addon_name_buf)?;
+        println!("parsing addon {}", addon_name);
+        let _addon_has_signature = addon_reader.read_u8()? == 1;
+        let addon_crc = addon_reader.read_u32::<LittleEndian>()?;
+        let _addon_extra_crc = addon_reader.read_u32::<LittleEndian>()?;
+
+        addon_packet_writer.write_u8(2)?; //Addontype Blizzard
+        addon_packet_writer.write_u8(1)?; //Uses CRC??
+        let uses_diffent_public_key = addon_crc != 0x4C1C776D; //Blizzard addon CRC
+        addon_packet_writer.write_u8(if uses_diffent_public_key { 1 } else{ 0 })?;
+        if uses_diffent_public_key
+        {
+            println!("non-blizzard addon: {}", addon_name);
+            //Write blizzard public key
+        }
+        addon_packet_writer.write_u32::<LittleEndian>(0)?;
+        addon_packet_writer.write_u8(0)?; 
+    }
+    addon_packet_writer.write_u8(0)?; //num banned addons
+
+    {
+        let client = client_lock.read().await;
+        send_packet(&client, addon_packet_header, &addon_packet_writer).await?;
+    }
+
     Ok(())
 }
 
 async fn send_auth_response(response: AuthResponse, receiver: &Client) -> Result<()>
 {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_AUTH_RESPONSE, 1);
+    let (header, mut writer) = create_packet(Opcodes::SMSG_AUTH_RESPONSE, 32);
     let resp_u8 = response as u8;
     writer.write_u8(resp_u8)?;
     if resp_u8 == AuthResponse::AuthOk as u8 && false //Conflicting info, no need to send this?
