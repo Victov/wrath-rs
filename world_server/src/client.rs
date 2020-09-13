@@ -46,7 +46,7 @@ impl Client
         let seed1 = rand::thread_rng().gen_biguint(32*8);
         writer.write(&seed1.to_bytes_le())?;
 
-        send_packet(self.socket.clone(), &writer, header).await?;
+        send_packet_unencrypted(self.socket.clone(), &writer, header).await?;
         Ok(())
     }
 

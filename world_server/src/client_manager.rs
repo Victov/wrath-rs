@@ -83,13 +83,23 @@ impl ClientManager
 
 async fn handle_incoming_packets(client_id: u64, socket: Arc<RwLock<TcpStream>>, packet_channel: Sender<PacketToHandle>) -> Result<()>
 {
+    use async_std::io::timeout;
+    use std::time::Duration;
+
     let mut buf = vec![0u8; 1024];
     let mut read_length;
     loop
     {
         {
             let mut write_socket = socket.write().await;
-            read_length = write_socket.read(&mut buf).await?;
+            let read_result = timeout(Duration::from_millis(10), write_socket.read(&mut buf)).await;
+            if read_result.is_err()
+            {
+                drop(write_socket);
+                task::sleep(Duration::from_millis(50)).await;
+                continue;
+            }
+            read_length = read_result?;
             if read_length == 0
             {
                 println!("disconnect");

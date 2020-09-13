@@ -47,9 +47,6 @@ impl ClientCrypto
         let hash_result = hmac.result();
         let encrypt_hash = hash_result.code();
 
-        println!("decrypt_hash = {:?}", decrypt_hash);
-        println!("encrypt_hash = {:?}", encrypt_hash);
-        
         self.encrypter = Some(Rc4::new(encrypt_hash));
         self.decrypter = Some(Rc4::new(decrypt_hash));
 
