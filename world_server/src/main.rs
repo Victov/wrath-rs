@@ -38,7 +38,11 @@ async fn main() -> Result<()> {
 
     loop
     {
-        realm_packet_handler.handle_queue(&client_manager).await?;
+        realm_packet_handler.handle_queue(&client_manager)
+            .await
+            .unwrap_or_else(|e| {
+                println!("Error while handling packet: {}", e);
+            });
         task::sleep(std::time::Duration::from_millis(100)).await;
     }
 }

@@ -154,6 +154,8 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     {
         let client = client_lock.read().await;
         send_packet(&client, addon_packet_header, &addon_packet_writer).await?;
+        send_clientcache_version(0, &client).await?;
+        send_tutorial_flags(&client).await?;
     }
 
     Ok(())
@@ -175,4 +177,25 @@ async fn send_auth_response(response: AuthResponse, receiver: &Client) -> Result
     send_packet(receiver, header, &writer).await?;
 
     Ok(())
+}
+
+async fn send_clientcache_version(version:u32, receiver:&Client) -> Result<()>
+{
+    let (header, mut writer) = create_packet(Opcodes::SMSG_CLIENTCACHE_VERSION, 4);
+    writer.write_u32::<LittleEndian>(version)?;
+    send_packet(receiver, header, &writer).await
+}
+
+async fn send_tutorial_flags(receiver: &Client) -> Result<()>
+{
+    let (header, mut writer) = create_packet(Opcodes::SMSG_TUTORIAL_FLAGS, 4 * 8);
+    //Each u32 is 32 bits that each indicate a tutorial message. 0 = not seen, 1 = seen. 
+    //Needs to be stored in the database when the client indicates that they've seen a message
+    //So that it can be sent back from here. That part is todo; For now we will just let
+    //The client see every tutorial.
+    for _ in 0 .. 8
+    {
+        writer.write_u32::<LittleEndian>(0)?; 
+    }
+    send_packet(receiver, header, &writer).await
 }
