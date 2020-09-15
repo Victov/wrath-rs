@@ -1,7 +1,7 @@
 use anyhow::{Result};
 use async_std::net::{TcpStream};
 use async_std::sync::{RwLock};
-use num_bigint::RandBigInt;
+use num_bigint::{RandBigInt};
 use rand::RngCore;
 use std::sync::{Arc};
 use super::packet::*;
@@ -46,7 +46,7 @@ impl Client
         let seed1 = rand::thread_rng().gen_biguint(32*8);
         writer.write(&seed1.to_bytes_le())?;
 
-        send_packet_unencrypted(self.socket.clone(), &writer, header).await?;
+        send_packet(self, header, &writer).await?;
         Ok(())
     }
 

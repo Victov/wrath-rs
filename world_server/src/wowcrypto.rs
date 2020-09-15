@@ -33,6 +33,8 @@ impl ClientCrypto
 
     pub fn initialize(&mut self, sess_key: &[u8]) -> Result<()>
     {
+        assert_eq!(sess_key.len(), 40);
+
         let mut sha1 = Sha1::new();
         let mut hmac = Hmac::new(sha1, &S);
         
@@ -43,7 +45,7 @@ impl ClientCrypto
         
         sha1.reset();
         //Encrypt key (s->c)
-        let mut hmac = Hmac::new(sha1, &R);
+        hmac = Hmac::new(sha1, &R);
         hmac.input(sess_key);
         let hash_result = hmac.result();
         let encrypt_hash = hash_result.code();
@@ -53,23 +55,25 @@ impl ClientCrypto
     
         //Process some zero bytes to prevent some attack idk
         let mut void_output = [0u8; 1024];
-        self.encrypter.unwrap().process(&[0;1024], &mut void_output);
-        self.decrypter.unwrap().process(&[0;1024], &mut void_output);
+        self.encrypter.as_mut().unwrap().process(&[0;1024], &mut void_output);
+        self.decrypter.as_mut().unwrap().process(&[0;1024], &mut void_output);
 
         Ok(())
     }
 
     pub fn encrypt(&mut self, data: &mut Vec<u8>) -> Result<()>
     {
+        assert_eq!(data.len(), 4);
         let input = data.clone();
-        self.encrypter.unwrap().process(&input, data);
+        self.encrypter.as_mut().unwrap().process(&input, data);
         Ok(())
     }
 
     pub fn decrypt(&mut self, data: &mut Vec<u8>) -> Result<()>
     {
+        assert_eq!(data.len(), 6);
         let input = data.clone();
-        self.decrypter.unwrap().process(&input, data);
+        self.decrypter.as_mut().unwrap().process(&input, data);
         Ok(())
     }
 }

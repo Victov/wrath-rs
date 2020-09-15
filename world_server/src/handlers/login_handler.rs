@@ -62,7 +62,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     name.truncate(name.len()-1);
     let name = String::from_utf8(name)?;
    
-    println!("user {} connecting with buildnumber {}", name, build_number);
+    println!("User {} connecting with buildnumber {}", name, build_number);
     
     let _unknown2 = reader.read_u32::<LittleEndian>()?;
     let client_seed = reader.read_u32::<LittleEndian>()?;
@@ -81,7 +81,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     assert_eq!(sesskey_bytes.len(), 40);
     {
         let client = client_lock.read().await;
-        client.crypto.write().await.initialize(sesskey_bytes.as_slice())?;
+        client.crypto.write().await.initialize(&sesskey_bytes)?;
     }
 
     let mut sha1 = crypto::sha1::Sha1::new();
@@ -95,10 +95,12 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
 
     let a = BigUint::from_bytes_le(&client_digest);
     let b = BigUint::from_bytes_le(&out_buf);
+
     if a != b
     {
         let client = client_lock.read().await;
         send_auth_response(AuthResponse::Reject, &client).await?;
+        async_std::task::sleep(std::time::Duration::from_secs(2)).await;
         return Err(anyhow::anyhow!("Failed auth attempt, rejecting"));
     }
     //Handle full world queuing here
@@ -131,7 +133,6 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
         addon_reader.read_until(0, &mut addon_name_buf)?;
         addon_name_buf.truncate(addon_name_buf.len()-1);
         let addon_name = String::from_utf8(addon_name_buf)?;
-        println!("parsing addon {}", addon_name);
         let _addon_has_signature = addon_reader.read_u8()? == 1;
         let addon_crc = addon_reader.read_u32::<LittleEndian>()?;
         let _addon_extra_crc = addon_reader.read_u32::<LittleEndian>()?;
@@ -142,7 +143,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
         addon_packet_writer.write_u8(if uses_diffent_public_key { 1 } else{ 0 })?;
         if uses_diffent_public_key
         {
-            println!("non-blizzard addon: {}", addon_name);
+            println!("Unhandled non-blizzard addon: {}", addon_name);
             //Write blizzard public key
         }
         addon_packet_writer.write_u32::<LittleEndian>(0)?;
@@ -160,15 +161,15 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
 
 async fn send_auth_response(response: AuthResponse, receiver: &Client) -> Result<()>
 {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_AUTH_RESPONSE, 32);
+    let (header, mut writer) = create_packet(Opcodes::SMSG_AUTH_RESPONSE, 11);
     let resp_u8 = response as u8;
     writer.write_u8(resp_u8)?;
-    if resp_u8 == AuthResponse::AuthOk as u8 && false //Conflicting info, no need to send this?
+    if resp_u8 == AuthResponse::AuthOk as u8
     {
         writer.write_u32::<LittleEndian>(0)?;
-        writer.write_u8(2)?;
-        writer.write_u32::<LittleEndian>(0)?;
         writer.write_u8(0)?;
+        writer.write_u32::<LittleEndian>(0)?;
+        writer.write_u8(2)?; //0= vanilla, 1=tbc, 2=wotlk
     }
 
     send_packet(receiver, header, &writer).await?;

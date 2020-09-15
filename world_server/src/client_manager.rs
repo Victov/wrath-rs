@@ -39,7 +39,6 @@ impl ClientManager
         let mut incoming_connections = tcp_listener.incoming();
 
         while let Some(tcp_stream) = incoming_connections.next().await {
-            println!("new connection!");
             let stream = tcp_stream?;
             let socket_wrapped = Arc::new(RwLock::new(stream));
             let client_lock = Arc::new(RwLock::new(Client::new(socket_wrapped.clone())));
