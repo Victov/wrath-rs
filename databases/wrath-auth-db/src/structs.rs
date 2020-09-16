@@ -21,3 +21,11 @@ pub struct DBAccount
     pub token_key: String,
     pub banned: u8
 }
+
+pub struct DBAccountData
+{
+    pub account_id: u32,
+    pub data_type: u32,
+    pub time: u64,
+    pub data: Option<Vec<u8>>,
+}

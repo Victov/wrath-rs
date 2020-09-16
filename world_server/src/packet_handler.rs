@@ -43,6 +43,7 @@ impl PacketHandler
         match packet.header.get_cmd()?
         {
             Opcodes::CMSG_AUTH_SESSION => handle_cmsg_auth_session(client_manager, packet).await,
+            Opcodes::CMSG_READY_FOR_ACCOUNT_DATA_TIMES => handle_csmg_ready_for_account_data_times(client_manager, packet).await,
             op => Err(anyhow::anyhow!("Unhandled opcode {:?}", op))
         }
     }

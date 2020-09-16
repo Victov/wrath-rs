@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sqlx::{Row};
 mod structs;
-pub use structs::{DBRealm, DBAccount};
+pub use structs::{DBRealm, DBAccount, DBAccountData};
 
 pub struct AuthDatabase
 {
@@ -80,5 +80,13 @@ impl AuthDatabase
             .execute(&self.connection_pool)
             .await?;
         Ok(())
+    }
+
+    pub async fn get_account_data(&self, account_id: u32) -> Result<DBAccountData>
+    {
+        let acc_data = sqlx::query_as!(DBAccountData, "SELECT * FROM account_data WHERE account_id = ?", account_id)
+            .fetch_one(&self.connection_pool)
+            .await?;
+        Ok(acc_data)
     }
 }
