@@ -82,11 +82,19 @@ impl AuthDatabase
         Ok(())
     }
 
-    pub async fn get_account_data(&self, account_id: u32) -> Result<DBAccountData>
+    pub async fn get_account_data(&self, account_id: u32) -> Result<Vec<DBAccountData>>
     {
         let acc_data = sqlx::query_as!(DBAccountData, "SELECT * FROM account_data WHERE account_id = ?", account_id)
-            .fetch_one(&self.connection_pool)
+            .fetch_all(&self.connection_pool)
             .await?;
         Ok(acc_data)
+    }
+
+    pub async fn create_account_data(&self, account_id:u32, data_type:u8) -> Result<()>
+    {
+        sqlx::query!("INSERT INTO account_data (account_id, data_type, time, data) VALUES (?,?, 0, NULL)", account_id, data_type)
+            .execute(&self.connection_pool)
+            .await?;
+        Ok(())
     }
 }

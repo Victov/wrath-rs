@@ -46,7 +46,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     let client_lock = client_manager.get_client(packet.client_id).await?;
     {
         let client = client_lock.read().await;
-        if client.client_state != ClientState::PreLogin
+        if client.is_authenticated()
         {
             return Err(anyhow!("Client sent auth session but was already logged in"));
             //Disconnect hacker?
@@ -156,6 +156,12 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
         send_packet(&client, addon_packet_header, &addon_packet_writer).await?;
         send_clientcache_version(0, &client).await?;
         send_tutorial_flags(&client).await?;
+    }
+
+    {
+        let mut client = client_lock.write().await;
+        client.client_state = ClientState::CharacterSelection;
+        client.account_id = Some(db_account.id);
     }
 
     Ok(())

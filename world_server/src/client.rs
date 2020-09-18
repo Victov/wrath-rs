@@ -12,6 +12,7 @@ use super::wowcrypto::*;
 pub enum ClientState
 {
     PreLogin,
+    CharacterSelection,
 }
 
 pub struct Client
@@ -19,7 +20,8 @@ pub struct Client
     pub socket: Arc<RwLock<TcpStream>>, 
     pub client_state : ClientState,
     pub id: u64,
-    pub crypto: RwLock<ClientCrypto>
+    pub crypto: RwLock<ClientCrypto>,
+    pub account_id: Option<u32>,
 }
 
 impl Client
@@ -32,6 +34,7 @@ impl Client
             client_state : ClientState::PreLogin,
             id: rand::thread_rng().next_u64(),
             crypto: RwLock::new(ClientCrypto::new()),
+            account_id : None,
         }
     }
 
@@ -50,4 +53,8 @@ impl Client
         Ok(())
     }
 
+    pub fn is_authenticated(&self) -> bool
+    {
+        self.account_id.is_some() && self.client_state != ClientState::PreLogin
+    }
 }
