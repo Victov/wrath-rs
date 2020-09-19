@@ -84,9 +84,6 @@ impl ClientManager
 
 async fn handle_incoming_packets(client_lock: Arc<RwLock<Client>>, socket: Arc<RwLock<TcpStream>>, packet_channel: Sender<PacketToHandle>) -> Result<()>
 {
-    use async_std::io::timeout;
-    use std::time::Duration;
-
     let mut buf = vec![0u8; 1024];
     let mut read_length;
     loop

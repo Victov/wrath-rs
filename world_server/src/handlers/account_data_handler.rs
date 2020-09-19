@@ -1,17 +1,14 @@
-//remove after implementing handling request,
-//then it will be clear what's redundant
-#![allow(unused_imports)]
-
 use super::PacketToHandle;
-use podio::{WritePodExt, ReadPodExt, LittleEndian};
+use podio::{WritePodExt, LittleEndian};
 use std::sync::Arc;
 use anyhow::{Result, anyhow};
 use super::super::ClientManager;
-use super::super::client::{Client, ClientState};
+use super::super::client::Client;
 use super::super::packet::*;
 use super::Opcodes;
 use wrath_auth_db::DBAccountData;
 
+#[allow(dead_code)]
 enum CacheMask
 {
     GlobalCache = 0x15,
