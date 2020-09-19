@@ -69,7 +69,7 @@ pub async fn send_packet(client: &Client, header: ServerPacketHeader, payload: &
     final_writer.write(&payload.get_ref())?;
 
     {
-        let mut write_socket = client.socket.write().await;
+        let mut write_socket = client.write_socket.lock().await;
         let written_len = write_socket.write(&final_writer.into_inner()).await?;
         write_socket.flush().await?;
         if written_len != payload_length + 4

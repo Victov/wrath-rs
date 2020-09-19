@@ -1,6 +1,6 @@
 use anyhow::{Result};
 use async_std::net::{TcpStream};
-use async_std::sync::{RwLock};
+use async_std::sync::{RwLock, Mutex};
 use num_bigint::{RandBigInt};
 use rand::RngCore;
 use std::sync::{Arc};
@@ -17,7 +17,8 @@ pub enum ClientState
 
 pub struct Client
 {
-    pub socket: Arc<RwLock<TcpStream>>, 
+    pub read_socket: Arc<RwLock<TcpStream>>, 
+    pub write_socket: Arc<Mutex<TcpStream>>,
     pub client_state : ClientState,
     pub id: u64,
     pub crypto: RwLock<ClientCrypto>,
@@ -26,11 +27,12 @@ pub struct Client
 
 impl Client
 {
-    pub fn new(socket : Arc<RwLock<TcpStream>>) -> Self
+    pub fn new(read_socket : Arc<RwLock<TcpStream>>, write_socket: Arc<Mutex<TcpStream>>) -> Self
     {
         Self
         {
-            socket: socket,
+            read_socket,
+            write_socket, 
             client_state : ClientState::PreLogin,
             id: rand::thread_rng().next_u64(),
             crypto: RwLock::new(ClientCrypto::new()),

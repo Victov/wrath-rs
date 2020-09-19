@@ -3,7 +3,7 @@ use async_std::task;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::stream::{StreamExt};
 use async_std::prelude::*;
-use async_std::sync::RwLock;
+use async_std::sync::{RwLock, Mutex};
 use wrath_auth_db::{AuthDatabase};
 use super::client::*;
 use std::sync::Arc;
@@ -39,9 +39,11 @@ impl ClientManager
         let mut incoming_connections = tcp_listener.incoming();
 
         while let Some(tcp_stream) = incoming_connections.next().await {
-            let stream = tcp_stream?;
-            let socket_wrapped = Arc::new(RwLock::new(stream));
-            let client_lock = Arc::new(RwLock::new(Client::new(socket_wrapped.clone())));
+            let read_stream = tcp_stream?;
+            let write_stream = read_stream.clone();
+            let read_socket_wrapped = Arc::new(RwLock::new(read_stream));
+            let write_socket_wrapped = Arc::new(Mutex::new(write_stream));
+            let client_lock = Arc::new(RwLock::new(Client::new(read_socket_wrapped.clone(), write_socket_wrapped)));
             let client_id = client_lock.read().await.id;
             
             {
@@ -60,7 +62,7 @@ impl ClientManager
                 });
 
             task::spawn(async move {
-                handle_incoming_packets(client_lock, socket_wrapped, packet_channel_for_client)
+                handle_incoming_packets(client_lock, read_socket_wrapped, packet_channel_for_client)
                     .await
                     .unwrap_or_else(|e| {
                         println!("Error while handling packet {:?}", e);
@@ -90,19 +92,12 @@ async fn handle_incoming_packets(client_lock: Arc<RwLock<Client>>, socket: Arc<R
     loop
     {
         {
-            let mut write_socket = socket.write().await;
-            let read_result = timeout(Duration::from_millis(10), write_socket.read(&mut buf)).await;
-            if read_result.is_err()
-            {
-                drop(write_socket);
-                task::sleep(Duration::from_millis(50)).await;
-                continue;
-            }
-            read_length = read_result?;
+            let mut read_socket = socket.write().await;
+            read_length = read_socket.read(&mut buf).await?;
             if read_length == 0
             {
                 println!("disconnect");
-                write_socket.shutdown(async_std::net::Shutdown::Both)?;
+                read_socket.shutdown(async_std::net::Shutdown::Both)?;
                 break;
             }
         }
