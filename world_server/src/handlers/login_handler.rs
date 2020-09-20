@@ -204,3 +204,40 @@ async fn send_tutorial_flags(receiver: &Client) -> Result<()>
     }
     send_packet(receiver, header, &writer).await
 }
+
+#[allow(dead_code)]
+enum RealmSplitState
+{
+    Normal = 0,
+    Split = 1,
+    SplitPending = 2,
+}
+
+pub async fn handle_cmsg_realm_split(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
+{
+    use std::io::Write;
+
+    let realm_id = {
+        let mut reader = std::io::Cursor::new(&packet.payload);
+        reader.read_u32::<LittleEndian>()?
+    };
+
+    let (header, mut writer) = create_packet(Opcodes::SMSG_REALM_SPLIT, 12);
+    writer.write_u32::<LittleEndian>(realm_id)?;
+    writer.write_u32::<LittleEndian>(RealmSplitState::Normal as u32)?; //Realm splitting not implemented 
+    writer.write("01/01/01".as_bytes())?;
+    writer.write_u8(0)?; //string terminator
+
+    {
+        let client_lock = client_manager.get_client(packet.client_id).await?;
+        let client = client_lock.read().await;
+        send_packet(&client, header, &writer).await?;
+    }
+    Ok(())
+}
+
+
+
+
+
+
