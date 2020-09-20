@@ -1,5 +1,7 @@
 use anyhow::Result;
 
+pub mod character;
+
 pub struct RealmDatabase
 {
     connection_pool : sqlx::MySqlPool,

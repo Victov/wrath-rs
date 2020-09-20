@@ -1,6 +1,7 @@
 use async_std::task;
 use anyhow::Result;
-use wrath_auth_db::{AuthDatabase};
+use wrath_auth_db::AuthDatabase;
+use wrath_realm_db::RealmDatabase;
 
 mod auth;
 mod opcodes;
@@ -10,6 +11,7 @@ mod client_manager;
 mod packet_handler;
 mod handlers;
 mod wowcrypto;
+mod guid;
 
 use packet_handler::{PacketToHandle, PacketHandler};
 use client_manager::ClientManager;
@@ -22,12 +24,15 @@ async fn main() -> Result<()> {
     let auth_database = AuthDatabase::new(&std::env::var("AUTH_DATABASE_URL")?).await?;
     let auth_database_ref = std::sync::Arc::new(auth_database);
 
+    let realm_database = RealmDatabase::new(&std::env::var("REALM_DATABASE_URL")?).await?;
+    let realm_database_ref = std::sync::Arc::new(realm_database);
+
     task::spawn(auth::auth_server_heartbeats());
     
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver);
     
-    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone()));
+    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), realm_database_ref.clone()));
     let client_manager_for_acceptloop = client_manager.clone();
 
     task::spawn(async move {

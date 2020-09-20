@@ -97,4 +97,25 @@ impl AuthDatabase
             .await?;
         Ok(())
     }
+
+    pub async fn get_num_characters_on_realm(&self, account_id: u32, realm_id: u32) -> Result<u8>
+    {
+        let res = sqlx::query!("SELECT num_characters FROM realm_characters WHERE account_id = ? AND realm_id = ?", account_id, realm_id)
+            .fetch_one(&self.connection_pool)
+            .await;
+
+        match res 
+        {
+            Ok(row) => Ok(row.num_characters),
+            Err(_) => Ok(0u8)
+        }
+    }
+
+    pub async fn set_num_characters_on_realm(&self, account_id: u32, realm_id: u32, num_characters: u8) -> Result<()>
+    {
+        sqlx::query!("REPLACE INTO realm_characters VALUES (?, ?, ?)", account_id, realm_id, num_characters)
+            .execute(&self.connection_pool)
+            .await?;
+        Ok(())
+    }
 }

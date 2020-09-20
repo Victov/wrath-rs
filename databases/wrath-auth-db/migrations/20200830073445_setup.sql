@@ -35,7 +35,18 @@ CREATE TABLE `account_data` (
   `data_type` int unsigned NOT NULL DEFAULT '0',
   `time` bigint unsigned NOT NULL DEFAULT '0',
   `data` longblob,
-  KEY `FK_ACCOUNT` (`account_id`),
+  KEY `FK_ACCOUNT_DATA_ACCOUNT` (`account_id`),
   CONSTRAINT `FK_ACCOUNT` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `realm_characters` (
+	`account_id` int unsigned NOT NULL DEFAULT '0',
+	`realm_id` int unsigned NOT NULL DEFAULT '0',
+	`num_characters` tinyint unsigned NOT NULL default '0',
+	KEY `FK_REALM_CHARACTERS_ACCOUNT` (`account_id`),
+	CONSTRAINT `FK_REALM_CHARACTERS_ACCOUNT` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+	KEY `FK_REALM_CHARACTERS_REALM` (`realm_id`),
+	CONSTRAINT `FK_REALM_CHARACTERS_REALM` FOREIGN KEY (`realm_id`) REFERENCES `realms` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+	PRIMARY KEY (`account_id`, `realm_id`)
+);
 

@@ -51,7 +51,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, auth_database: std::s
             }
             else if buf[0] == 16
             {
-                realms::handle_realmlist_request(&mut stream, &auth_database).await.unwrap();
+                realms::handle_realmlist_request(&mut stream, &logindata, &auth_database).await.unwrap();
             }
             else
             {

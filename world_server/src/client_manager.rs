@@ -4,7 +4,8 @@ use async_std::net::{TcpListener, TcpStream};
 use async_std::stream::{StreamExt};
 use async_std::prelude::*;
 use async_std::sync::{RwLock, Mutex};
-use wrath_auth_db::{AuthDatabase};
+use wrath_auth_db::AuthDatabase;
+use wrath_realm_db::RealmDatabase;
 use super::client::*;
 use std::sync::Arc;
 use std::sync::mpsc::{Sender};
@@ -15,17 +16,19 @@ use rand::RngCore;
 pub struct ClientManager
 {
     pub auth_db : Arc<AuthDatabase>,
+    pub realm_db : Arc<RealmDatabase>,
     pub realm_seed : u32,
     clients: RwLock<HashMap<u64, Arc<RwLock<Client>>>>,
 }
 
 impl ClientManager
 {
-    pub fn new(auth_db : Arc<AuthDatabase>) -> Self
+    pub fn new(auth_db : Arc<AuthDatabase>, realm_db : Arc<RealmDatabase>) -> Self
     {
         Self
         {
             auth_db,
+            realm_db,
             realm_seed : rand::thread_rng().next_u32(),
             clients: RwLock::new(HashMap::new()),
         }

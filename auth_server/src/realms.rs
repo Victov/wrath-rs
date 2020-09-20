@@ -62,7 +62,7 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
 }
 
 
-pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, auth_database: &std::sync::Arc<AuthDatabase>) -> Result<()>
+pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, logindata: &super::auth::LoginNumbers, auth_database: &std::sync::Arc<AuthDatabase>) -> Result<()>
 {
     use std::io::Write;
 
@@ -73,6 +73,8 @@ pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, a
     let realms_info  = Vec::<u8>::new();
     let mut writer = std::io::Cursor::new(realms_info);
 
+    let account = auth_database.get_account_by_username(&logindata.username).await?;
+
     for realm in &realms
     {
         let mut realm_flags = realm.flags as u8;
@@ -80,6 +82,7 @@ pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, a
         {
             realm_flags |= constants::RealmFlags::Offline as u8;
         }
+        let num_characters = auth_database.get_num_characters_on_realm(account.id, realm.id).await?;
 
         writer.write_u8(realm.realm_type as u8)?;
         writer.write_u8(0)?; //realm locked
@@ -89,7 +92,7 @@ pub async fn handle_realmlist_request(stream : &mut async_std::net::TcpStream, a
         writer.write(realm.ip.as_bytes())?;
         writer.write_u8(0)?; //string terminator
         writer.write_f32::<podio::LittleEndian>(realm.population)?;
-        writer.write_u8(1)?; //num characters on this realm
+        writer.write_u8(num_characters)?; //num characters on this realm
         writer.write_u8(realm.timezone as u8)?;
         writer.write_u8(0)?;//realm.id as u8)?; 
     }

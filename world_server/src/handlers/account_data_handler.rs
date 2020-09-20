@@ -82,7 +82,6 @@ async fn send_account_data_times(client: &Client, data: &Vec<DBAccountData>, mas
     }
 
     send_packet(client, header, &writer).await?;
-    println!("sent account data times");
     Ok(())
 }
 
