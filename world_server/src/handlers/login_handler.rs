@@ -236,8 +236,19 @@ pub async fn handle_cmsg_realm_split(client_manager: &Arc<ClientManager>, packet
     Ok(())
 }
 
+pub async fn handle_cmsg_ping(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
+{
+    let mut reader = std::io::Cursor::new(&packet.payload);
+    let sequence = reader.read_u32::<LittleEndian>()?;
+    let _latency = reader.read_u32::<LittleEndian>()?;
 
+    let (header, mut writer) = create_packet(Opcodes::SMSG_PONG, 4);
+    writer.write_u32::<LittleEndian>(sequence)?;
 
-
-
+    let lock = client_manager.get_client(packet.client_id).await?;
+    let client = lock.read().await;
+    send_packet(&client, header, &writer).await?;
+   
+    Ok(())
+}
 

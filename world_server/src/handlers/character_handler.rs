@@ -1,11 +1,11 @@
 use super::PacketToHandle;
-use podio::{WritePodExt, LittleEndian};
+use podio::{WritePodExt, ReadPodExt, LittleEndian};
 use std::sync::Arc;
 use anyhow::{Result, anyhow};
-use super::super::ClientManager;
 use super::super::packet::*;
 use super::*;
 use std::io::Write;
+use wrath_realm_db::character::DBCharacterCreateParameters;
 
 pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
 {
@@ -48,6 +48,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
         writer.write_f32::<LittleEndian>(character.z)?;
         writer.write_u32::<LittleEndian>(character.guild_id)?;
         writer.write_u32::<LittleEndian>(character_flags)?;
+        writer.write_u32::<LittleEndian>(0)?;
         writer.write_u8(is_first_login)?;
         writer.write_u32::<LittleEndian>(0)?;//pet display id
         writer.write_u32::<LittleEndian>(0)?;//pet level
@@ -65,4 +66,98 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
         send_packet(&client, header, &writer).await?;
     }
     Ok(())
+}
+
+#[allow(dead_code)]
+enum CharacterCreateReponse
+{
+    InProgres = 0x2E,
+    Success = 0x2F,
+    Error = 0x30,
+    Failed = 0x31,
+    NameInUse = 0x32,
+    Disable = 0x33,
+    PvpTeamsViolation = 0x34,
+    ServerLimit = 0x35,
+    AccountLimit = 0x36,
+    ServerQueue = 0x37,
+    OnlyExisting = 0x38,
+    Expansion = 0x39,
+    ExpansionClass = 0x3A,
+    LevelRequirement = 0x3B,
+    UniqueClassLimit = 0x3C,
+    CharacterInGuild = 0x3D,
+    RestrictedRaceClass = 0x3E,
+    CharacterChooseRace = 0x3F,
+    CharacterArenaLeader = 0x40,
+    CharacterDeleteMail = 0x41,
+    CharacterSwapFaction = 0x42,
+    CharacterRaceOnly = 0x43,
+    CharacterGoldLimit = 0x44,
+    ForceLogin = 0x45,
+}
+
+pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
+{
+    use std::io::BufRead;
+
+    let mut reader = std::io::Cursor::new(&packet.payload);
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_lock.read().await;
+
+    if !client.is_authenticated()
+    {
+        return Err(anyhow!("Unauthenticated client tried to create character"));
+    }
+
+    let account_id = client.account_id.unwrap();
+
+    let create_params = {
+        let mut name = Vec::<u8>::new();
+        reader.read_until(0u8, &mut name)?;
+        let name = String::from_utf8(name)?;
+        let race = reader.read_u8()?;
+        let class = reader.read_u8()?;
+        let gender = reader.read_u8()?;
+        let skin_color = reader.read_u8()?;
+        let face = reader.read_u8()?;
+        let hair_style = reader.read_u8()?;
+        let hair_color = reader.read_u8()?;
+        let facial_style = reader.read_u8()?;
+        let outfit = reader.read_u8()?;
+
+        DBCharacterCreateParameters
+        {
+            account_id, name, race, class, gender, skin_color, face, hair_style, hair_color, facial_style, outfit
+        }
+    };
+
+    let realm_db = &client_manager.realm_db;
+    if !realm_db.is_character_name_available(&create_params.name).await?
+    {
+        send_char_create_reply(&client, CharacterCreateReponse::NameInUse).await?;
+        return Ok(()); //this is a perfectly valid handling, not Err
+    }
+
+    let result = realm_db.create_character(&create_params).await;
+    if result.is_err()
+    {
+        send_char_create_reply(&client, CharacterCreateReponse::Failed).await?;
+        return Err(anyhow!("Failed to insert character into database"));
+    }
+
+    let realm_id = std::env::var("REALM_ID")?.parse()?;
+    let num_chars = realm_db.get_num_characters_for_account(account_id).await?;
+    client_manager.auth_db.set_num_characters_on_realm(account_id, realm_id, num_chars).await?;
+
+    send_char_create_reply(&client, CharacterCreateReponse::Success).await?;
+
+    Ok(())
+}
+
+async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -> Result<()>
+{
+    let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_CREATE, 1);
+    writer.write_u8(resp as u8)?;
+    send_packet(client, header, &writer).await
 }
