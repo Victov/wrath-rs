@@ -64,16 +64,14 @@ impl ClientCrypto
     pub fn encrypt(&mut self, data: &mut Vec<u8>) -> Result<()>
     {
         assert_eq!(data.len(), 4);
-        let input = data.clone();
-        self.encrypter.as_mut().unwrap().process(&input, data);
+        self.encrypter.as_mut().unwrap().process(&data.clone(), data);
         Ok(())
     }
 
     pub fn decrypt(&mut self, data: &mut Vec<u8>) -> Result<()>
     {
         assert_eq!(data.len(), 6);
-        let input = data.clone();
-        self.decrypter.as_mut().unwrap().process(&input, data);
+        self.decrypter.as_mut().unwrap().process(&data.clone(), data);
         Ok(())
     }
 }

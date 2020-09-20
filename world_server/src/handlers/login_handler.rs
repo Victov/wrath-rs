@@ -54,7 +54,6 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     }
     
     let mut reader = std::io::Cursor::new(&packet.payload);
-    //reader.seek(std::io::SeekFrom::Start(6))?; //skip header
     let build_number = reader.read_u32::<LittleEndian>()?;
     let _unknown1  = reader.read_u32::<LittleEndian>()?;
     let mut name = Vec::new();
@@ -71,7 +70,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
 
     let client_digest = reader.read_exact(20)?;
     let decompressed_addon_data_length = reader.read_u32::<LittleEndian>()?;
-    let compressed_addon_data = reader.read_exact(packet.header.length as usize - reader.position() as usize - 4)?;
+    let compressed_addon_data = reader.read_exact(packet.header.length as usize - reader.position() as usize)?;
     let db_account = client_manager.auth_db.get_account_by_username(&name).await?;
     //Handle db_account failed to fetch with reponse
     

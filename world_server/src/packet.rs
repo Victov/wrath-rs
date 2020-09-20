@@ -52,6 +52,10 @@ pub async fn send_packet(client: &Client, header: ServerPacketHeader, payload: &
     use std::io::Write;
 
     let payload_length = payload.get_ref().len();
+    if payload_length > 0x7FFF
+    {
+        return Err(anyhow!("Sending large packet header, but we don't have support for that yet!"));
+    }
 
     let mut header_buffer = Vec::<u8>::new();
     let mut header_writer = std::io::Cursor::new(&mut header_buffer);
@@ -81,11 +85,12 @@ pub async fn send_packet(client: &Client, header: ServerPacketHeader, payload: &
     Ok(())
 }
 
-pub async fn read_header(bytes: &mut Vec<u8>, client: &Client) -> Result<ClientPacketHeader>
+pub async fn read_header(bytes: &[u8], start_index: usize, client: &Client) -> Result<ClientPacketHeader>
 {
     use podio::{ReadPodExt};
+    use std::io::{Seek, SeekFrom};
 
-    let mut header = bytes.iter().take(6).map(|a| *a).collect::<Vec<u8>>();
+    let mut header = bytes.iter().skip(start_index).take(6).map(|a| *a).collect::<Vec<u8>>();
 
     if client.crypto.read().await.is_initialized()
     {
@@ -93,13 +98,20 @@ pub async fn read_header(bytes: &mut Vec<u8>, client: &Client) -> Result<ClientP
     }
 
     let mut reader = std::io::Cursor::new(header);
+    let firstbyte = reader.read_u8()?;
+    let is_large_packet = firstbyte & 0x80 != 0;
+    if is_large_packet
+    {
+        return Err(anyhow!("Received a large packet, but we don't have support for that yet!"));
+    }
+    reader.seek(SeekFrom::Start(0))?;
     let packet_len = reader.read_u16::<BigEndian>()?;
     let opcode_u32 = reader.read_u32::<LittleEndian>()?;
 
     let header = ClientPacketHeader
     {
         opcode: opcode_u32,
-        length: packet_len
+        length: packet_len - 4
     };
 
     Ok(header)

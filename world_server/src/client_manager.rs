@@ -87,7 +87,7 @@ impl ClientManager
 
 async fn handle_incoming_packets(client_lock: Arc<RwLock<Client>>, socket: Arc<RwLock<TcpStream>>, packet_channel: Sender<PacketToHandle>) -> Result<()>
 {
-    let mut buf = vec![0u8; 1024];
+    let mut buf = vec![0u8; 4096];
     let mut read_length;
     loop
     {
@@ -101,10 +101,16 @@ async fn handle_incoming_packets(client_lock: Arc<RwLock<Client>>, socket: Arc<R
                 break;
             }
         }
-        let client = client_lock.read().await;
-        let header = super::packet::read_header(&mut buf, &client).await?;
-        let shrunk_buf = buf.iter().skip(6).take(read_length - 6 as usize).map(|a| *a).collect();
-        packet_channel.send(PacketToHandle { client_id: client.id, header, payload: shrunk_buf })?;
+        let mut ptr = 0;
+        while ptr < read_length
+        {
+            let client = client_lock.read().await;
+            let header = super::packet::read_header(&buf, ptr, &client).await?;
+            let payload_length = header.length as usize;
+            let shrunk_buf = buf.iter().skip(ptr + 6).take(payload_length).map(|a| *a).collect();
+            packet_channel.send(PacketToHandle { client_id: client.id, header, payload: shrunk_buf })?;
+            ptr += 6 + payload_length;
+        }
     }
     Ok(())
 }
