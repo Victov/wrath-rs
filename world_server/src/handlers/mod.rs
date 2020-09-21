@@ -18,3 +18,6 @@ pub use character_handler::handle_cmsg_char_enum;
 pub use character_handler::handle_cmsg_char_create;
 pub use character_handler::handle_cmsg_player_login;
 pub use character_handler::send_verify_world;
+
+mod instance_handler;
+pub use instance_handler::send_dungeon_difficulty;

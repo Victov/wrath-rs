@@ -16,7 +16,6 @@ pub enum ClientState
 {
     PreLogin,
     CharacterSelection,
-    InWorld,
 }
 
 pub struct Client
@@ -79,6 +78,7 @@ impl Client
         let character = lock.as_ref().unwrap();
 
         super::handlers::send_verify_world(&character).await?;
+        super::handlers::send_dungeon_difficulty(&character).await?;
         Ok(())
     }
 }

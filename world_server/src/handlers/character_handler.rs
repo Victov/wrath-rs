@@ -189,23 +189,8 @@ pub async fn send_verify_world(character: &Character) -> Result<()>
     writer.write_f32::<LittleEndian>(character.z)?;
     writer.write_f32::<LittleEndian>(character.orientation)?;
 
-    let client_lock = character.client.upgrade().ok_or_else(|| {
-        anyhow!("failed to get associated client from character")
-    })?; 
-    let client = client_lock.read().await;
-
-    send_packet(&client, header, &writer).await?;
+    send_packet_to_character(&character, header, &writer).await?;
 
     Ok(())
 }
-
-
-
-
-
-
-
-
-
-
 

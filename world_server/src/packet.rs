@@ -47,6 +47,16 @@ pub fn create_packet(opcode: Opcodes, allocate_size:usize) -> (ServerPacketHeade
     (header, writer)
 }
 
+pub async fn send_packet_to_character(character: &super::character::Character, header: ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()>
+{
+    let client_lock = character.client.upgrade().ok_or_else(|| {
+        anyhow!("failed to get associated client from character")
+    })?; 
+    let client = client_lock.read().await;
+
+    send_packet(&client, header, &payload).await
+}
+
 pub async fn send_packet(client: &Client, header: ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()>
 {
     use std::io::Write;
@@ -76,6 +86,11 @@ pub async fn send_packet(client: &Client, header: ServerPacketHeader, payload: &
         let mut write_socket = client.write_socket.lock().await;
         let written_len = write_socket.write(&final_writer.into_inner()).await?;
         write_socket.flush().await?;
+
+        if std::env::var("PRINT_OUTGOING_PACKETS")?.parse::<usize>()? == 1usize
+        {
+            println!("Outgoing: {:?}", header.get_cmd());
+        }
         if written_len != payload_length + 4
         {
             return Err(anyhow!("Wrong written length while sending packet"));

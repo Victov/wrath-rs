@@ -40,7 +40,10 @@ impl PacketHandler
 
     async fn handle_packet(&self, client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
     {
-        println!("Incoming: {:?}", packet.header.get_cmd());
+        if std::env::var("PRINT_INCOMING_PACKETS")?.parse::<usize>()? == 1usize
+        {
+            println!("Incoming: {:?}", packet.header.get_cmd());
+        }
         match packet.header.get_cmd()?
         {
             Opcodes::CMSG_AUTH_SESSION => handle_cmsg_auth_session(client_manager, packet).await,
