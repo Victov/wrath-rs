@@ -12,6 +12,7 @@ mod packet_handler;
 mod handlers;
 mod wowcrypto;
 mod guid;
+mod character;
 
 use packet_handler::{PacketToHandle, PacketHandler};
 use client_manager::ClientManager;

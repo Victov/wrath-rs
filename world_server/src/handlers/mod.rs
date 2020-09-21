@@ -1,6 +1,6 @@
 pub use super::packet_handler::PacketToHandle;
 pub use super::opcodes::Opcodes;
-pub use super::guid::{HighGuid, Guid, WriteGuid};
+pub use super::guid::{HighGuid, Guid, WriteGuid, ReadGuid};
 pub use super::client::Client;
 pub use super::client_manager::ClientManager;
 
@@ -16,3 +16,5 @@ pub use account_data_handler::handle_csmg_update_account_data;
 mod character_handler;
 pub use character_handler::handle_cmsg_char_enum;
 pub use character_handler::handle_cmsg_char_create;
+pub use character_handler::handle_cmsg_player_login;
+pub use character_handler::send_verify_world;

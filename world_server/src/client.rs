@@ -4,15 +4,19 @@ use async_std::sync::{RwLock, Mutex};
 use num_bigint::{RandBigInt};
 use rand::RngCore;
 use std::sync::{Arc};
+use super::guid::*;
 use super::packet::*;
 use super::opcodes::Opcodes;
 use super::wowcrypto::*;
+use super::character::*;
+use super::client_manager::ClientManager;
 
 #[derive(PartialEq)]
 pub enum ClientState
 {
     PreLogin,
     CharacterSelection,
+    InWorld,
 }
 
 pub struct Client
@@ -23,6 +27,7 @@ pub struct Client
     pub id: u64,
     pub crypto: RwLock<ClientCrypto>,
     pub account_id: Option<u32>,
+    pub active_character: Arc<RwLock<Option<Character>>>,
 }
 
 impl Client
@@ -37,6 +42,7 @@ impl Client
             id: rand::thread_rng().next_u64(),
             crypto: RwLock::new(ClientCrypto::new()),
             account_id : None,
+            active_character: Arc::new(RwLock::new(None)),
         }
     }
 
@@ -58,5 +64,21 @@ impl Client
     pub fn is_authenticated(&self) -> bool
     {
         self.account_id.is_some() && self.client_state != ClientState::PreLogin
+    }
+
+    pub async fn login_character(&self, client_manager: &ClientManager, character_guid: Guid) -> Result<()>
+    {
+        //Load character and insert into our safe locks asap
+        {
+            let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?.clone());
+            let character = Character::load_from_database(weakself, &client_manager.realm_db, character_guid).await?;
+            *self.active_character.write().await = Some(character);
+        }
+        //take the route that any other caller would take, through acquiring a lock
+        let lock = self.active_character.read().await;
+        let character = lock.as_ref().unwrap();
+
+        super::handlers::send_verify_world(&character).await?;
+        Ok(())
     }
 }

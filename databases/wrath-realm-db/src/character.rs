@@ -89,4 +89,13 @@ impl super::RealmDatabase
             .await?;
         Ok(())
     }
+
+    pub async fn get_character(&self, character_id:u32) -> Result<DBCharacter>
+    {
+        let res = sqlx::query_as!(DBCharacter, "SELECT * FROM characters WHERE id = ?", character_id)
+            .fetch_one(&self.connection_pool)
+            .await?;
+
+        Ok(res)
+    }
 }

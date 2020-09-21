@@ -26,6 +26,11 @@ impl Guid
     {
         Self((low as u64) | ((mid as u64) << 24) | ((high as u64) << 48))
     }
+
+    pub fn get_low_part(&self) -> u32
+    {
+        self.0 as u32
+    }
 }
 
 pub trait WriteGuid
@@ -40,5 +45,20 @@ impl<W: std::io::Write> WriteGuid for W
         use podio::WritePodExt;
         self.write_u64::<T>(guid.0)?;
         Ok(())
+    }
+}
+
+pub trait ReadGuid
+{
+    fn read_guid<T: podio::Endianness>(&mut self) -> anyhow::Result<Guid>;
+}
+
+impl<R: std::io::Read> ReadGuid for R
+{
+    fn read_guid<T: podio::Endianness>(&mut self) -> anyhow::Result<Guid>
+    {
+        use podio::ReadPodExt;
+        let val = self.read_u64::<T>()?;
+        Ok(Guid(val))
     }
 }

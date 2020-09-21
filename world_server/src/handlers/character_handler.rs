@@ -6,6 +6,7 @@ use super::super::packet::*;
 use super::*;
 use std::io::Write;
 use wrath_realm_db::character::DBCharacterCreateParameters;
+use super::super::character::*;
 
 pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
 {
@@ -158,3 +159,53 @@ async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -
     writer.write_u8(resp as u8)?;
     send_packet(client, header, &writer).await
 }
+
+pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
+{
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    if !client_lock.read().await.is_authenticated()
+    {
+        return Err(anyhow!("Trying to login character on client that isn't authenticated"));
+    }
+
+    let guid =
+    {
+        let mut reader = std::io::Cursor::new(&packet.payload);
+        reader.read_guid::<LittleEndian>()?
+    };
+
+    let client = client_lock.read().await;
+    client.login_character(client_manager, guid).await?;
+
+    Ok(())
+}
+
+pub async fn send_verify_world(character: &Character) -> Result<()>
+{
+    let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_VERIFY_WORLD, 20);
+    writer.write_u32::<LittleEndian>(character.map)?;
+    writer.write_f32::<LittleEndian>(character.x)?;
+    writer.write_f32::<LittleEndian>(character.y)?;
+    writer.write_f32::<LittleEndian>(character.z)?;
+    writer.write_f32::<LittleEndian>(character.orientation)?;
+
+    let client_lock = character.client.upgrade().ok_or_else(|| {
+        anyhow!("failed to get associated client from character")
+    })?; 
+    let client = client_lock.read().await;
+
+    send_packet(&client, header, &writer).await?;
+
+    Ok(())
+}
+
+
+
+
+
+
+
+
+
+
+
