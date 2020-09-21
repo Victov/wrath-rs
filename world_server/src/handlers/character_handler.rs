@@ -30,8 +30,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
         let is_first_login = 0u8;
 
         writer.write_guid::<LittleEndian>(&guid)?;
-        writer.write(character.name.as_bytes())?;
-        writer.write_u8(0)?; //string terminator
+        writer.write(character.name.as_bytes())?; //Investigate: Don't need to manually write string terminator here?
         writer.write_u8(character.race)?;
         writer.write_u8(character.class)?;
         writer.write_u8(character.gender)?;
@@ -52,8 +51,8 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
         writer.write_u8(is_first_login)?;
         writer.write_u32::<LittleEndian>(0)?;//pet display id
         writer.write_u32::<LittleEndian>(0)?;//pet level
-        writer.write_u32::<LittleEndian>(0)?;//pet family 
-        for _ in 0 .. 23 //inventory slot count
+        writer.write_u32::<LittleEndian>(0)?;//pet family
+        for _ in 0 .. 23u8 //inventory slot count
         {
             writer.write_u32::<LittleEndian>(0)?; //equipped item display id
             writer.write_u8(0)?; //inventory type
@@ -61,10 +60,8 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
         }
     }
 
-    {
-        let client = client_lock.read().await;
-        send_packet(&client, header, &writer).await?;
-    }
+    let client = client_lock.read().await;
+    send_packet(&client, header, &writer).await?;
     Ok(())
 }
 
