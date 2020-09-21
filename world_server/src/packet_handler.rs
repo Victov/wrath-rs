@@ -49,6 +49,7 @@ impl PacketHandler
             Opcodes::CMSG_REALM_SPLIT => handle_cmsg_realm_split(client_manager, packet).await,
             Opcodes::CMSG_CHAR_CREATE => handle_cmsg_char_create(client_manager, packet).await,
             Opcodes::CMSG_PING => handle_cmsg_ping(client_manager, packet).await,
+            Opcodes::CMSG_UPDATE_ACCOUNT_DATA => handle_csmg_update_account_data(client_manager, packet).await,
             op => Err(anyhow::anyhow!("Unhandled opcode {:?}", op))
         }
     }

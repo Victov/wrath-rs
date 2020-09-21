@@ -31,12 +31,13 @@ INSERT INTO realms VALUES
 (NULL, 'testrealm', 0, 0, "127.0.0.1:8085", 0.0, 1, 0);
 
 CREATE TABLE `account_data` (
-  `account_id` int unsigned NOT NULL DEFAULT '0',
-  `data_type` int unsigned NOT NULL DEFAULT '0',
-  `time` bigint unsigned NOT NULL DEFAULT '0',
-  `data` longblob,
-  KEY `FK_ACCOUNT_DATA_ACCOUNT` (`account_id`),
-  CONSTRAINT `FK_ACCOUNT` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+	`account_id` int unsigned NOT NULL DEFAULT '0',
+	`data_type` int unsigned NOT NULL DEFAULT '0',
+	`time` bigint unsigned NOT NULL DEFAULT '0',
+	`decompressed_size` int unsigned NOT NULL default '0',
+	`data` longblob,
+	KEY `FK_ACCOUNT_DATA_ACCOUNT` (`account_id`),
+	CONSTRAINT `FK_ACCOUNT` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `realm_characters` (

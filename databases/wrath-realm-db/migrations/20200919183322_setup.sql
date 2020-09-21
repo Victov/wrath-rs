@@ -13,7 +13,7 @@ CREATE TABLE `characters` (
 	`player_flags` int(10) unsigned NOT NULL DEFAULT '0',
 	`at_login_flags` smallint(5) unsigned NOT NULL DEFAULT '0',
 	`zone` smallint(5) unsigned NOT NULL DEFAULT '0',
-	`level` tinyint(3) unsigned NOT NULL DEFAULT '0',
+	`level` tinyint(3) unsigned NOT NULL DEFAULT '1',
 	`map` smallint(5) unsigned NOT NULL DEFAULT '0',
 	`x` float NOT NULL DEFAULT '0',
 	`y` float NOT NULL DEFAULT '0',

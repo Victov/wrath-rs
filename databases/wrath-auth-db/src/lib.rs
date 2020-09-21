@@ -92,7 +92,17 @@ impl AuthDatabase
 
     pub async fn create_account_data(&self, account_id:u32, data_type:u8) -> Result<()>
     {
-        sqlx::query!("INSERT INTO account_data (account_id, data_type, time, data) VALUES (?,?, 0, NULL)", account_id, data_type)
+        sqlx::query!("INSERT INTO account_data (account_id, data_type, time, decompressed_size, data) VALUES (?,?, 0, 0, NULL)", account_id, data_type)
+            .execute(&self.connection_pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn update_account_data(&self, account_id:u32, new_time: u32, data_type:u8, new_length:u32, data:&[u8]) -> Result<()>
+    {
+        sqlx::query!("UPDATE account_data SET decompressed_size = ?, data = ?, time = ? WHERE account_id = ? AND data_type = ?", 
+                     new_length, data, new_time,
+                     account_id, data_type)
             .execute(&self.connection_pool)
             .await?;
         Ok(())

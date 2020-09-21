@@ -11,6 +11,7 @@ pub use login_handler::handle_cmsg_ping;
 
 mod account_data_handler;
 pub use account_data_handler::handle_csmg_ready_for_account_data_times;
+pub use account_data_handler::handle_csmg_update_account_data;
 
 mod character_handler;
 pub use character_handler::handle_cmsg_char_enum;

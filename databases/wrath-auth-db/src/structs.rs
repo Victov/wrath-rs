@@ -27,5 +27,6 @@ pub struct DBAccountData
     pub account_id: u32,
     pub data_type: u32,
     pub time: u64,
+    pub decompressed_size: u32,
     pub data: Option<Vec<u8>>,
 }
