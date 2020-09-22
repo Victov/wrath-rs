@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_std::sync::RwLock;
 use crate::guid::*;
 use crate::client::Client;
@@ -48,8 +48,11 @@ impl Character
         crate::handlers::send_verify_world(&self).await?;
         crate::handlers::send_dungeon_difficulty(&self).await?;
         crate::handlers::send_character_account_data_times(client_manager, &self).await?;
-        
-        
+        {
+            let client_lock = self.client.upgrade().ok_or_else(|| anyhow!("no client on character"))?;
+            let client = client_lock.read().await;
+            crate::handlers::send_voice_chat_status(&client, false).await?;
+        }
 
         Ok(())
     }
