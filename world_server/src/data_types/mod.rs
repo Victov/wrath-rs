@@ -1,3 +1,6 @@
+mod tutorial_flags;
+pub use tutorial_flags::TutorialFlags;
+
 pub struct WorldZoneLocation
 {
     pub x: f32,

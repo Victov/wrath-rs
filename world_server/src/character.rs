@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use async_std::sync::RwLock;
 use crate::guid::*;
+use crate::data_types::TutorialFlags;
 use crate::client::Client;
 use crate::ClientManager;
 use crate::data_types::WorldZoneLocation;
@@ -18,6 +19,7 @@ pub struct Character
     pub orientation: f32,
     pub map: u32,
     pub bind_location: WorldZoneLocation,
+    pub tutorial_flags: TutorialFlags,
 }
 
 impl Character
@@ -33,6 +35,8 @@ impl Character
             y: db_entry.bind_y,
             z: db_entry.bind_z,
         };
+
+        let tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
 
         let character_id = guid.get_low_part();
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
@@ -50,7 +54,8 @@ impl Character
             z: db_entry.z,
             orientation: 0f32,
             map: db_entry.map as u32,
-            bind_location
+            bind_location,
+            tutorial_flags,
         })
     }
 
@@ -59,12 +64,9 @@ impl Character
         crate::handlers::send_verify_world(&self).await?;
         crate::handlers::send_dungeon_difficulty(&self).await?;
         crate::handlers::send_character_account_data_times(client_manager, &self).await?;
-        {
-            let client_lock = self.client.upgrade().ok_or_else(|| anyhow!("no client on character"))?;
-            let client = client_lock.read().await;
-            crate::handlers::send_voice_chat_status(&client, false).await?;
-        }
+        crate::handlers::send_voice_chat_status(&self, false).await?;
         crate::handlers::send_bind_update(&self).await?;
+        crate::handlers::send_tutorial_flags(&self).await?;
 
         Ok(())
     }

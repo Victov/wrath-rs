@@ -24,6 +24,7 @@ CREATE TABLE `characters` (
 	`bind_y` float NOT NULL DEFAULT '0',
 	`bind_z` float NOT NULL DEFAULT '0',
 	`guild_id` int(10) unsigned NOT NULL DEFAULT '0',
+	`tutorial_data` binary(8) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
