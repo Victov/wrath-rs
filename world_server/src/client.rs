@@ -76,9 +76,8 @@ impl Client
         //take the route that any other caller would take, through acquiring a lock
         let lock = self.active_character.read().await;
         let character = lock.as_ref().unwrap();
+        character.perform_login(client_manager).await?;
 
-        super::handlers::send_verify_world(&character).await?;
-        super::handlers::send_dungeon_difficulty(&character).await?;
-        Ok(())
+       Ok(())
     }
 }

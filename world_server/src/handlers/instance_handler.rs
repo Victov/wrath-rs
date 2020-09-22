@@ -2,15 +2,15 @@
 //Then we know what we don't need and can delete them
 #![allow(unused_imports)]
 
-use super::PacketToHandle;
+use anyhow::{Result, anyhow};
+use crate::packet_handler::PacketToHandle;
+use crate::character::Character;
+use crate::packet::*;
+use crate::opcodes::Opcodes;
 use podio::{WritePodExt, ReadPodExt, LittleEndian};
 use std::sync::Arc;
-use anyhow::{Result, anyhow};
-use super::super::packet::*;
-use super::*;
 use std::io::Write;
 use wrath_realm_db::character::DBCharacterCreateParameters;
-use super::super::character::*;
 
 
 pub async fn send_dungeon_difficulty(character: &Character) -> Result<()>

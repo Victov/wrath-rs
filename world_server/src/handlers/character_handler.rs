@@ -1,12 +1,15 @@
-use super::PacketToHandle;
+use anyhow::{Result, anyhow};
+use crate::packet_handler::PacketToHandle;
+use crate::packet::*;
+use crate::character::*;
+use crate::opcodes::Opcodes;
+use crate::guid::{Guid, ReadGuid, WriteGuid, HighGuid};
+use crate::client_manager::ClientManager;
+use crate::client::Client;
 use podio::{WritePodExt, ReadPodExt, LittleEndian};
 use std::sync::Arc;
-use anyhow::{Result, anyhow};
-use super::super::packet::*;
-use super::*;
 use std::io::Write;
 use wrath_realm_db::character::DBCharacterCreateParameters;
-use super::super::character::*;
 
 pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
 {

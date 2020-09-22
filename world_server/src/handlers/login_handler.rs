@@ -1,11 +1,11 @@
-use super::PacketToHandle;
+use anyhow::{Result, anyhow};
+use crate::client::{Client, ClientState};
+use crate::packet::*;
+use crate::opcodes::Opcodes;
+use crate::packet_handler::PacketToHandle;
+use crate::client_manager::ClientManager;
 use podio::{WritePodExt, ReadPodExt, LittleEndian};
 use std::sync::Arc;
-use anyhow::{Result, anyhow};
-use super::super::ClientManager;
-use super::super::client::{Client, ClientState};
-use super::super::packet::*;
-use super::Opcodes;
 
 #[allow(dead_code)]
 #[derive(PartialEq)]

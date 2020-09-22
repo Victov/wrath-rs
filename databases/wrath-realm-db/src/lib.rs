@@ -1,6 +1,7 @@
 use anyhow::Result;
 
 pub mod character;
+pub mod character_account_data;
 
 pub struct RealmDatabase
 {
