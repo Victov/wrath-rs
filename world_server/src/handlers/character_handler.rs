@@ -197,3 +197,16 @@ pub async fn send_verify_world(character: &Character) -> Result<()>
     Ok(())
 }
 
+pub async fn send_bind_update(character: &Character) -> Result<()>
+{
+    let (header, mut writer) = create_packet(Opcodes::SMSG_BINDPOINTUPDATE, 20);
+    writer.write_f32::<LittleEndian>(character.bind_location.x)?;
+    writer.write_f32::<LittleEndian>(character.bind_location.y)?;
+    writer.write_f32::<LittleEndian>(character.bind_location.z)?;
+    writer.write_u32::<LittleEndian>(character.bind_location.map)?;
+    writer.write_u32::<LittleEndian>(character.bind_location.zone)?;
+
+    send_packet_to_character(&character, header, &writer).await?;
+
+    Ok(())
+}

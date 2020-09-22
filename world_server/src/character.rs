@@ -3,6 +3,7 @@ use async_std::sync::RwLock;
 use crate::guid::*;
 use crate::client::Client;
 use crate::ClientManager;
+use crate::data_types::WorldZoneLocation;
 use std::sync::{Weak};
 use wrath_realm_db::{RealmDatabase};
 
@@ -11,11 +12,12 @@ pub struct Character
     pub guid: Guid,
     pub client: Weak<RwLock<Client>>,
 
-    pub x:f32,
-    pub y:f32,
-    pub z:f32,
-    pub orientation:f32,
-    pub map:u32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub orientation: f32,
+    pub map: u32,
+    pub bind_location: WorldZoneLocation,
 }
 
 impl Character
@@ -23,6 +25,14 @@ impl Character
     pub async fn load_from_database(client: Weak<RwLock<Client>>, realm_database: &RealmDatabase, guid: Guid) -> Result<Self>
     {
         let db_entry = realm_database.get_character(guid.get_low_part()).await?;
+        let bind_location = WorldZoneLocation
+        {
+            zone: db_entry.bind_zone as u32,
+            map: db_entry.bind_map as u32,
+            x: db_entry.bind_x,
+            y: db_entry.bind_y,
+            z: db_entry.bind_z,
+        };
 
         let character_id = guid.get_low_part();
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
@@ -40,6 +50,7 @@ impl Character
             z: db_entry.z,
             orientation: 0f32,
             map: db_entry.map as u32,
+            bind_location
         })
     }
 
@@ -53,6 +64,7 @@ impl Character
             let client = client_lock.read().await;
             crate::handlers::send_voice_chat_status(&client, false).await?;
         }
+        crate::handlers::send_bind_update(&self).await?;
 
         Ok(())
     }

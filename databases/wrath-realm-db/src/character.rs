@@ -21,6 +21,11 @@ pub struct DBCharacter
     pub x: f32,
     pub y: f32,
     pub z: f32,
+    pub bind_zone: u16,
+    pub bind_map: u16,
+    pub bind_x: f32,
+    pub bind_y: f32,
+    pub bind_z: f32,
     pub guild_id: u32,
 }
 
