@@ -4,6 +4,7 @@ use crate::packet::*;
 use crate::opcodes::Opcodes;
 use crate::packet_handler::PacketToHandle;
 use crate::client_manager::ClientManager;
+use crate::character::Character;
 use podio::{WritePodExt, ReadPodExt, LittleEndian};
 use std::sync::Arc;
 
@@ -252,3 +253,15 @@ pub async fn handle_cmsg_ping(client_manager: &Arc<ClientManager>, packet: &Pack
     Ok(())
 }
 
+pub async fn send_login_set_time_speed(character: &Character) -> Result<()>
+{
+    use crate::data_types::{WritePackedTime};
+
+    let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_SETTIMESPEED, 20);
+    writer.write_packed_time::<LittleEndian>(&chrono::Local::now().into())?;
+    writer.write_f32::<LittleEndian>(0.01667)?; //Seems to be hardcoded value
+    writer.write_u32::<LittleEndian>(0)?;
+    send_packet_to_character(&character, header, &writer).await?;
+
+    Ok(())
+}

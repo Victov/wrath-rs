@@ -67,6 +67,7 @@ impl Character
         crate::handlers::send_voice_chat_status(&self, false).await?;
         crate::handlers::send_bind_update(&self).await?;
         crate::handlers::send_tutorial_flags(&self).await?;
+        crate::handlers::send_login_set_time_speed(&self).await?;
 
         Ok(())
     }
