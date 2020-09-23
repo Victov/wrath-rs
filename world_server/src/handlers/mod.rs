@@ -29,3 +29,6 @@ pub use tutorial_handler::send_tutorial_flags;
 
 mod faction_handler;
 pub use faction_handler::send_faction_list;
+
+mod spell_handler;
+pub use spell_handler::send_initial_spells;
