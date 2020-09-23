@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_std::sync::RwLock;
+use crate::constants::social::RelationType;
 use crate::guid::*;
 use crate::data_types::{WorldZoneLocation, ActionBar, TutorialFlags};
 use crate::client::Client;
@@ -73,6 +74,11 @@ impl Character
         crate::handlers::send_faction_list(&self).await?;
         crate::handlers::send_initial_spells(&self).await?;
         crate::handlers::send_talents_info(&self).await?;
+        crate::handlers::send_aura_update_all(&self).await?;
+        crate::handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
+        crate::handlers::send_initial_world_states(&self).await?;
+        crate::handlers::send_world_state_update(&self, 0xF3D, 0).await?;
+        crate::handlers::send_world_state_update(&self, 0xC77, 0).await?;
 
         Ok(())
     }
