@@ -72,6 +72,7 @@ impl Character
         crate::handlers::send_action_buttons(&self).await?;
         crate::handlers::send_faction_list(&self).await?;
         crate::handlers::send_initial_spells(&self).await?;
+        crate::handlers::send_talents_info(&self).await?;
 
         Ok(())
     }

@@ -32,3 +32,6 @@ pub use faction_handler::send_faction_list;
 
 mod spell_handler;
 pub use spell_handler::send_initial_spells;
+
+mod talent_handler;
+pub use talent_handler::send_talents_info;
