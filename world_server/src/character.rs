@@ -70,6 +70,7 @@ impl Character
         crate::handlers::send_tutorial_flags(&self).await?;
         crate::handlers::send_login_set_time_speed(&self).await?;
         crate::handlers::send_action_buttons(&self).await?;
+        crate::handlers::send_faction_list(&self).await?;
 
         Ok(())
     }
