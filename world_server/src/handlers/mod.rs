@@ -16,6 +16,7 @@ pub use character_handler::handle_cmsg_char_create;
 pub use character_handler::handle_cmsg_player_login;
 pub use character_handler::send_verify_world;
 pub use character_handler::send_bind_update;
+pub use character_handler::send_action_buttons;
 
 mod instance_handler;
 pub use instance_handler::send_dungeon_difficulty;

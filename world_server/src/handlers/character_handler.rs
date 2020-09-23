@@ -210,3 +210,13 @@ pub async fn send_bind_update(character: &Character) -> Result<()>
 
     Ok(())
 }
+
+pub async fn send_action_buttons(character: &Character) -> Result<()>
+{
+    let (header, mut writer) = create_packet(Opcodes::SMSG_ACTION_BUTTONS, character.action_bar.data.len());
+    writer.write_u8(0)?; //Talent specialization
+    writer.write(&character.action_bar.data)?;
+
+    send_packet_to_character(&character, header, &writer).await?;
+    Ok(())
+}

@@ -1,10 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_std::sync::RwLock;
 use crate::guid::*;
-use crate::data_types::TutorialFlags;
+use crate::data_types::{WorldZoneLocation, ActionBar, TutorialFlags};
 use crate::client::Client;
 use crate::ClientManager;
-use crate::data_types::WorldZoneLocation;
 use std::sync::{Weak};
 use wrath_realm_db::{RealmDatabase};
 
@@ -20,6 +19,7 @@ pub struct Character
     pub map: u32,
     pub bind_location: WorldZoneLocation,
     pub tutorial_flags: TutorialFlags,
+    pub action_bar: ActionBar,
 }
 
 impl Character
@@ -56,6 +56,7 @@ impl Character
             map: db_entry.map as u32,
             bind_location,
             tutorial_flags,
+            action_bar: ActionBar::new(), //TODO: store/read from database
         })
     }
 
@@ -68,6 +69,7 @@ impl Character
         crate::handlers::send_bind_update(&self).await?;
         crate::handlers::send_tutorial_flags(&self).await?;
         crate::handlers::send_login_set_time_speed(&self).await?;
+        crate::handlers::send_action_buttons(&self).await?;
 
         Ok(())
     }
