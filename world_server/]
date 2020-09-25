@@ -47,8 +47,8 @@ async fn main() -> Result<()> {
         })
     });
     
-    let desired_timestep_sec: f32 = 1.0 / 10.0;
-    let mut previous_loop_total: f32 = desired_timestep_sec;
+    let mut previous_loop_total: f32 = 0.0;
+    let desired_timestep_sec: f32 = 1.0 / 30f32;
     loop
     {
         let before = std::time::Instant::now();

@@ -1,10 +1,11 @@
 use std::sync::mpsc::{Receiver};
 use anyhow::Result;
 use super::client_manager::ClientManager;
-use super::packet::{ClientPacketHeader};
 use std::sync::Arc;
-use super::handlers::*;
-use super::opcodes::Opcodes;
+use crate::packet::{ClientPacketHeader};
+use crate::handlers::*;
+use crate::opcodes::Opcodes;
+use crate::world::World;
 
 pub struct PacketToHandle
 {
@@ -16,15 +17,17 @@ pub struct PacketToHandle
 pub struct PacketHandler
 {
     receive_channel: Receiver<PacketToHandle>,
+    world: Arc<World>,
 }
 
 impl PacketHandler
 {
-    pub fn new(packet_receiver_channel: Receiver<PacketToHandle>) -> Self
+    pub fn new(packet_receiver_channel: Receiver<PacketToHandle>, world: Arc<World>) -> Self
     {
         Self
         {
             receive_channel: packet_receiver_channel,
+            world,
         }
     }
 

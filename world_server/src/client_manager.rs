@@ -7,6 +7,7 @@ use async_std::sync::{RwLock, Mutex};
 use wrath_auth_db::AuthDatabase;
 use wrath_realm_db::RealmDatabase;
 use super::client::*;
+use crate::world::World;
 use std::sync::Arc;
 use std::sync::mpsc::{Sender};
 use super::packet_handler::{PacketToHandle};
@@ -19,11 +20,12 @@ pub struct ClientManager
     pub realm_db : Arc<RealmDatabase>,
     pub realm_seed : u32,
     clients: RwLock<HashMap<u64, Arc<RwLock<Client>>>>,
+    pub world: Arc<World>,
 }
 
 impl ClientManager
 {
-    pub fn new(auth_db : Arc<AuthDatabase>, realm_db : Arc<RealmDatabase>) -> Self
+    pub fn new(auth_db : Arc<AuthDatabase>, realm_db : Arc<RealmDatabase>, world: Arc<World>) -> Self
     {
         Self
         {
@@ -31,6 +33,7 @@ impl ClientManager
             realm_db,
             realm_seed : rand::thread_rng().next_u32(),
             clients: RwLock::new(HashMap::new()),
+            world,
         }
     }
 
