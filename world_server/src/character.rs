@@ -77,8 +77,9 @@ impl Character
         crate::handlers::send_aura_update_all(&self).await?;
         crate::handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
         crate::handlers::send_initial_world_states(&self).await?;
-        crate::handlers::send_world_state_update(&self, 0xF3D, 0).await?;
-        crate::handlers::send_world_state_update(&self, 0xC77, 0).await?;
+        //crate::handlers::send_world_state_update(&self, 0xF3D, 0).await?;
+        //crate::handlers::send_world_state_update(&self, 0xC77, 0).await?;
+        crate::handlers::send_temp_dummy_hardcoded_update(&self).await?;
 
         Ok(())
     }
