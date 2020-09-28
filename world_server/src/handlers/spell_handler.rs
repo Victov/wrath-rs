@@ -11,6 +11,7 @@ pub async fn send_initial_spells(character: &Character) -> Result<()>
     writer.write_u8(0)?;
     
     let num_spells: u16 = 2;
+    writer.write_u16::<LittleEndian>(num_spells)?;
     for i in 0 .. num_spells
     {
         writer.write_u32::<LittleEndian>(70282 + i as u32)?; //fireball and hellfire, randomly taken for testing
