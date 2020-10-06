@@ -16,6 +16,7 @@ mod character;
 mod data_types;
 mod constants;
 mod world;
+mod updates;
 
 use packet_handler::{PacketToHandle, PacketHandler};
 use client_manager::ClientManager;

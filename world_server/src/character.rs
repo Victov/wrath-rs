@@ -1,10 +1,11 @@
 use anyhow::Result;
-use async_std::sync::RwLock;
+use async_std::sync::{Mutex, RwLock};
 use crate::constants::social::RelationType;
 use crate::guid::*;
 use crate::data_types::{WorldZoneLocation, ActionBar, TutorialFlags};
 use crate::client::Client;
 use crate::ClientManager;
+use crate::updates::{constants::{ObjectUpdateFlags, ObjectType}, Updateable, UpdateData};
 use std::sync::{Weak};
 use wrath_realm_db::{RealmDatabase};
 
@@ -21,6 +22,30 @@ pub struct Character
     pub bind_location: WorldZoneLocation,
     pub tutorial_flags: TutorialFlags,
     pub action_bar: ActionBar,
+    pub update_data: Mutex<UpdateData>,
+}
+
+impl Updateable for Character
+{
+    fn get_guid(&self) -> &Guid
+    {
+        &self.guid
+    }
+
+    fn get_update_flags(&self) -> u32
+    {
+        ObjectUpdateFlags::Living as u32 | ObjectUpdateFlags::Position as u32 
+    }
+
+    fn get_object_type(&self) -> u32
+    {
+        ObjectType::Player as u32
+    }
+
+    fn get_object_type_mask(&self) -> u32
+    {
+        1 << ObjectType::Player as u32
+    }
 }
 
 impl Character
@@ -58,6 +83,7 @@ impl Character
             bind_location,
             tutorial_flags,
             action_bar: ActionBar::new(), //TODO: store/read from database
+            update_data: Mutex::new(UpdateData::new()),
         })
     }
 
@@ -77,9 +103,8 @@ impl Character
         crate::handlers::send_aura_update_all(&self).await?;
         crate::handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
         crate::handlers::send_initial_world_states(&self).await?;
-        //crate::handlers::send_world_state_update(&self, 0xF3D, 0).await?;
-        //crate::handlers::send_world_state_update(&self, 0xC77, 0).await?;
-        crate::handlers::send_temp_dummy_hardcoded_update(&self).await?;
+        
+        client_manager.world.map_manager.add_character_to_world(self).await?;
 
         Ok(())
     }

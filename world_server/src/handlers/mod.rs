@@ -40,7 +40,9 @@ pub use talent_handler::send_talents_info;
 mod world_handler;
 pub use world_handler::send_initial_world_states;
 pub use world_handler::send_world_state_update;
-pub use world_handler::send_temp_dummy_hardcoded_update;
 
 mod social_handler;
 pub use social_handler::send_contact_list;
+
+mod update_handler;
+pub use update_handler::send_update;

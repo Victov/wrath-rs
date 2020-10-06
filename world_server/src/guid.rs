@@ -1,5 +1,5 @@
 
-
+#[derive(PartialEq)]
 pub struct Guid(u64);
 
 //from: https://github.com/azerothcore/azerothcore-wotlk/blob/master/src/server/game/Entities/Object/ObjectDefines.h
@@ -31,11 +31,17 @@ impl Guid
     {
         self.0 as u32
     }
+
+    pub fn get_high_part(&self) -> u32
+    {
+        (self.0 >> 32) as u32
+    }
 }
 
 pub trait WriteGuid
 {
     fn write_guid<T: podio::Endianness>(&mut self, guid: &Guid) -> anyhow::Result<()>;
+    fn write_packed_guid(&mut self, guid: &Guid) -> anyhow::Result<()>;
 }
 
 impl<W: std::io::Write> WriteGuid for W
@@ -44,6 +50,30 @@ impl<W: std::io::Write> WriteGuid for W
     {
         use podio::WritePodExt;
         self.write_u64::<T>(guid.0)?;
+        Ok(())
+    }
+
+    fn write_packed_guid(&mut self, guid: &Guid) -> anyhow::Result<()>
+    {
+        let mut inner = guid.0;
+        let mut mask = 0u8;
+        let mut bytes = Vec::<u8>::new();
+
+        for i in 0 .. 8u8
+        {
+            if inner & 0xFF > 0
+            {
+                bytes.push((inner & 0xFF) as u8);                      
+                mask |= 1 << i;
+            }
+            inner >>= 8;
+        }
+
+        use podio::WritePodExt;
+
+        self.write_u8(mask)?;
+        self.write(&bytes)?;
+
         Ok(())
     }
 }
