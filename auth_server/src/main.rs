@@ -32,9 +32,7 @@ async fn main() -> Result<()> {
     let loop_accept_duration = std::time::Duration::from_secs_f32(1.0f32);
     while running.load(Ordering::Relaxed) {
         let accept_future = tcp_listener.accept();
-        if let Ok(Ok((stream, _))) =
-            async_std::future::timeout(loop_accept_duration, accept_future).await
-        {
+        if let Ok(Ok((stream, _))) = async_std::future::timeout(loop_accept_duration, accept_future).await {
             task::spawn(handle_incoming_connection(stream, auth_db.clone()));
         }
     }
@@ -42,10 +40,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn handle_incoming_connection(
-    mut stream: TcpStream,
-    auth_database: std::sync::Arc<AuthDatabase>,
-) -> Result<()> {
+async fn handle_incoming_connection(mut stream: TcpStream, auth_database: std::sync::Arc<AuthDatabase>) -> Result<()> {
     println!("incoming on address {}", stream.local_addr()?.to_string());
     let mut logindata = auth::LoginNumbers::default();
 
@@ -54,19 +49,13 @@ async fn handle_incoming_connection(
         let read_len = stream.read(&mut buf).await?;
         if read_len > 0 {
             if buf[0] == 0 {
-                logindata = auth::handle_logon_challenge(&mut stream, &buf, &auth_database)
-                    .await
-                    .unwrap();
+                logindata = auth::handle_logon_challenge(&mut stream, &buf, &auth_database).await.unwrap();
             } else if buf[0] == 1 {
-                auth::handle_logon_proof(&mut stream, &buf, &logindata, &auth_database)
-                    .await
-                    .unwrap();
+                auth::handle_logon_proof(&mut stream, &buf, &logindata, &auth_database).await.unwrap();
             } else if buf[0] == 2 {
                 println!("reconnect challenge");
             } else if buf[0] == 16 {
-                realms::handle_realmlist_request(&mut stream, &logindata, &auth_database)
-                    .await
-                    .unwrap();
+                realms::handle_realmlist_request(&mut stream, &logindata, &auth_database).await.unwrap();
             } else {
                 println!("unhandled {}", buf[0]);
                 return Err(anyhow!("Unhandled command header"));

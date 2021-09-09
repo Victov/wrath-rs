@@ -1,6 +1,5 @@
 #[allow(dead_code)]
-pub enum ObjectUpdateType
-{
+pub enum ObjectUpdateType {
     Values = 0,
     Movement = 1,
     CreateObject = 2,
@@ -10,10 +9,9 @@ pub enum ObjectUpdateType
 }
 
 #[allow(dead_code)]
-pub enum ObjectUpdateFlags
-{
+pub enum ObjectUpdateFlags {
     FlagNone = 0,
-    FlagSelf =  0x0001,
+    FlagSelf = 0x0001,
     Transport = 0x0002,
     HasTarget = 0x0004,
     Unknown = 0x0008,
@@ -26,8 +24,7 @@ pub enum ObjectUpdateFlags
 }
 
 #[allow(dead_code)]
-pub enum ObjectType
-{
+pub enum ObjectType {
     Object,
     Item,
     Container,
@@ -37,4 +34,3 @@ pub enum ObjectType
     DynamicObject,
     Corpse,
 }
-

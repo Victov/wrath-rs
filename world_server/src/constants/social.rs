@@ -1,7 +1,6 @@
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
-pub enum RelationType
-{
+pub enum RelationType {
     None = 0x00,
     Friend = 0x01,
     Ignore = 0x02,

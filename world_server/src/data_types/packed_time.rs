@@ -2,40 +2,32 @@ use chrono::prelude::*;
 
 pub struct PackedTime(u32);
 
-pub trait WritePackedTime
-{
+pub trait WritePackedTime {
     fn write_packed_time<T: podio::Endianness>(&mut self, packed_time: &PackedTime) -> anyhow::Result<()>;
 }
 
-impl<W: std::io::Write> WritePackedTime for W
-{
-    fn write_packed_time<T: podio::Endianness>(&mut self, packed_time: &PackedTime) -> anyhow::Result<()>
-    {
+impl<W: std::io::Write> WritePackedTime for W {
+    fn write_packed_time<T: podio::Endianness>(&mut self, packed_time: &PackedTime) -> anyhow::Result<()> {
         use podio::WritePodExt;
         self.write_u32::<T>(packed_time.0)?;
         Ok(())
     }
 }
 
-pub trait ReadPackedTime
-{
+pub trait ReadPackedTime {
     fn read_packed_time<T: podio::Endianness>(&mut self) -> anyhow::Result<PackedTime>;
 }
 
-impl<R: std::io::Read> ReadPackedTime for R
-{
-    fn read_packed_time<T: podio::Endianness>(&mut self) -> anyhow::Result<PackedTime>
-    {
+impl<R: std::io::Read> ReadPackedTime for R {
+    fn read_packed_time<T: podio::Endianness>(&mut self) -> anyhow::Result<PackedTime> {
         use podio::ReadPodExt;
         let val = self.read_u32::<T>()?;
         Ok(PackedTime(val))
     }
 }
 
-impl<T: TimeZone> From<DateTime<T>> for PackedTime
-{
-    fn from(datetime: DateTime<T>) -> Self
-    {
+impl<T: TimeZone> From<DateTime<T>> for PackedTime {
+    fn from(datetime: DateTime<T>) -> Self {
         let day_of_week = datetime.weekday() as u32; //TODO: from sunday? from monday? might need adjustment
 
         let mut game_time = datetime.minute() as u32 & 0x3F;

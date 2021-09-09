@@ -48,46 +48,32 @@ async fn main() -> Result<()> {
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver, world.clone());
 
-    let client_manager = std::sync::Arc::new(ClientManager::new(
-        auth_database_ref.clone(),
-        realm_database_ref.clone(),
-        world.clone(),
-    ));
+    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), realm_database_ref.clone(), world.clone()));
     let client_manager_for_acceptloop = client_manager.clone();
 
     task::spawn(async move {
         client_manager_for_acceptloop
             .accept_realm_connections(sender)
             .await
-            .unwrap_or_else(|e| {
-                println!("Error in realm_socket::accept_realm_connections: {:?}", e)
-            })
+            .unwrap_or_else(|e| println!("Error in realm_socket::accept_realm_connections: {:?}", e))
     });
 
     let desired_timestep_sec: f32 = 1.0 / 10.0;
     let mut previous_loop_total: f32 = desired_timestep_sec;
     while running.load(Ordering::Relaxed) {
         let before = std::time::Instant::now();
-        realm_packet_handler
-            .handle_queue(&client_manager)
-            .await
-            .unwrap_or_else(|e| {
-                println!("Error while handling packet: {}", e);
-            });
+        realm_packet_handler.handle_queue(&client_manager).await.unwrap_or_else(|e| {
+            println!("Error while handling packet: {}", e);
+        });
         world.tick(previous_loop_total).await?;
         let after = std::time::Instant::now();
         let update_duration = after.duration_since(before);
         if update_duration.as_secs_f32() < desired_timestep_sec {
-            task::sleep(std::time::Duration::from_secs_f32(
-                desired_timestep_sec - update_duration.as_secs_f32(),
-            ))
-            .await;
+            task::sleep(std::time::Duration::from_secs_f32(desired_timestep_sec - update_duration.as_secs_f32())).await;
         } else {
             println!("Warning: Too long tick to keep up with desired timestep!");
         }
-        previous_loop_total = std::time::Instant::now()
-            .duration_since(before)
-            .as_secs_f32();
+        previous_loop_total = std::time::Instant::now().duration_since(before).as_secs_f32();
     }
     Ok(())
 }

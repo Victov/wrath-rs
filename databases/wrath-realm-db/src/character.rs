@@ -1,7 +1,6 @@
 use anyhow::Result;
 
-pub struct DBCharacter
-{
+pub struct DBCharacter {
     pub id: u32,
     pub account_id: u32,
     pub name: String,
@@ -30,8 +29,7 @@ pub struct DBCharacter
     pub tutorial_data: Vec<u8>,
 }
 
-pub struct DBCharacterCreateParameters
-{
+pub struct DBCharacterCreateParameters {
     pub account_id: u32,
     pub name: String,
     pub race: u8,
@@ -45,10 +43,8 @@ pub struct DBCharacterCreateParameters
     pub outfit: u8,
 }
 
-impl super::RealmDatabase
-{
-    pub async fn get_characters_for_account(&self, account_id: u32) -> Result<Vec<DBCharacter>>
-    {
+impl super::RealmDatabase {
+    pub async fn get_characters_for_account(&self, account_id: u32) -> Result<Vec<DBCharacter>> {
         let res = sqlx::query_as!(DBCharacter, "SELECT * FROM characters WHERE account_id = ?", account_id)
             .fetch_all(&self.connection_pool)
             .await?;
@@ -56,8 +52,7 @@ impl super::RealmDatabase
         Ok(res)
     }
 
-    pub async fn get_num_characters_for_account(&self, account_id: u32) -> Result<u8>
-    {
+    pub async fn get_num_characters_for_account(&self, account_id: u32) -> Result<u8> {
         let res = sqlx::query!("SELECT count(*) as cnt FROM characters WHERE account_id = ?", account_id)
             .fetch_one(&self.connection_pool)
             .await?;
@@ -65,21 +60,18 @@ impl super::RealmDatabase
         Ok(res.cnt as u8)
     }
 
-    pub async fn is_character_name_available(&self, name: &str) -> Result<bool>
-    {
+    pub async fn is_character_name_available(&self, name: &str) -> Result<bool> {
         let res = sqlx::query!("SELECT count(*) AS cnt FROM characters WHERE name = ?", name)
             .fetch_one(&self.connection_pool)
             .await;
 
-        match res
-        {
+        match res {
             Ok(result) => Ok(result.cnt == 0),
-            Err(e) => Err(anyhow::anyhow!(e))
+            Err(e) => Err(anyhow::anyhow!(e)),
         }
     }
 
-    pub async fn create_character(&self, params: &DBCharacterCreateParameters) -> Result<()>
-    {
+    pub async fn create_character(&self, params: &DBCharacterCreateParameters) -> Result<()> {
         sqlx::query!("INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
         params.account_id,
         params.name,
@@ -96,8 +88,7 @@ impl super::RealmDatabase
         Ok(())
     }
 
-    pub async fn get_character(&self, character_id:u32) -> Result<DBCharacter>
-    {
+    pub async fn get_character(&self, character_id: u32) -> Result<DBCharacter> {
         let res = sqlx::query_as!(DBCharacter, "SELECT * FROM characters WHERE id = ?", character_id)
             .fetch_one(&self.connection_pool)
             .await?;

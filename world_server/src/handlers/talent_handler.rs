@@ -1,13 +1,12 @@
-use anyhow::Result;
-use crate::packet::*;
 use crate::character::*;
 use crate::opcodes::Opcodes;
-use podio::{WritePodExt, LittleEndian};
+use crate::packet::*;
+use anyhow::Result;
+use podio::{LittleEndian, WritePodExt};
 
-pub async fn send_talents_info(character: &Character) -> Result<()>
-{
+pub async fn send_talents_info(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_TALENTS_INFO, 20);
-    
+
     //Cheese out and just say we have zero talent specs
 
     writer.write_u32::<LittleEndian>(0)?; //Free talent points

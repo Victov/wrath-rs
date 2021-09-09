@@ -1,6 +1,5 @@
 #[allow(dead_code)]
-pub enum AuthResult
-{
+pub enum AuthResult {
     Success = 0x00,
     FailBanned = 0x03,
     FailUnknownAccount = 0x04,
@@ -26,20 +25,18 @@ pub enum AuthResult
     FailGameAccountLocked = 0x18,
     FailUnlockableLock = 0x19,
     FailConversionRequired = 0x20,
-    FailDisconnected = 0xFF
+    FailDisconnected = 0xFF,
 }
 
 #[allow(dead_code)]
-pub enum RealmFlags
-{
-    None                              = 0x00,
-    Invalid                           = 0x01,
-    Offline                           = 0x02,
-    SpecificBuild                     = 0x04,
-    Unknown1                          = 0x08,
-    Unknown2                          = 0x10,
-    Recommended                       = 0x20,
-    New                               = 0x40,
-    Full                              = 0x80
+pub enum RealmFlags {
+    None = 0x00,
+    Invalid = 0x01,
+    Offline = 0x02,
+    SpecificBuild = 0x04,
+    Unknown1 = 0x08,
+    Unknown2 = 0x10,
+    Recommended = 0x20,
+    New = 0x40,
+    Full = 0x80,
 }
-
