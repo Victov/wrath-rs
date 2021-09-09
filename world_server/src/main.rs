@@ -1,31 +1,40 @@
-use async_std::task;
 use anyhow::Result;
+use async_std::task;
+use client_manager::ClientManager;
+use core::sync::atomic::{AtomicBool, Ordering};
+use packet_handler::{PacketHandler, PacketToHandle};
 use wrath_auth_db::AuthDatabase;
 use wrath_realm_db::RealmDatabase;
 
 mod auth;
-mod opcodes;
-mod client;
-mod packet;
-mod client_manager;
-mod packet_handler;
-mod handlers;
-mod wowcrypto;
-mod guid;
 mod character;
-mod data_types;
+mod client;
+mod client_manager;
 mod constants;
-mod world;
+mod data_types;
+mod guid;
+mod handlers;
+mod opcodes;
+mod packet;
+mod packet_handler;
 mod updates;
-
-use packet_handler::{PacketToHandle, PacketHandler};
-use client_manager::ClientManager;
+mod world;
+mod wowcrypto;
 
 #[async_std::main]
 async fn main() -> Result<()> {
     println!("Starting World Server");
     dotenv::dotenv().ok();
-    
+
+    let running = std::sync::Arc::new(AtomicBool::new(true));
+    let running_clone = running.clone();
+    let ctrlc_handler = async_ctrlc::CtrlC::new().expect("Failed to register ctrl+C handler");
+    task::spawn(async move {
+        ctrlc_handler.await;
+        running_clone.store(false, Ordering::Relaxed);
+        println!("Received a ctrl+C. Performing Graceful shutdown");
+    });
+
     let auth_database = AuthDatabase::new(&std::env::var("AUTH_DATABASE_URL")?).await?;
     let auth_database_ref = std::sync::Arc::new(auth_database);
 
@@ -35,25 +44,32 @@ async fn main() -> Result<()> {
     task::spawn(auth::auth_server_heartbeats());
 
     let world = std::sync::Arc::new(world::World::new());
-    
+
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver, world.clone());
-    
-    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), realm_database_ref.clone(), world.clone()));
+
+    let client_manager = std::sync::Arc::new(ClientManager::new(
+        auth_database_ref.clone(),
+        realm_database_ref.clone(),
+        world.clone(),
+    ));
     let client_manager_for_acceptloop = client_manager.clone();
 
     task::spawn(async move {
-        client_manager_for_acceptloop.accept_realm_connections(sender).await.unwrap_or_else(|e| {
-            println!("Error in realm_socket::accept_realm_connections: {:?}", e)
-        })
+        client_manager_for_acceptloop
+            .accept_realm_connections(sender)
+            .await
+            .unwrap_or_else(|e| {
+                println!("Error in realm_socket::accept_realm_connections: {:?}", e)
+            })
     });
-    
+
     let desired_timestep_sec: f32 = 1.0 / 10.0;
     let mut previous_loop_total: f32 = desired_timestep_sec;
-    loop
-    {
+    while running.load(Ordering::Relaxed) {
         let before = std::time::Instant::now();
-        realm_packet_handler.handle_queue(&client_manager)
+        realm_packet_handler
+            .handle_queue(&client_manager)
             .await
             .unwrap_or_else(|e| {
                 println!("Error while handling packet: {}", e);
@@ -61,14 +77,17 @@ async fn main() -> Result<()> {
         world.tick(previous_loop_total).await?;
         let after = std::time::Instant::now();
         let update_duration = after.duration_since(before);
-        if update_duration.as_secs_f32() < desired_timestep_sec
-        {
-            task::sleep(std::time::Duration::from_secs_f32(desired_timestep_sec - update_duration.as_secs_f32())).await;
-        }
-        else
-        {
+        if update_duration.as_secs_f32() < desired_timestep_sec {
+            task::sleep(std::time::Duration::from_secs_f32(
+                desired_timestep_sec - update_duration.as_secs_f32(),
+            ))
+            .await;
+        } else {
             println!("Warning: Too long tick to keep up with desired timestep!");
         }
-        previous_loop_total = std::time::Instant::now().duration_since(before).as_secs_f32();
+        previous_loop_total = std::time::Instant::now()
+            .duration_since(before)
+            .as_secs_f32();
     }
+    Ok(())
 }
