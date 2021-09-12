@@ -18,6 +18,7 @@ CREATE TABLE `characters` (
 	`x` float NOT NULL DEFAULT '0',
 	`y` float NOT NULL DEFAULT '0',
 	`z` float NOT NULL DEFAULT '0',
+	`instance_id` int (10) unsigned NOT NULL DEFAULT '0',
 	`bind_zone` smallint(5) unsigned NOT NULL DEFAULT '0',
 	`bind_map` smallint(5) unsigned NOT NULL DEFAULT '0',
 	`bind_x` float NOT NULL DEFAULT '0',

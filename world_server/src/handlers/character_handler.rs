@@ -1,34 +1,36 @@
-use anyhow::{Result, anyhow};
-use crate::packet_handler::PacketToHandle;
-use crate::packet::*;
 use crate::character::*;
-use crate::opcodes::Opcodes;
-use crate::guid::{Guid, ReadGuid, WriteGuid, HighGuid};
-use crate::client_manager::ClientManager;
 use crate::client::Client;
-use podio::{WritePodExt, ReadPodExt, LittleEndian};
-use std::sync::Arc;
+use crate::client_manager::ClientManager;
+use crate::guid::{Guid, HighGuid, ReadGuid, WriteGuid};
+use crate::opcodes::Opcodes;
+use crate::packet::*;
+use crate::packet_handler::PacketToHandle;
+use anyhow::{anyhow, Result};
+use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::io::Write;
+use std::sync::Arc;
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
-pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
-{
+pub async fn handle_cmsg_char_enum(
+    client_manager: &Arc<ClientManager>,
+    packet: &PacketToHandle,
+) -> Result<()> {
     let client_lock = client_manager.get_client(packet.client_id).await?;
-    
-    if !client_lock.read().await.is_authenticated()
-    {
+
+    if !client_lock.read().await.is_authenticated() {
         return Err(anyhow!("Not authenticated while retrieving character list"));
     }
 
     let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_ENUM, 40);
 
-    let characters = client_manager.realm_db.get_characters_for_account(
-        client_lock.read().await.account_id.unwrap()).await?;
+    let characters = client_manager
+        .realm_db
+        .get_characters_for_account(client_lock.read().await.account_id.unwrap())
+        .await?;
 
     writer.write_u8(characters.len() as u8)?;
 
-    for character in characters
-    {
+    for character in characters {
         let guid = Guid::new(character.id, 0, HighGuid::Player);
         let character_flags = 0; //todo: stuff like being ghost, hide cloak, hide helmet, etc
         let is_first_login = 0u8;
@@ -53,10 +55,11 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
         writer.write_u32::<LittleEndian>(character_flags)?;
         writer.write_u32::<LittleEndian>(0)?;
         writer.write_u8(is_first_login)?;
-        writer.write_u32::<LittleEndian>(0)?;//pet display id
-        writer.write_u32::<LittleEndian>(0)?;//pet level
-        writer.write_u32::<LittleEndian>(0)?;//pet family
-        for _ in 0 .. 23u8 //inventory slot count
+        writer.write_u32::<LittleEndian>(0)?; //pet display id
+        writer.write_u32::<LittleEndian>(0)?; //pet level
+        writer.write_u32::<LittleEndian>(0)?; //pet family
+        for _ in 0..23u8
+        //inventory slot count
         {
             writer.write_u32::<LittleEndian>(0)?; //equipped item display id
             writer.write_u8(0)?; //inventory type
@@ -70,8 +73,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
 }
 
 #[allow(dead_code)]
-enum CharacterCreateReponse
-{
+enum CharacterCreateReponse {
     InProgres = 0x2E,
     Success = 0x2F,
     Error = 0x30,
@@ -98,16 +100,17 @@ enum CharacterCreateReponse
     ForceLogin = 0x45,
 }
 
-pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
-{
+pub async fn handle_cmsg_char_create(
+    client_manager: &Arc<ClientManager>,
+    packet: &PacketToHandle,
+) -> Result<()> {
     use std::io::BufRead;
 
     let mut reader = std::io::Cursor::new(&packet.payload);
     let client_lock = client_manager.get_client(packet.client_id).await?;
     let client = client_lock.read().await;
 
-    if !client.is_authenticated()
-    {
+    if !client.is_authenticated() {
         return Err(anyhow!("Unauthenticated client tried to create character"));
     }
 
@@ -126,53 +129,73 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
         let hair_color = reader.read_u8()?;
         let facial_style = reader.read_u8()?;
         let outfit = reader.read_u8()?;
+        let x = -8949.95f32; //Human starting pos x
+        let y = -132.493f32; //Human starting pos y
+        let z = 83.53f32; //Human starting posz
 
-        DBCharacterCreateParameters
-        {
-            account_id, name, race, class, gender, skin_color, face, hair_style, hair_color, facial_style, outfit
+        DBCharacterCreateParameters {
+            account_id,
+            name,
+            race,
+            class,
+            gender,
+            skin_color,
+            face,
+            hair_style,
+            hair_color,
+            facial_style,
+            outfit,
+            x,
+            y,
+            z,
         }
     };
 
     let realm_db = &client_manager.realm_db;
-    if !realm_db.is_character_name_available(&create_params.name).await?
+    if !realm_db
+        .is_character_name_available(&create_params.name)
+        .await?
     {
         send_char_create_reply(&client, CharacterCreateReponse::NameInUse).await?;
         return Ok(()); //this is a perfectly valid handling, not Err
     }
 
     let result = realm_db.create_character(&create_params).await;
-    if result.is_err()
-    {
+    if result.is_err() {
         send_char_create_reply(&client, CharacterCreateReponse::Failed).await?;
         return Err(anyhow!("Failed to insert character into database"));
     }
 
     let realm_id = std::env::var("REALM_ID")?.parse()?;
     let num_chars = realm_db.get_num_characters_for_account(account_id).await?;
-    client_manager.auth_db.set_num_characters_on_realm(account_id, realm_id, num_chars).await?;
+    client_manager
+        .auth_db
+        .set_num_characters_on_realm(account_id, realm_id, num_chars)
+        .await?;
 
     send_char_create_reply(&client, CharacterCreateReponse::Success).await?;
 
     Ok(())
 }
 
-async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -> Result<()>
-{
+async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_CREATE, 1);
     writer.write_u8(resp as u8)?;
     send_packet(client, header, &writer).await
 }
 
-pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()>
-{
+pub async fn handle_cmsg_player_login(
+    client_manager: &Arc<ClientManager>,
+    packet: &PacketToHandle,
+) -> Result<()> {
     let client_lock = client_manager.get_client(packet.client_id).await?;
-    if !client_lock.read().await.is_authenticated()
-    {
-        return Err(anyhow!("Trying to login character on client that isn't authenticated"));
+    if !client_lock.read().await.is_authenticated() {
+        return Err(anyhow!(
+            "Trying to login character on client that isn't authenticated"
+        ));
     }
 
-    let guid =
-    {
+    let guid = {
         let mut reader = std::io::Cursor::new(&packet.payload);
         reader.read_guid::<LittleEndian>()?
     };
@@ -183,8 +206,7 @@ pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packe
     Ok(())
 }
 
-pub async fn send_verify_world(character: &Character) -> Result<()>
-{
+pub async fn send_verify_world(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_VERIFY_WORLD, 20);
     writer.write_u32::<LittleEndian>(character.map)?;
     writer.write_f32::<LittleEndian>(character.x)?;
@@ -197,8 +219,7 @@ pub async fn send_verify_world(character: &Character) -> Result<()>
     Ok(())
 }
 
-pub async fn send_bind_update(character: &Character) -> Result<()>
-{
+pub async fn send_bind_update(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_BINDPOINTUPDATE, 20);
     writer.write_f32::<LittleEndian>(character.bind_location.x)?;
     writer.write_f32::<LittleEndian>(character.bind_location.y)?;
@@ -211,9 +232,11 @@ pub async fn send_bind_update(character: &Character) -> Result<()>
     Ok(())
 }
 
-pub async fn send_action_buttons(character: &Character) -> Result<()>
-{
-    let (header, mut writer) = create_packet(Opcodes::SMSG_ACTION_BUTTONS, character.action_bar.data.len());
+pub async fn send_action_buttons(character: &Character) -> Result<()> {
+    let (header, mut writer) = create_packet(
+        Opcodes::SMSG_ACTION_BUTTONS,
+        character.action_bar.data.len(),
+    );
     writer.write_u8(0)?; //Talent specialization
     writer.write(&character.action_bar.data)?;
 
