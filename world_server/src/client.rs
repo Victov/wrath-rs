@@ -59,17 +59,11 @@ impl Client {
         self.account_id.is_some() && self.client_state != ClientState::PreLogin
     }
 
-    pub async fn login_character(
-        &self,
-        client_manager: &ClientManager,
-        character_guid: Guid,
-    ) -> Result<()> {
+    pub async fn login_character(&self, client_manager: &ClientManager, character_guid: Guid) -> Result<()> {
         //Load character and insert into our safe locks asap
         {
             let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?.clone());
-            let character =
-                Character::load_from_database(weakself, &client_manager.realm_db, character_guid)
-                    .await?;
+            let character = Character::load_from_database(weakself, &client_manager.realm_db, character_guid).await?;
             *self.active_character.write().await = Some(character);
         }
         //take the route that any other caller would take, through acquiring a lock

@@ -23,11 +23,7 @@ pub async fn send_initial_world_states(character: &Character) -> Result<()> {
 }
 
 #[allow(dead_code)]
-pub async fn send_world_state_update(
-    character: &Character,
-    world_state: u32,
-    value: u32,
-) -> Result<()> {
+pub async fn send_world_state_update(character: &Character, world_state: u32, value: u32) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_WORLD_STATE, 8);
     writer.write_u32::<LittleEndian>(world_state)?;
     writer.write_u32::<LittleEndian>(value)?;

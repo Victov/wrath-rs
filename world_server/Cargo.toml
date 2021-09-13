@@ -21,3 +21,4 @@ wrath-realm-db = { path="../databases/wrath-realm-db" }
 flate2 = { version="1.0" }
 chrono = { version = "0.4" }
 bit_field = { version = "0.10.1" }
+async-ctrlc = {version="1.2", features=["termination"] }
