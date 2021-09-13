@@ -16,10 +16,7 @@ pub trait ReceiveUpdates {
     fn clear_creation_data(&mut self);
 }
 
-pub fn build_create_update_block_for_player(
-    player: &impl MapObject,
-    object: &(impl MapObject + HasValueFields),
-) -> Result<(u32, Vec<u8>)> {
+pub fn build_create_update_block_for_player(player: &impl MapObject, object: &(impl MapObject + HasValueFields)) -> Result<(u32, Vec<u8>)> {
     let flags2: u32 = 0;
     let outputbuf = Vec::<u8>::new();
     let mut update_type = ObjectUpdateType::CreateObject as u8;
@@ -64,13 +61,7 @@ pub fn build_create_update_block_for_player(
     Ok((block_count, writer.into_inner()))
 }
 
-fn build_movement_update(
-    writer: &mut Cursor<Vec<u8>>,
-    flags: u16,
-    flags2: u32,
-    _player: &impl MapObject,
-    object: &impl MapObject,
-) -> Result<()> {
+fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, flags2: u32, _player: &impl MapObject, object: &impl MapObject) -> Result<()> {
     writer.write_u16::<LittleEndian>(flags)?;
 
     //Only implemented for living things for now

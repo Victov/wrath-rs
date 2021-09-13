@@ -1,7 +1,5 @@
-
 #[allow(dead_code)]
-pub enum FactionReputationIndex 
-{
+pub enum FactionReputationIndex {
     None = 0,
     BootyBay = 1,
     GelkisClanCentaur = 2,
@@ -80,7 +78,5 @@ pub enum FactionReputationIndex
     TheSonsOfHodir = 97,
     TheSunreavers = 98,
     TheAshenVerdict = 104,
-    FactionCount
+    FactionCount,
 }
-
-

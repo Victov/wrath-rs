@@ -49,35 +49,25 @@ pub struct DBCharacterCreateParameters {
 
 impl super::RealmDatabase {
     pub async fn get_characters_for_account(&self, account_id: u32) -> Result<Vec<DBCharacter>> {
-        let res = sqlx::query_as!(
-            DBCharacter,
-            "SELECT * FROM characters WHERE account_id = ?",
-            account_id
-        )
-        .fetch_all(&self.connection_pool)
-        .await?;
+        let res = sqlx::query_as!(DBCharacter, "SELECT * FROM characters WHERE account_id = ?", account_id)
+            .fetch_all(&self.connection_pool)
+            .await?;
 
         Ok(res)
     }
 
     pub async fn get_num_characters_for_account(&self, account_id: u32) -> Result<u8> {
-        let res = sqlx::query!(
-            "SELECT count(*) as cnt FROM characters WHERE account_id = ?",
-            account_id
-        )
-        .fetch_one(&self.connection_pool)
-        .await?;
+        let res = sqlx::query!("SELECT count(*) as cnt FROM characters WHERE account_id = ?", account_id)
+            .fetch_one(&self.connection_pool)
+            .await?;
 
         Ok(res.cnt as u8)
     }
 
     pub async fn is_character_name_available(&self, name: &str) -> Result<bool> {
-        let res = sqlx::query!(
-            "SELECT count(*) AS cnt FROM characters WHERE name = ?",
-            name
-        )
-        .fetch_one(&self.connection_pool)
-        .await;
+        let res = sqlx::query!("SELECT count(*) AS cnt FROM characters WHERE name = ?", name)
+            .fetch_one(&self.connection_pool)
+            .await;
 
         match res {
             Ok(result) => Ok(result.cnt == 0),
@@ -106,13 +96,9 @@ impl super::RealmDatabase {
     }
 
     pub async fn get_character(&self, character_id: u32) -> Result<DBCharacter> {
-        let res = sqlx::query_as!(
-            DBCharacter,
-            "SELECT * FROM characters WHERE id = ?",
-            character_id
-        )
-        .fetch_one(&self.connection_pool)
-        .await?;
+        let res = sqlx::query_as!(DBCharacter, "SELECT * FROM characters WHERE id = ?", character_id)
+            .fetch_one(&self.connection_pool)
+            .await?;
 
         Ok(res)
     }

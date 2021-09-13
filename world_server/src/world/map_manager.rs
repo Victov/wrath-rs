@@ -21,10 +21,7 @@ impl MapManager {
         }
     }
 
-    pub async fn push_object(
-        &self,
-        object: &mut (impl MapObject + ReceiveUpdates + HasValueFields),
-    ) -> Result<()> {
+    pub async fn push_object(&self, object: &mut (impl MapObject + ReceiveUpdates + HasValueFields)) -> Result<()> {
         self.cell.write().await.push_object(object).await?;
         let (block_count, mut update_data) = build_create_update_block_for_player(object, object)?;
         object.push_creation_data(&mut update_data, block_count);

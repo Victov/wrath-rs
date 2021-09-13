@@ -2,21 +2,19 @@
 //Then we know what we don't need and can delete them
 #![allow(unused_imports)]
 
-use anyhow::{Result, anyhow};
-use crate::packet_handler::PacketToHandle;
 use crate::character::Character;
-use crate::packet::*;
 use crate::opcodes::Opcodes;
-use podio::{WritePodExt, ReadPodExt, LittleEndian};
-use std::sync::Arc;
+use crate::packet::*;
+use crate::packet_handler::PacketToHandle;
+use anyhow::{anyhow, Result};
+use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::io::Write;
+use std::sync::Arc;
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
-
-pub async fn send_dungeon_difficulty(character: &Character) -> Result<()>
-{
+pub async fn send_dungeon_difficulty(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::MSG_SET_DUNGEON_DIFFICULTY, 12);
-    
+
     //TODO: get dungeon difficulty from character instead of hardcoded
     //TODO: handle being in a group
 

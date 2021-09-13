@@ -11,10 +11,7 @@ use std::io::Write;
 use std::sync::Arc;
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
-pub async fn handle_cmsg_char_enum(
-    client_manager: &Arc<ClientManager>,
-    packet: &PacketToHandle,
-) -> Result<()> {
+pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
     let client_lock = client_manager.get_client(packet.client_id).await?;
 
     if !client_lock.read().await.is_authenticated() {
@@ -100,10 +97,7 @@ enum CharacterCreateReponse {
     ForceLogin = 0x45,
 }
 
-pub async fn handle_cmsg_char_create(
-    client_manager: &Arc<ClientManager>,
-    packet: &PacketToHandle,
-) -> Result<()> {
+pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
     use std::io::BufRead;
 
     let mut reader = std::io::Cursor::new(&packet.payload);
@@ -152,10 +146,7 @@ pub async fn handle_cmsg_char_create(
     };
 
     let realm_db = &client_manager.realm_db;
-    if !realm_db
-        .is_character_name_available(&create_params.name)
-        .await?
-    {
+    if !realm_db.is_character_name_available(&create_params.name).await? {
         send_char_create_reply(&client, CharacterCreateReponse::NameInUse).await?;
         return Ok(()); //this is a perfectly valid handling, not Err
     }
@@ -184,15 +175,10 @@ async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -
     send_packet(client, header, &writer).await
 }
 
-pub async fn handle_cmsg_player_login(
-    client_manager: &Arc<ClientManager>,
-    packet: &PacketToHandle,
-) -> Result<()> {
+pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
     let client_lock = client_manager.get_client(packet.client_id).await?;
     if !client_lock.read().await.is_authenticated() {
-        return Err(anyhow!(
-            "Trying to login character on client that isn't authenticated"
-        ));
+        return Err(anyhow!("Trying to login character on client that isn't authenticated"));
     }
 
     let guid = {
@@ -233,10 +219,7 @@ pub async fn send_bind_update(character: &Character) -> Result<()> {
 }
 
 pub async fn send_action_buttons(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(
-        Opcodes::SMSG_ACTION_BUTTONS,
-        character.action_bar.data.len(),
-    );
+    let (header, mut writer) = create_packet(Opcodes::SMSG_ACTION_BUTTONS, character.action_bar.data.len());
     writer.write_u8(0)?; //Talent specialization
     writer.write(&character.action_bar.data)?;
 

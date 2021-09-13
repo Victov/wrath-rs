@@ -42,11 +42,7 @@ impl PartialEq for Character {
 }
 
 impl Character {
-    pub async fn load_from_database(
-        client: Weak<RwLock<Client>>,
-        realm_database: &RealmDatabase,
-        guid: Guid,
-    ) -> Result<Self> {
+    pub async fn load_from_database(client: Weak<RwLock<Client>>, realm_database: &RealmDatabase, guid: Guid) -> Result<Self> {
         let db_entry = realm_database.get_character(guid.get_low_part()).await?;
         let bind_location = WorldZoneLocation {
             zone: db_entry.bind_zone as u32,
@@ -59,13 +55,10 @@ impl Character {
         let tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
 
         let character_id = guid.get_low_part();
-        let character_account_data = realm_database
-            .get_character_account_data(character_id)
-            .await?;
+        let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
         if character_account_data.len() == 0 {
-            crate::handlers::create_empty_character_account_data_rows(realm_database, character_id)
-                .await?;
+            crate::handlers::create_empty_character_account_data_rows(realm_database, character_id).await?;
         }
 
         Ok(Self {
@@ -101,15 +94,7 @@ impl Character {
         crate::handlers::send_initial_spells(&self).await?;
         crate::handlers::send_talents_info(&self).await?;
         crate::handlers::send_aura_update_all(&self).await?;
-        crate::handlers::send_contact_list(
-            &self,
-            &[
-                RelationType::Friend,
-                RelationType::Muted,
-                RelationType::Ignore,
-            ],
-        )
-        .await?;
+        crate::handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
         crate::handlers::send_initial_world_states(&self).await?;
         //crate::handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //crate::handlers::send_world_state_update(&self, 0xC77, 0).await?;
@@ -124,15 +109,10 @@ impl Character {
         self.set_object_field_u32(ObjectFields::HighGuid, self.get_guid().get_high_part())?;
         self.set_object_field_u32(
             ObjectFields::Type,
-            1 << ObjectType::Unit as u32
-                | 1 << ObjectType::Player as u32
-                | 1 << ObjectType::Object as u32,
+            1 << ObjectType::Unit as u32 | 1 << ObjectType::Player as u32 | 1 << ObjectType::Object as u32,
         )?;
         self.set_object_field_f32(ObjectFields::Scale, 1.0f32)?;
-        self.set_unit_field_u32(
-            UnitFields::UnitBytes0,
-            (race << 24) | (class << 16) | (gender << 8) | power_type,
-        )?;
+        self.set_unit_field_u32(UnitFields::UnitBytes0, (race << 24) | (class << 16) | (gender << 8) | power_type)?;
         self.set_unit_field_u32(UnitFields::Health, 100)?;
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
