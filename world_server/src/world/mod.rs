@@ -9,12 +9,14 @@ pub mod map_cell;
 mod map_manager;
 pub mod map_object;
 mod update_builder;
+mod value_fields;
 
 pub mod prelude {
     pub use super::super::constants::*;
     pub use super::map_cell::*;
     pub use super::map_object::*;
     pub use super::update_builder::*;
+    pub use super::value_fields::*;
 }
 
 pub struct World {

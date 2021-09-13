@@ -2,18 +2,19 @@
 // Auto generated for version 3, 3, 5, 12340, regexed into rust code with pain
 
 #[allow(dead_code)]
-enum ObjectFields {
-    Guid = 0x0000,    // Size: 2, Type: Long, Flags: Public
-    Type = 0x0002,    // Size: 1, Type: Int, Flags: Public
-    Entry = 0x0003,   // Size: 1, Type: Int, Flags: Public
-    Scale = 0x0004,   // Size: 1, Type: Float, Flags: Public
-    Padding = 0x0005, // Size: 1, Type: Int, Flags: None
-    End = 0x0006,     //(ObjectFields::End as isize) = 0x0006
+pub enum ObjectFields {
+    LowGuid = 0x0000,  // Size: 2, Type: Long, Flags: Public
+    HighGuid = 0x0001, //Not auto-generated, inserted that myself
+    Type = 0x0002,     // Size: 1, Type: Int, Flags: Public
+    Entry = 0x0003,    // Size: 1, Type: Int, Flags: Public
+    Scale = 0x0004,    // Size: 1, Type: Float, Flags: Public
+    Padding = 0x0005,  // Size: 1, Type: Int, Flags: None
+    End = 0x0006,      //(ObjectFields::End as isize) = 0x0006
 }
 
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
-enum ItemFields {
+pub enum ItemFields {
     Owner = (ObjectFields::End as isize) + 0x0000, // Size: 2, Type: Long, Flags: Public
     Contained = (ObjectFields::End as isize) + 0x0002, // Size: 2, Type: Long, Flags: Public
     Creator = (ObjectFields::End as isize) + 0x0004, // Size: 2, Type: Long, Flags: Public
@@ -56,7 +57,7 @@ enum ItemFields {
 }
 
 #[allow(dead_code)]
-enum ContainerFields {
+pub enum ContainerFields {
     NumSlots = (ItemFields::End as isize) + 0x0000, // Size: 1, Type: Int, Flags: Public
     ContainerAlignPad = (ItemFields::End as isize) + 0x0001, // Size: 1, Type: Bytes, Flags: None
     Slot1 = (ItemFields::End as isize) + 0x0002,    // Size: 72, Type: Long, Flags: Public
@@ -65,7 +66,7 @@ enum ContainerFields {
 
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
-enum UnitFields {
+pub enum UnitFields {
     Charm = (ObjectFields::End as isize) + 0x0000, // Size: 2, Type: Long, Flags: Public
     Summon = (ObjectFields::End as isize) + 0x0002, // Size: 2, Type: Long, Flags: Public
     Critter = (ObjectFields::End as isize) + 0x0004, // Size: 2, Type: Long, Flags: Private
@@ -160,7 +161,7 @@ enum UnitFields {
 
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
-enum PlayerFields {
+pub enum PlayerFields {
     PlayerDuelArbiter = (UnitFields::UnitEnd as isize) + 0x0000, // Size: 2, Type: Long, Flags: Public
     PlayerFlags = (UnitFields::UnitEnd as isize) + 0x0002, // Size: 1, Type: Int, Flags: Public
     PlayerGuildid = (UnitFields::UnitEnd as isize) + 0x0003, // Size: 1, Type: Int, Flags: Public
@@ -380,7 +381,7 @@ enum PlayerFields {
 }
 
 #[allow(dead_code)]
-enum GameObjectFields {
+pub enum GameObjectFields {
     ObjectFieldCreatedBy = (ObjectFields::End as isize) + 0x0000, // Size: 2, Type: Long, Flags: Public
     Displayid = (ObjectFields::End as isize) + 0x0002, // Size: 1, Type: Int, Flags: Public
     Flags = (ObjectFields::End as isize) + 0x0003,     // Size: 1, Type: Int, Flags: Public
@@ -393,7 +394,7 @@ enum GameObjectFields {
 }
 
 #[allow(dead_code)]
-enum DynamicObjectFields {
+pub enum DynamicObjectFields {
     Caster = (ObjectFields::End as isize) + 0x0000, // Size: 2, Type: Long, Flags: Public
     Bytes = (ObjectFields::End as isize) + 0x0002,  // Size: 1, Type: Bytes, Flags: Public
     Spellid = (ObjectFields::End as isize) + 0x0003, // Size: 1, Type: Int, Flags: Public
@@ -403,7 +404,7 @@ enum DynamicObjectFields {
 }
 
 #[allow(dead_code)]
-enum CorpseFields {
+pub enum CorpseFields {
     Owner = (ObjectFields::End as isize) + 0x0000, // Size: 2, Type: Long, Flags: Public
     Party = (ObjectFields::End as isize) + 0x0002, // Size: 2, Type: Long, Flags: Public
     DisplayId = (ObjectFields::End as isize) + 0x0004, // Size: 1, Type: Int, Flags: Public

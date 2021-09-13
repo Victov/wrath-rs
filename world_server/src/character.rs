@@ -3,11 +3,14 @@ use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data_types::{ActionBar, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::guid::*;
+use crate::world::prelude::updates::ObjectType;
 use crate::ClientManager;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_std::sync::RwLock;
 use std::sync::Weak;
 use wrath_realm_db::RealmDatabase;
+
+const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 
 pub struct Character {
     pub guid: Guid,
@@ -26,6 +29,10 @@ pub struct Character {
     //required for world updates and implenting ReceiveUpdates trait
     creation_buffer: Vec<u8>,
     creation_block_count: u32,
+
+    //required for unit values and implementing ValueFieldsRaw trait, which in turn will grant us
+    //HasvalueFields trait, with all sorts of goodies
+    unit_value_fields: [u32; NUM_UNIT_FIELDS],
 }
 
 impl PartialEq for Character {
@@ -75,6 +82,7 @@ impl Character {
             action_bar: ActionBar::new(), //TODO: store/read from database
             creation_block_count: 0,
             creation_buffer: vec![],
+            unit_value_fields: [0; NUM_UNIT_FIELDS],
         })
     }
 
@@ -107,6 +115,31 @@ impl Character {
         //crate::handlers::send_world_state_update(&self, 0xC77, 0).await?;
         //crate::handlers::send_temp_dummy_hardcoded_update(&self).await?;
 
+        let race = 1u32; //human
+        let class = 1u32; //warrior
+        let gender = 1u32; //female
+        let power_type = 1u32; //rage
+
+        self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().get_low_part())?;
+        self.set_object_field_u32(ObjectFields::HighGuid, self.get_guid().get_high_part())?;
+        self.set_object_field_u32(
+            ObjectFields::Type,
+            1 << ObjectType::Unit as u32
+                | 1 << ObjectType::Player as u32
+                | 1 << ObjectType::Object as u32,
+        )?;
+        self.set_object_field_f32(ObjectFields::Scale, 1.0f32)?;
+        self.set_unit_field_u32(
+            UnitFields::UnitBytes0,
+            (race << 24) | (class << 16) | (gender << 8) | power_type,
+        )?;
+        self.set_unit_field_u32(UnitFields::Health, 100)?;
+        self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
+        self.set_unit_field_u32(UnitFields::Level, 1)?;
+        self.set_unit_field_u32(UnitFields::Factiontemplate, 1)?;
+        self.set_unit_field_u32(UnitFields::Displayid, 19724)?; //human female
+        self.set_unit_field_u32(UnitFields::Nativedisplayid, 19724)?;
+
         world
             .get_instance_manager()
             .get_map_for_instance(self.instance_id)
@@ -117,7 +150,10 @@ impl Character {
             .await?;
 
         let (num, buf) = self.get_creation_data();
-        crate::handlers::send_update_packet(&self, num, &buf).await
+        super::handlers::send_update_packet(&self, num, &buf).await?;
+        self.clear_creation_data();
+
+        Ok(())
     }
 }
 
@@ -150,5 +186,26 @@ impl ReceiveUpdates for Character {
     fn clear_creation_data(&mut self) {
         self.creation_block_count = 0;
         self.creation_buffer.clear();
+    }
+}
+
+impl ValueFieldsRaw for Character {
+    fn set_field_u32(&mut self, field: usize, value: u32) -> Result<()> {
+        if field > self.unit_value_fields.len() {
+            bail!("Out-of-range unit field being set")
+        }
+        self.unit_value_fields[field] = value;
+        Ok(())
+    }
+
+    fn get_field_u32(&self, field: usize) -> Result<u32> {
+        if field > self.unit_value_fields.len() {
+            bail!("Out-of-range unit field being accessed");
+        }
+        Ok(self.unit_value_fields[field])
+    }
+
+    fn get_num_value_fields(&self) -> usize {
+        NUM_UNIT_FIELDS
     }
 }

@@ -2,13 +2,13 @@
 //for reference
 
 use anyhow::Result;
-use podio::{BigEndian, LittleEndian, WritePodExt};
+use podio::{LittleEndian, WritePodExt};
 
-use crate::guid::{self, Guid, WriteGuid};
+use crate::guid::WriteGuid;
 use std::io::Cursor;
 
 use super::super::constants::updates::*;
-use super::prelude::MapObject;
+use super::prelude::{HasValueFields, MapObject, ObjectFields, UpdateMask};
 
 pub trait ReceiveUpdates {
     fn push_creation_data(&mut self, data: &mut Vec<u8>, block_count: u32);
@@ -18,7 +18,7 @@ pub trait ReceiveUpdates {
 
 pub fn build_create_update_block_for_player(
     player: &impl MapObject,
-    object: &impl MapObject,
+    object: &(impl MapObject + HasValueFields),
 ) -> Result<(u32, Vec<u8>)> {
     let flags2: u32 = 0;
     let outputbuf = Vec::<u8>::new();
@@ -46,14 +46,20 @@ pub fn build_create_update_block_for_player(
     //We should be writing the object guid, however since we still have a hardcoded
     //GUID in the build_values_update they need to match. So until we have flexible
     //values update that's built up from actual values, leave the temp hardcoded guid here
-    //writer.write_guid_compressed(&object.get_guid())?; //should be this
-    let guid = Guid::new(0x00010203, 0, guid::HighGuid::Player);
-    writer.write_guid_compressed(&guid)?;
+    writer.write_guid_compressed(&object.get_guid())?;
+
+    //let guid = Guid::new(0x00010203, 0, guid::HighGuid::Player);
+    //writer.write_guid_compressed(&guid)?;
 
     writer.write_u8(object.get_type() as u8)?;
 
     build_movement_update(&mut writer, flags, flags2, player, object)?;
-    build_values_update(&mut writer, player, object)?;
+
+    let mut update_mask = UpdateMask::new(object.get_num_value_fields());
+    object.set_mask_for_create_bits(&mut &mut update_mask)?;
+    update_mask.set_bit(ObjectFields::HighGuid as usize, true)?; //override if it wasn't detected
+
+    build_values_update(&mut writer, player, object, &update_mask)?;
     block_count += 1;
     Ok((block_count, writer.into_inner()))
 }
@@ -111,40 +117,21 @@ fn build_movement_update(
 fn build_values_update(
     writer: &mut Cursor<Vec<u8>>,
     _player: &impl MapObject,
-    _object: &impl MapObject,
+    object: &(impl MapObject + HasValueFields),
+    update_mask: &UpdateMask,
 ) -> Result<()> {
-    //temporarily hardcoded, to be done nicely later
-    let values = &[
-        0x2a, // Mask Size ((1326 + 31) / 32 = 42)
-        0b00010111, 0x00, 0x80, 0x01, 0x01, 0x00, 0b11000000, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03,
-        0x00, // OBJECT_FIELD_GUID Low GUID [Required]
-        0x00, 0x00, 0x00, 0x00, // OBJECT_FIELD_GUID High GUID [Required]
-        0x19, 0x00, 0x00, 0x00, // OBJECT_FIELD_TYPE -> unit | player | object
-        0x00, 0x00, 0x80, 0x3f, // OBJECT_FIELD_SCALE_X
-        0x01, 0x01, 0x01,
-        0x01, // UNIT_FIELD_BYTES_0 Race(Human), Class(Warrior), Gender(Female), PowerType(Rage)
-        0x3c, 0x00, 0x00, 0x00, // UNIT_FIELD_HEALTH
-        0x3c, 0x00, 0x00, 0x00, // UNIT_FIELD_MAXHEALTH
-        0x01, 0x00, 0x00, 0x00, // UNIT_FIELD_LEVEL
-        0x01, 0x00, 0x00, 0x00, // UNIT_FIELD_FACTIONTEMPLATE [Required]
-        0x0c, 0x4d, 0x00, 0x00, // UNIT_FIELD_DISPLAYID (Human Female = 19724) [Required]
-        0x0c, 0x4d, 0x00, 0x00,
-    ];
+    let num_values = object.get_num_value_fields();
+    assert_eq!(num_values, update_mask.get_num_fields());
 
-    {
-        use std::io::Write;
-        writer.write(values)?;
+    writer.write_u8(update_mask.get_num_blocks() as u8)?;
+    for block in update_mask.get_blocks() {
+        writer.write_u32::<LittleEndian>(*block)?;
+    }
+
+    for i in 0..num_values {
+        if update_mask.get_bit(i)? {
+            writer.write_u32::<LittleEndian>(object.get_field_u32(i)?)?;
+        }
     }
 
     Ok(())
