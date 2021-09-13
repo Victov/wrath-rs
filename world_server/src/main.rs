@@ -1,4 +1,7 @@
+use std::sync::{atomic::AtomicBool, Arc};
+
 use anyhow::Result;
+use async_ctrlc::CtrlC;
 use async_std::task;
 use wrath_auth_db::AuthDatabase;
 use wrath_realm_db::RealmDatabase;
@@ -24,6 +27,14 @@ use packet_handler::{PacketHandler, PacketToHandle};
 async fn main() -> Result<()> {
     println!("Starting World Server");
     dotenv::dotenv().ok();
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    let ctrlc = CtrlC::new().expect("Failed to register ctrl+c abort handler");
+    task::spawn(async move {
+        ctrlc.await;
+        println!("Detected Ctrl+C, starting graceful shutdown");
+        r.store(false, std::sync::atomic::Ordering::Relaxed);
+    });
 
     let auth_database = AuthDatabase::new(&std::env::var("AUTH_DATABASE_URL")?).await?;
     let auth_database_ref = std::sync::Arc::new(auth_database);
@@ -50,7 +61,7 @@ async fn main() -> Result<()> {
 
     let desired_timestep_sec: f32 = 1.0 / 10.0;
     let mut previous_loop_total: f32 = desired_timestep_sec;
-    loop {
+    while running.load(std::sync::atomic::Ordering::Relaxed) {
         let before = std::time::Instant::now();
         realm_packet_handler.handle_queue(&client_manager).await.unwrap_or_else(|e| {
             println!("Error while handling packet: {}", e);
@@ -65,4 +76,5 @@ async fn main() -> Result<()> {
         }
         previous_loop_total = std::time::Instant::now().duration_since(before).as_secs_f32();
     }
+    Ok(())
 }
