@@ -1,4 +1,4 @@
-use super::constants;
+use super::prelude::*;
 use anyhow::Result;
 use async_std::prelude::*;
 use podio::{BigEndian, ReadPodExt, WritePodExt};
@@ -28,7 +28,7 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
             for (&realm_id, &heartbeat) in &hashtable {
                 if Instant::now().duration_since(heartbeat).as_secs() > HEARTBEAT_TIMEOUT_SECONDS {
                     (*auth_db_handle).set_realm_online_status(realm_id, false).await.unwrap_or_else(|_| {
-                        println!("Couldnt set realm status to online!");
+                        warn!("Couldnt set realm status to online!");
                     });
                 }
             }
@@ -47,13 +47,13 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
             let realm_pop_current: f32 = realm_population_count as f32 / REALM_MAX_POPULATION;
             (*heartbeats_rwlock.write().unwrap()).insert(realm_id as u32, Instant::now());
             (*auth_db).set_realm_online_status(realm_id as u32, true).await.unwrap_or_else(|e| {
-                println!("Failed to set realm online: {}", e);
+                warn!("Failed to set realm online: {}", e);
             });
             (*auth_db)
                 .set_realm_population(realm_id as u32, realm_pop_current)
                 .await
                 .unwrap_or_else(|e| {
-                    println!("Error while writing realm population: {}", e);
+                    warn!("Error while writing realm population: {}", e);
                 });
         }
     }
@@ -66,7 +66,7 @@ pub async fn handle_realmlist_request(
 ) -> Result<()> {
     use std::io::Write;
 
-    println!("realmlist request");
+    info!("Received a realmlist request");
 
     let realms = (*auth_database).get_all_realms().await?;
 
@@ -78,7 +78,7 @@ pub async fn handle_realmlist_request(
     for realm in &realms {
         let mut realm_flags = realm.flags as u8;
         if realm.online == 0 {
-            realm_flags |= constants::RealmFlags::Offline as u8;
+            realm_flags |= RealmFlags::Offline as u8;
         }
         let num_characters = auth_database.get_num_characters_on_realm(account.id, realm.id).await?;
 

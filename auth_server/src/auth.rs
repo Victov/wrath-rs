@@ -1,4 +1,5 @@
 use super::constants;
+use super::prelude::*;
 use anyhow::*;
 use async_std::net::TcpStream;
 use async_std::prelude::*;
@@ -45,8 +46,8 @@ pub async fn handle_logon_challenge(stream: &mut TcpStream, buf: &[u8], auth_dat
     let username = std::str::from_utf8(&username_bytes)?;
     logindata.username = username.to_string();
 
-    println!(
-        "logon challenge for user {} on ip {}.{}.{}.{}, version {}.{}.{}:{}",
+    info!(
+        "Logon challenge for user {} on ip {}.{}.{}.{}, version {}.{}.{}:{}",
         username, ip[0], ip[1], ip[2], ip[3], version1, version2, version3, build
     );
 
@@ -79,8 +80,8 @@ pub async fn handle_logon_challenge(stream: &mut TcpStream, buf: &[u8], auth_dat
         logindata.v = v;
         logindata.s = s;
 
-        //println!("v={}", logindata.v.to_str_radix(16));
-        //println!("s={}", logindata.s.to_str_radix(16));
+        //trace!("v={}", logindata.v.to_str_radix(16));
+        //trace!("s={}", logindata.s.to_str_radix(16));
     } else {
         logindata.v = BigUint::parse_bytes(account.v.as_bytes(), 16).ok_or_else(|| anyhow!("Failed to parse v from database"))?;
         logindata.s = BigUint::parse_bytes(account.s.as_bytes(), 16).ok_or_else(|| anyhow!("Failed to parse s from database"))?;
@@ -90,18 +91,18 @@ pub async fn handle_logon_challenge(stream: &mut TcpStream, buf: &[u8], auth_dat
 
     logindata.b = rand::thread_rng().gen_biguint(19 * 8);
     //logindata.b = BigUint::from_str_radix("6dd94824b210c7b205974f9f53e9539ed459991932b0ca50f6a1bdc839c5c486", 16)?;
-    //println!("b={}", logindata.b.to_str_radix(16));
+    //trace!("b={}", logindata.b.to_str_radix(16));
 
     let gmod = logindata.g.modpow(&logindata.b, &logindata.n);
     logindata.bb = ((&logindata.v * 3u32) + gmod) % &logindata.n;
-    //println!("B={}", logindata.bb.to_str_radix(16));
+    //trace!("B={}", logindata.bb.to_str_radix(16));
     let bb_bytes = logindata.bb.to_bytes_le();
     assert!(bb_bytes.len() == 32);
     //bb_bytes.resize(32, 0);
 
     //let unk : BigUint = rand::thread_rng().gen_biguint(16 * 8);
     //let unk = BigUint::from_str_radix("383855f209cf4e2267e3fc317cf6fb6f", 16)?;
-    //println!("unk={}", unk.to_str_radix(16));
+    //trace!("unk={}", unk.to_str_radix(16));
 
     //let unk_bytes = unk.to_bytes_le();
     let unk_bytes = [0u8; 16];
@@ -160,7 +161,7 @@ pub async fn handle_logon_proof(
     logindata: &LoginNumbers,
     auth_database: &std::sync::Arc<AuthDatabase>,
 ) -> Result<()> {
-    println!("logon proof");
+    info!("Received login proof");
     if logindata.n.is_zero() {
         return Err(anyhow!(
             "Trying to handle login proof but no numbers have been generated from the challenge. Hacking?"
@@ -178,7 +179,7 @@ pub async fn handle_logon_proof(
     let a: BigUint = BigUint::from_bytes_le(&a_bytes);
     //let a = BigUint::from_str_radix("3e7738d6735bac8dfa29a261635bc500cb396a1115a7cf8c62ddb75b045e89ec", 16)?;
     //let a_bytes = a.to_bytes_le();
-    //println!("A={}", a.to_str_radix(16));
+    //trace!("A={}", a.to_str_radix(16));
     if (&a % &logindata.n).is_zero() {
         return Err(anyhow!("a%N cannot be zero according to SRP protocol"));
     }
@@ -188,9 +189,9 @@ pub async fn handle_logon_proof(
     hasher.update(&logindata.bb.to_bytes_le());
     let hashed = hasher.finalize_reset();
     let u = BigUint::from_bytes_le(hashed.as_slice());
-    //println!("u={}", u.to_str_radix(16));
+    //trace!("u={}", u.to_str_radix(16));
     let s = (&a * (logindata.v.modpow(&u, &logindata.n))).modpow(&logindata.b, &logindata.n);
-    //println!("S={}", s.to_str_radix(16));
+    //trace!("S={}", s.to_str_radix(16));
     let s_bytes = s.to_bytes_le();
     assert!(s_bytes.len() == 32);
 
@@ -221,7 +222,7 @@ pub async fn handle_logon_proof(
     }
 
     let k = BigUint::from_bytes_le(vk);
-    //println!("k={}", k.to_str_radix(16));
+    //trace!("k={}", k.to_str_radix(16));
 
     hasher.update(logindata.n.to_bytes_le());
     let mut n_hash = hasher.finalize_reset();
@@ -256,7 +257,7 @@ pub async fn handle_logon_proof(
     let m2_bytes = hasher.finalize_reset();
     let m2 = BigUint::from_bytes_be(&m2_bytes);
 
-    //println!("m : {}\nm1: {}\nm2: {}", m.to_str_radix(16), m1.to_str_radix(16), m2.to_str_radix(16));
+    //trace!("m : {}\nm1: {}\nm2: {}", m.to_str_radix(16), m1.to_str_radix(16), m2.to_str_radix(16));
     if m.to_bytes_le() != m_one_bytes {
         stream.write(&[1, constants::AuthResult::FailNoAccess as u8, 3, 0]).await?;
         stream.flush().await?;
