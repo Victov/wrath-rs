@@ -1,6 +1,6 @@
 use super::client::Client;
 use super::opcodes::Opcodes;
-use anyhow::{anyhow, Result};
+use crate::prelude::*;
 use async_std::prelude::*;
 use podio::{BigEndian, LittleEndian, WritePodExt};
 use std::convert::TryFrom;
@@ -78,7 +78,7 @@ pub async fn send_packet(client: &Client, header: ServerPacketHeader, payload: &
         write_socket.flush().await?;
 
         if std::env::var("PRINT_OUTGOING_PACKETS")?.parse::<usize>()? == 1usize {
-            println!("Outgoing: {:?}", header.get_cmd());
+            info!("Outgoing: {:?}", header.get_cmd());
         }
         if written_len != payload_length + 4 {
             return Err(anyhow!("Wrong written length while sending packet"));

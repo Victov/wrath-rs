@@ -2,7 +2,7 @@ use crate::character::*;
 use crate::guid::WriteGuid;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
-use anyhow::Result;
+use crate::prelude::*;
 use podio::{LittleEndian, WritePodExt};
 
 pub async fn send_initial_spells(character: &Character) -> Result<()> {

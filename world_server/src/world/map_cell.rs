@@ -1,6 +1,5 @@
-use anyhow::Result;
-
 use super::map_object::MapObject;
+use crate::prelude::*;
 
 pub struct MapCell {}
 

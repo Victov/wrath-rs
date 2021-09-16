@@ -1,13 +1,13 @@
+use crate::prelude::*;
 use chrono::prelude::*;
-
 pub struct PackedTime(u32);
 
 pub trait WritePackedTime {
-    fn write_packed_time<T: podio::Endianness>(&mut self, packed_time: &PackedTime) -> anyhow::Result<()>;
+    fn write_packed_time<T: podio::Endianness>(&mut self, packed_time: &PackedTime) -> Result<()>;
 }
 
 impl<W: std::io::Write> WritePackedTime for W {
-    fn write_packed_time<T: podio::Endianness>(&mut self, packed_time: &PackedTime) -> anyhow::Result<()> {
+    fn write_packed_time<T: podio::Endianness>(&mut self, packed_time: &PackedTime) -> Result<()> {
         use podio::WritePodExt;
         self.write_u32::<T>(packed_time.0)?;
         Ok(())
@@ -15,11 +15,11 @@ impl<W: std::io::Write> WritePackedTime for W {
 }
 
 pub trait ReadPackedTime {
-    fn read_packed_time<T: podio::Endianness>(&mut self) -> anyhow::Result<PackedTime>;
+    fn read_packed_time<T: podio::Endianness>(&mut self) -> Result<PackedTime>;
 }
 
 impl<R: std::io::Read> ReadPackedTime for R {
-    fn read_packed_time<T: podio::Endianness>(&mut self) -> anyhow::Result<PackedTime> {
+    fn read_packed_time<T: podio::Endianness>(&mut self) -> Result<PackedTime> {
         use podio::ReadPodExt;
         let val = self.read_u32::<T>()?;
         Ok(PackedTime(val))

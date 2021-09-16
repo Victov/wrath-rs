@@ -1,7 +1,7 @@
 use crate::character::*;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
-use anyhow::Result;
+use crate::prelude::*;
 
 pub async fn send_tutorial_flags(character: &Character) -> Result<()> {
     use std::io::Write;

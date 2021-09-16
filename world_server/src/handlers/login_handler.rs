@@ -4,7 +4,7 @@ use crate::client_manager::ClientManager;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
-use anyhow::{anyhow, Result};
+use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::sync::Arc;
 
@@ -59,7 +59,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     name.truncate(name.len() - 1);
     let name = String::from_utf8(name)?;
 
-    println!("User {} connecting with buildnumber {}", name, build_number);
+    info!("User {} connecting with buildnumber {}", name, build_number);
 
     let _unknown2 = reader.read_u32::<LittleEndian>()?;
     let client_seed = reader.read_u32::<LittleEndian>()?;
@@ -97,7 +97,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
         let client = client_lock.read().await;
         send_auth_response(AuthResponse::Reject, &client).await?;
         async_std::task::sleep(std::time::Duration::from_secs(2)).await;
-        return Err(anyhow::anyhow!("Failed auth attempt, rejecting"));
+        return Err(anyhow!("Failed auth attempt, rejecting"));
     }
     //Handle full world queuing here
 
@@ -114,7 +114,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
         let mut addon_data_decoder = ZlibDecoder::new(compressed_addon_data.as_slice());
         addon_data_decoder.read_to_end(&mut decompressed_addon_data)?;
         if decompressed_addon_data.len() != decompressed_addon_data_length as usize {
-            return Err(anyhow::anyhow!("decompressed addon data length didn't match expectation"));
+            return Err(anyhow!("decompressed addon data length didn't match expectation"));
         }
     }
 
@@ -136,7 +136,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
         let uses_diffent_public_key = addon_crc != 0x4C1C776D; //Blizzard addon CRC
         addon_packet_writer.write_u8(if uses_diffent_public_key { 1 } else { 0 })?;
         if uses_diffent_public_key {
-            println!("Unhandled non-blizzard addon: {}", addon_name);
+            warn!("Unhandled non-blizzard addon: {}", addon_name);
             //Write blizzard public key
         }
         addon_packet_writer.write_u32::<LittleEndian>(0)?;

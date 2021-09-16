@@ -2,7 +2,7 @@ use crate::character::*;
 use crate::constants::social::*;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
-use anyhow::{anyhow, Result};
+use crate::prelude::*;
 use podio::{LittleEndian, WritePodExt};
 
 pub async fn send_contact_list(character: &Character, relation_types: &[RelationType]) -> Result<()> {

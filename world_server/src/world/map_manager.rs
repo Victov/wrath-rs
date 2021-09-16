@@ -1,10 +1,9 @@
-use anyhow::Result;
-use async_std::sync::RwLock;
-
 use super::map_cell::*;
 use super::map_object::MapObject;
 use super::prelude::HasValueFields;
 use super::update_builder::*;
+use crate::prelude::*;
+use async_std::sync::RwLock;
 
 pub struct MapManager {
     //Of course, the mapmananger should have multiple cells

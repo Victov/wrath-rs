@@ -6,7 +6,7 @@ use crate::character::Character;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
-use anyhow::{anyhow, Result};
+use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::io::Write;
 use std::sync::Arc;

@@ -1,7 +1,7 @@
 use super::client::*;
 use super::packet_handler::PacketToHandle;
+use crate::prelude::*;
 use crate::world::World;
-use anyhow::Result;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
 use async_std::stream::StreamExt;
@@ -56,7 +56,7 @@ impl ClientManager {
             let packet_channel_for_client = packet_handle_sender.clone();
 
             client_lock.read().await.send_auth_challenge(realm_seed).await.unwrap_or_else(|e| {
-                println!("Error while sending auth challenge: {:?}", e);
+                error!("Error while sending auth challenge: {:?}", e);
                 return;
             });
 
@@ -64,7 +64,7 @@ impl ClientManager {
                 handle_incoming_packets(client_lock, read_socket_wrapped, packet_channel_for_client)
                     .await
                     .unwrap_or_else(|e| {
-                        println!("Error while handling packet {:?}", e);
+                        warn!("Error while handling packet {:?}", e);
                     });
                 //Client stopped handling packets. Probably disconnected. Remove from client list?
             });
@@ -75,9 +75,7 @@ impl ClientManager {
 
     pub async fn get_client(&self, id: u64) -> Result<Arc<RwLock<Client>>> {
         let hashmap = self.clients.read().await;
-        let clientlock = hashmap
-            .get(&id)
-            .ok_or_else(|| anyhow::anyhow!("Failed to get client for client id: {}", id))?;
+        let clientlock = hashmap.get(&id).ok_or_else(|| anyhow!("Failed to get client for client id: {}", id))?;
         Ok(clientlock.clone())
     }
 }
@@ -94,7 +92,7 @@ async fn handle_incoming_packets(
             let mut read_socket = socket.write().await;
             read_length = read_socket.read(&mut buf).await?;
             if read_length == 0 {
-                println!("disconnect");
+                info!("A client disconnected");
                 read_socket.shutdown(async_std::net::Shutdown::Both)?;
                 break;
             }

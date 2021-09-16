@@ -1,4 +1,4 @@
-use anyhow::Result;
+use crate::prelude::*;
 use async_std::net::UdpSocket;
 use podio::{BigEndian, WritePodExt};
 
@@ -7,7 +7,7 @@ pub async fn auth_server_heartbeats() -> Result<()> {
     socket.connect("127.0.0.1:1234").await?;
     let num_players_online = 10u32;
 
-    println!("REALM_ID = {}", std::env::var("REALM_ID")?);
+    info!("My realm ID = {}", std::env::var("REALM_ID")?);
     loop {
         std::thread::sleep(std::time::Duration::from_secs(5));
         let buf = Vec::<u8>::new();

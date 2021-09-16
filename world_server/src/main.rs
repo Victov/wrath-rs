@@ -1,8 +1,10 @@
 use std::sync::{atomic::AtomicBool, Arc};
 
-use anyhow::Result;
 use async_ctrlc::CtrlC;
 use async_std::task;
+use client_manager::ClientManager;
+use packet_handler::{PacketHandler, PacketToHandle};
+use tracing_subscriber::EnvFilter;
 use wrath_auth_db::AuthDatabase;
 use wrath_realm_db::RealmDatabase;
 
@@ -20,19 +22,28 @@ mod packet_handler;
 mod world;
 mod wowcrypto;
 
-use client_manager::ClientManager;
-use packet_handler::{PacketHandler, PacketToHandle};
+pub mod prelude {
+    pub use anyhow::{anyhow, bail, Result};
+    pub use tracing::{error, info, trace, warn};
+}
+use prelude::*;
 
 #[async_std::main]
 async fn main() -> Result<()> {
-    println!("Starting World Server");
     dotenv::dotenv().ok();
+    tracing_subscriber::FmtSubscriber::builder()
+        .with_env_filter(EnvFilter::new("wrath=info,sqlx=warn"))
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_timer(tracing_subscriber::fmt::time::time())
+        .init();
+
+    info!("Starting World Server");
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     let ctrlc = CtrlC::new().expect("Failed to register ctrl+c abort handler");
     task::spawn(async move {
         ctrlc.await;
-        println!("Detected Ctrl+C, starting graceful shutdown");
+        info!("Detected Ctrl+C, starting graceful shutdown");
         r.store(false, std::sync::atomic::Ordering::Relaxed);
     });
 
@@ -56,7 +67,7 @@ async fn main() -> Result<()> {
         client_manager_for_acceptloop
             .accept_realm_connections(sender)
             .await
-            .unwrap_or_else(|e| println!("Error in realm_socket::accept_realm_connections: {:?}", e))
+            .unwrap_or_else(|e| warn!("Error in realm_socket::accept_realm_connections: {:?}", e))
     });
 
     let desired_timestep_sec: f32 = 1.0 / 10.0;
@@ -64,7 +75,7 @@ async fn main() -> Result<()> {
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let before = std::time::Instant::now();
         realm_packet_handler.handle_queue(&client_manager).await.unwrap_or_else(|e| {
-            println!("Error while handling packet: {}", e);
+            warn!("Error while handling packet: {}", e);
         });
         world.tick(previous_loop_total).await?;
         let after = std::time::Instant::now();
@@ -72,7 +83,7 @@ async fn main() -> Result<()> {
         if update_duration.as_secs_f32() < desired_timestep_sec {
             task::sleep(std::time::Duration::from_secs_f32(desired_timestep_sec - update_duration.as_secs_f32())).await;
         } else {
-            println!("Warning: Too long tick to keep up with desired timestep!");
+            warn!("Too long tick to keep up with desired timestep!");
         }
         previous_loop_total = std::time::Instant::now().duration_since(before).as_secs_f32();
     }

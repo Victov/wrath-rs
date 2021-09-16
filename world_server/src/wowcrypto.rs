@@ -1,4 +1,4 @@
-use anyhow::Result;
+use crate::prelude::*;
 use crypto::digest::Digest;
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;

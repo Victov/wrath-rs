@@ -2,8 +2,8 @@ use super::client_manager::ClientManager;
 use crate::handlers::*;
 use crate::opcodes::Opcodes;
 use crate::packet::ClientPacketHeader;
+use crate::prelude::*;
 use crate::world::World;
-use anyhow::Result;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 
@@ -34,7 +34,7 @@ impl PacketHandler {
 
     async fn handle_packet(&self, client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
         if std::env::var("PRINT_INCOMING_PACKETS")?.parse::<usize>()? == 1usize {
-            println!("Incoming: {:?}", packet.header.get_cmd());
+            info!("Incoming: {:?}", packet.header.get_cmd());
         }
         match packet.header.get_cmd()? {
             Opcodes::CMSG_AUTH_SESSION => handle_cmsg_auth_session(client_manager, packet).await,
@@ -45,7 +45,7 @@ impl PacketHandler {
             Opcodes::CMSG_PING => handle_cmsg_ping(client_manager, packet).await,
             Opcodes::CMSG_UPDATE_ACCOUNT_DATA => handle_csmg_update_account_data(client_manager, packet).await,
             Opcodes::CMSG_PLAYER_LOGIN => handle_cmsg_player_login(client_manager, packet).await,
-            op => Err(anyhow::anyhow!("Unhandled opcode {:?}", op)),
+            op => Err(anyhow!("Unhandled opcode {:?}", op)),
         }
     }
 }

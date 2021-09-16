@@ -1,7 +1,7 @@
 use crate::character::*;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
-use anyhow::Result;
+use crate::prelude::*;
 use podio::{LittleEndian, WritePodExt};
 
 pub async fn send_talents_info(character: &Character) -> Result<()> {

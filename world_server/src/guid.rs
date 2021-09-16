@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use std::fmt::Display;
 
 #[derive(PartialEq)]
@@ -35,18 +36,18 @@ impl Guid {
 }
 
 pub trait WriteGuid {
-    fn write_guid<T: podio::Endianness>(&mut self, guid: &Guid) -> anyhow::Result<()>;
-    fn write_guid_compressed(&mut self, guid: &Guid) -> anyhow::Result<()>;
+    fn write_guid<T: podio::Endianness>(&mut self, guid: &Guid) -> Result<()>;
+    fn write_guid_compressed(&mut self, guid: &Guid) -> Result<()>;
 }
 
 impl<W: std::io::Write> WriteGuid for W {
-    fn write_guid<T: podio::Endianness>(&mut self, guid: &Guid) -> anyhow::Result<()> {
+    fn write_guid<T: podio::Endianness>(&mut self, guid: &Guid) -> Result<()> {
         use podio::WritePodExt;
         self.write_u64::<T>(guid.0)?;
         Ok(())
     }
 
-    fn write_guid_compressed(&mut self, guid: &Guid) -> anyhow::Result<()> {
+    fn write_guid_compressed(&mut self, guid: &Guid) -> Result<()> {
         let mut mask: u8 = 0;
         let inner: u64 = guid.0;
         for i in 0..8 {
@@ -76,11 +77,11 @@ fn get_byte_value_at(input: u64, index: isize) -> u8 {
 }
 
 pub trait ReadGuid {
-    fn read_guid<T: podio::Endianness>(&mut self) -> anyhow::Result<Guid>;
+    fn read_guid<T: podio::Endianness>(&mut self) -> Result<Guid>;
 }
 
 impl<R: std::io::Read> ReadGuid for R {
-    fn read_guid<T: podio::Endianness>(&mut self) -> anyhow::Result<Guid> {
+    fn read_guid<T: podio::Endianness>(&mut self) -> Result<Guid> {
         use podio::ReadPodExt;
         let val = self.read_u64::<T>()?;
         Ok(Guid(val))

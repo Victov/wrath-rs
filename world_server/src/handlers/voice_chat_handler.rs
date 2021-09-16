@@ -1,7 +1,7 @@
 use crate::character::Character;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
-use anyhow::Result;
+use crate::prelude::*;
 use podio::WritePodExt;
 
 pub async fn send_voice_chat_status(character: &Character, enabled: bool) -> Result<()> {

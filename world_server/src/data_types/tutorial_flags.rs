@@ -1,4 +1,4 @@
-use anyhow::Result;
+use crate::prelude::*;
 use std::convert::TryInto;
 use wrath_realm_db::character::DBCharacter;
 
