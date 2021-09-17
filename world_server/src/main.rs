@@ -15,7 +15,7 @@ mod client_manager;
 mod constants;
 mod data_types;
 mod guid;
-mod handlers;
+pub mod handlers;
 mod opcodes;
 mod packet;
 mod packet_handler;
@@ -23,6 +23,7 @@ mod world;
 mod wowcrypto;
 
 pub mod prelude {
+    pub use super::handlers;
     pub use anyhow::{anyhow, bail, Result};
     pub use tracing::{error, info, trace, warn};
 }

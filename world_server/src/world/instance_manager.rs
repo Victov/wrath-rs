@@ -9,7 +9,7 @@ type InstanceID = u32;
 pub struct InstanceManager {
     //Multiple instances are things like raids and dungeons which can spawn many times for
     //different groups
-    multiple_instances: RwLock<HashMap<InstanceID, Arc<RwLock<MapManager>>>>,
+    multiple_instances: RwLock<HashMap<InstanceID, Arc<MapManager>>>,
 }
 
 impl InstanceManager {
@@ -19,12 +19,12 @@ impl InstanceManager {
         }
     }
 
-    pub async fn get_map_for_instance(&self, instance_id: InstanceID) -> Arc<RwLock<MapManager>> {
+    pub async fn get_map_for_instance(&self, instance_id: InstanceID) -> Arc<MapManager> {
         self.multiple_instances
             .write()
             .await
             .entry(instance_id)
-            .or_insert(Arc::new(RwLock::new(MapManager::new())))
+            .or_insert(Arc::new(MapManager::new()))
             .clone()
     }
 }

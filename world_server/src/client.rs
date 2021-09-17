@@ -5,6 +5,7 @@ use super::opcodes::Opcodes;
 use super::packet::*;
 use super::wowcrypto::*;
 use crate::prelude::*;
+use crate::world::prelude::ReceiveUpdates;
 use async_std::net::TcpStream;
 use async_std::sync::{Mutex, RwLock};
 use num_bigint::RandBigInt;
@@ -24,7 +25,7 @@ pub struct Client {
     pub id: u64,
     pub crypto: RwLock<ClientCrypto>,
     pub account_id: Option<u32>,
-    pub active_character: Arc<RwLock<Option<Character>>>,
+    pub active_character: Option<Arc<RwLock<Character>>>,
 }
 
 impl Client {
@@ -36,7 +37,7 @@ impl Client {
             id: rand::thread_rng().next_u64(),
             crypto: RwLock::new(ClientCrypto::new()),
             account_id: None,
-            active_character: Arc::new(RwLock::new(None)),
+            active_character: None,
         }
     }
 
@@ -58,17 +59,41 @@ impl Client {
         self.account_id.is_some() && self.client_state != ClientState::PreLogin
     }
 
-    pub async fn login_character(&self, client_manager: &ClientManager, character_guid: Guid) -> Result<()> {
-        //Load character and insert into our safe locks asap
+    pub async fn load_and_set_active_character(&mut self, client_manager: &ClientManager, character_guid: Guid) -> Result<()> {
+        let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?.clone());
+        let mut character = Character::new(weakself, character_guid);
+        character.load_from_database(&client_manager.realm_db).await?;
+        self.active_character = Some(Arc::new(RwLock::new(character)));
+        Ok(())
+    }
+
+    pub async fn login_active_character(&self, client_manager: &ClientManager) -> Result<()> {
+        let character_lock = self.active_character.as_ref().unwrap();
+        let character_instance_id;
+
+        //Operations that can happen within a read lock
         {
-            let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?.clone());
-            let character = Character::load_from_database(weakself, &client_manager.realm_db, character_guid).await?;
-            *self.active_character.write().await = Some(character);
+            let character = character_lock.read().await;
+            character_instance_id = character.instance_id;
+            character.perform_login(client_manager).await?;
         }
-        //take the route that any other caller would take, through acquiring a lock
-        let mut lock = self.active_character.write().await;
-        let character = lock.as_mut().unwrap();
-        character.perform_login(client_manager).await?;
+
+        //This one must have no locks because it needs a write lock
+        client_manager
+            .world
+            .get_instance_manager()
+            .get_map_for_instance(character_instance_id)
+            .await
+            .push_object(Arc::downgrade(&character_lock))
+            .await?;
+
+        //We need write for this
+        {
+            let mut character = character_lock.write().await;
+            let (num, buf) = (*character).get_creation_data();
+            handlers::send_update_packet(&character, num, &buf).await?;
+            character.clear_creation_data();
+        }
 
         Ok(())
     }

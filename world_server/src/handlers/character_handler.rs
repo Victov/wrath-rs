@@ -186,8 +186,12 @@ pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packe
         reader.read_guid::<LittleEndian>()?
     };
 
+    {
+        let mut client = client_lock.write().await;
+        client.load_and_set_active_character(client_manager, guid).await?;
+    }
     let client = client_lock.read().await;
-    client.login_character(client_manager, guid).await?;
+    client.login_active_character(client_manager).await?;
 
     Ok(())
 }
@@ -207,13 +211,16 @@ pub async fn send_verify_world(character: &Character) -> Result<()> {
 
 pub async fn send_bind_update(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_BINDPOINTUPDATE, 20);
-    writer.write_f32::<LittleEndian>(character.bind_location.x)?;
-    writer.write_f32::<LittleEndian>(character.bind_location.y)?;
-    writer.write_f32::<LittleEndian>(character.bind_location.z)?;
-    writer.write_u32::<LittleEndian>(character.bind_location.map)?;
-    writer.write_u32::<LittleEndian>(character.bind_location.zone)?;
-
-    send_packet_to_character(&character, header, &writer).await?;
+    if let Some(bind_location) = &character.bind_location {
+        writer.write_f32::<LittleEndian>(bind_location.x)?;
+        writer.write_f32::<LittleEndian>(bind_location.y)?;
+        writer.write_f32::<LittleEndian>(bind_location.z)?;
+        writer.write_u32::<LittleEndian>(bind_location.map)?;
+        writer.write_u32::<LittleEndian>(bind_location.zone)?;
+        send_packet_to_character(&character, header, &writer).await?;
+    } else {
+        bail!("Requested to send Bind Update but character has no bind location")
+    }
 
     Ok(())
 }

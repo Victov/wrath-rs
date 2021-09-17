@@ -143,16 +143,13 @@ pub async fn handle_csmg_update_account_data(client_manager: &Arc<ClientManager>
             .update_account_data(account_id, time, data_type, decompressed_size, &new_data)
             .await?;
     } else {
-        let character_lock = client.active_character.read().await;
-        let character_id = character_lock
-            .as_ref()
-            .ok_or_else(|| anyhow!("Failed to get active character from client"))?
-            .guid
-            .get_low_part();
-        client_manager
-            .realm_db
-            .update_character_account_data(character_id, time, data_type, decompressed_size, &new_data)
-            .await?;
+        if let Some(character_lock) = &client.active_character {
+            let character_id = character_lock.read().await.guid.get_low_part();
+            client_manager
+                .realm_db
+                .update_character_account_data(character_id, time, data_type, decompressed_size, &new_data)
+                .await?;
+        }
     }
 
     let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_ACCOUNT_DATA_COMPLETE, 8);
