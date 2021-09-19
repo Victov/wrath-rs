@@ -1,11 +1,24 @@
+use std::sync::Weak;
+
+use async_std::sync::RwLock;
+
 pub use super::map_cell::MapCell;
+use super::map_manager::MapManager;
+use super::update_builder::{MapObjectWithValueFields, ReceiveUpdates};
+use crate::prelude::*;
 use crate::{constants::updates::ObjectType, data_types::PositionAndOrientation, guid::Guid};
 
 pub trait MapObject: Send + Sync {
     fn get_guid(&self) -> &Guid;
     fn get_position(&self) -> PositionAndOrientation;
-    fn set_in_cell(&mut self, cell: &MapCell);
     fn get_type(&self) -> ObjectType;
+
+    fn on_pushed_to_map(&mut self, map_manager: &MapManager) -> Result<()>;
+    fn is_in_range(&self, guid: &Guid) -> bool;
+    fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn MapObjectWithValueFields>>) -> Result<()>;
+    fn remove_in_range_object(&mut self, guid: &Guid) -> Result<()>;
+    fn wants_updates(&self) -> bool;
+    fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates>;
 
     fn is_player(&self) -> bool {
         self.get_type() as u8 & ObjectType::Player as u8 > 0

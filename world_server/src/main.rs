@@ -23,6 +23,7 @@ mod world;
 mod wowcrypto;
 
 pub mod prelude {
+    pub use super::guid::*;
     pub use super::handlers;
     pub use anyhow::{anyhow, bail, Result};
     pub use tracing::{error, info, trace, warn};

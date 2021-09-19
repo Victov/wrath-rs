@@ -9,13 +9,18 @@ use std::io::Cursor;
 use super::super::constants::updates::*;
 use super::prelude::{HasValueFields, MapObject, ObjectFields, UpdateMask};
 
+#[async_trait::async_trait]
 pub trait ReceiveUpdates {
     fn push_creation_data(&mut self, data: &mut Vec<u8>, block_count: u32);
     fn get_creation_data(&self) -> (u32, &Vec<u8>);
     fn clear_creation_data(&mut self);
+    async fn process_pending_updates(&mut self) -> Result<()>;
 }
 
-pub fn build_create_update_block_for_player(player: &impl MapObject, object: &(impl MapObject + HasValueFields)) -> Result<(u32, Vec<u8>)> {
+pub trait MapObjectWithValueFields: MapObject + HasValueFields {}
+impl<T> MapObjectWithValueFields for T where T: MapObject + HasValueFields {}
+
+pub fn build_create_update_block_for_player(player: &dyn MapObjectWithValueFields, object: &dyn MapObjectWithValueFields) -> Result<(u32, Vec<u8>)> {
     let flags2: u32 = 0;
     let outputbuf = Vec::<u8>::new();
     let mut update_type = ObjectUpdateType::CreateObject as u8;
@@ -60,7 +65,13 @@ pub fn build_create_update_block_for_player(player: &impl MapObject, object: &(i
     Ok((block_count, writer.into_inner()))
 }
 
-fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, flags2: u32, _player: &impl MapObject, object: &impl MapObject) -> Result<()> {
+fn build_movement_update(
+    writer: &mut Cursor<Vec<u8>>,
+    flags: u16,
+    flags2: u32,
+    _player: &dyn MapObjectWithValueFields,
+    object: &dyn MapObjectWithValueFields,
+) -> Result<()> {
     writer.write_u16::<LittleEndian>(flags)?;
 
     //Only implemented for living things for now
@@ -106,8 +117,8 @@ fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, flags2: u32, 
 
 fn build_values_update(
     writer: &mut Cursor<Vec<u8>>,
-    _player: &impl MapObject,
-    object: &(impl MapObject + HasValueFields),
+    _player: &dyn MapObjectWithValueFields,
+    object: &dyn MapObjectWithValueFields,
     update_mask: &UpdateMask,
 ) -> Result<()> {
     let num_values = object.get_num_value_fields();

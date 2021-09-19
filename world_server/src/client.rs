@@ -87,14 +87,6 @@ impl Client {
             .push_object(Arc::downgrade(&character_lock))
             .await?;
 
-        //We need write for this
-        {
-            let mut character = character_lock.write().await;
-            let (num, buf) = (*character).get_creation_data();
-            handlers::send_update_packet(&character, num, &buf).await?;
-            character.clear_creation_data();
-        }
-
         Ok(())
     }
 }

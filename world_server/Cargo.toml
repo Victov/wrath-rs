@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 async-std = {version="*", features=["attributes"] }
+async-trait = {version="0.1"}
 anyhow = { version = "1.0.32" }
 podio = { version = "*" } 
 dotenv = { version="*" }

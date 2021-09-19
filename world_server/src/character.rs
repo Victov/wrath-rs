@@ -7,6 +7,7 @@ use crate::prelude::*;
 use crate::world::prelude::updates::ObjectType;
 use crate::ClientManager;
 use async_std::sync::RwLock;
+use std::collections::HashMap;
 use std::sync::Weak;
 use wrath_realm_db::RealmDatabase;
 
@@ -33,6 +34,9 @@ pub struct Character {
     //required for unit values and implementing ValueFieldsRaw trait, which in turn will grant us
     //HasvalueFields trait, with all sorts of goodies
     unit_value_fields: [u32; NUM_UNIT_FIELDS],
+
+    //things required to keep MapObject working
+    in_range_objects: HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>,
 }
 
 impl Character {
@@ -52,6 +56,7 @@ impl Character {
             creation_block_count: 0,
             creation_buffer: vec![],
             unit_value_fields: [0; NUM_UNIT_FIELDS],
+            in_range_objects: HashMap::new(),
         }
     }
 
@@ -118,10 +123,6 @@ impl Character {
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
 
-        /*let (num, buf) = self.get_creation_data();
-        handlers::send_update_packet(&self, num, &buf).await?;
-        self.clear_creation_data();*/
-
         Ok(())
     }
 }
@@ -129,10 +130,6 @@ impl Character {
 impl MapObject for Character {
     fn get_guid(&self) -> &Guid {
         &self.guid
-    }
-    fn set_in_cell(&mut self, _cell: &MapCell) {}
-    fn get_type(&self) -> updates::ObjectType {
-        ObjectType::Player
     }
 
     fn get_position(&self) -> PositionAndOrientation {
@@ -143,8 +140,42 @@ impl MapObject for Character {
             o: self.orientation,
         }
     }
+
+    fn get_type(&self) -> updates::ObjectType {
+        ObjectType::Player
+    }
+
+    fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
+        let (block_count, mut update_data) = build_create_update_block_for_player(self, self)?;
+        self.push_creation_data(&mut update_data, block_count);
+        Ok(())
+    }
+
+    fn is_in_range(&self, guid: &Guid) -> bool {
+        self.in_range_objects.contains_key(guid)
+    }
+
+    fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn MapObjectWithValueFields>>) -> Result<()> {
+        assert!(!self.is_in_range(guid));
+        self.in_range_objects.insert(guid.clone(), object);
+        Ok(())
+    }
+
+    fn remove_in_range_object(&mut self, guid: &Guid) -> Result<()> {
+        self.in_range_objects.remove(guid);
+        Ok(())
+    }
+
+    fn wants_updates(&self) -> bool {
+        true
+    }
+
+    fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates> {
+        Some(self)
+    }
 }
 
+#[async_trait::async_trait]
 impl ReceiveUpdates for Character {
     fn push_creation_data(&mut self, data: &mut Vec<u8>, block_count: u32) {
         self.creation_buffer.append(data);
@@ -156,6 +187,15 @@ impl ReceiveUpdates for Character {
     fn clear_creation_data(&mut self) {
         self.creation_block_count = 0;
         self.creation_buffer.clear();
+    }
+
+    async fn process_pending_updates(&mut self) -> Result<()> {
+        let (num, buf) = self.get_creation_data();
+        if num > 0 {
+            handlers::send_update_packet(self, num, &buf).await?;
+            self.clear_creation_data();
+        }
+        Ok(())
     }
 }
 

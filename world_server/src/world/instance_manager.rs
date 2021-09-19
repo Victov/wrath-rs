@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -17,6 +18,15 @@ impl InstanceManager {
         Self {
             multiple_instances: RwLock::new(HashMap::default()),
         }
+    }
+
+    pub async fn tick(&self, delta_time: f32) -> Result<()> {
+        let maps_table = self.multiple_instances.read().await;
+        for map in maps_table.values() {
+            map.tick(delta_time).await?;
+        }
+
+        Ok(())
     }
 
     pub async fn get_map_for_instance(&self, instance_id: InstanceID) -> Arc<MapManager> {

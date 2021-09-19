@@ -10,8 +10,7 @@ impl MapCell {
         Self {}
     }
 
-    pub async fn push_object(&mut self, object: &mut impl MapObject) -> Result<()> {
-        object.set_in_cell(self);
+    pub async fn push_object(&mut self, _object: &mut impl MapObject) -> Result<()> {
         Ok(())
     }
 }

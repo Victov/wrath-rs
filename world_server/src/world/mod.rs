@@ -12,6 +12,7 @@ mod value_fields;
 pub mod prelude {
     pub use super::super::constants::*;
     pub use super::map_cell::*;
+    pub use super::map_manager::*;
     pub use super::map_object::*;
     pub use super::update_builder::*;
     pub use super::value_fields::*;
@@ -32,7 +33,8 @@ impl World {
         self.instance_manager.clone()
     }
 
-    pub async fn tick(&self, _delta_time: f32) -> Result<()> {
+    pub async fn tick(&self, delta_time: f32) -> Result<()> {
+        self.instance_manager.tick(delta_time).await?;
         Ok(())
     }
 }
