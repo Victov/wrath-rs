@@ -1,4 +1,5 @@
 use super::client_manager::ClientManager;
+use crate::client::ClientState;
 use crate::handlers::*;
 use crate::opcodes::Opcodes;
 use crate::packet::ClientPacketHeader;
@@ -36,6 +37,16 @@ impl PacketHandler {
         if std::env::var("PRINT_INCOMING_PACKETS")?.parse::<usize>()? == 1usize {
             info!("Incoming: {:?}", packet.header.get_cmd());
         }
+        {
+            let client_lock = client_manager.get_client(packet.client_id).await?;
+            let client = client_lock.read().await;
+            //Most likely this won't even be reached since the client manager can't find that
+            //client
+            if client.client_state == ClientState::Disconnected {
+                bail!("PacketHandler received a packet for a client that's already disconnected. Ignoring");
+            }
+        }
+
         match packet.header.get_cmd()? {
             Opcodes::CMSG_AUTH_SESSION => handle_cmsg_auth_session(client_manager, packet).await,
             Opcodes::CMSG_READY_FOR_ACCOUNT_DATA_TIMES => handle_csmg_ready_for_account_data_times(client_manager, packet).await,

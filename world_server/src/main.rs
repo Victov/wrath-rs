@@ -76,6 +76,9 @@ async fn main() -> Result<()> {
     let mut previous_loop_total: f32 = desired_timestep_sec;
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let before = std::time::Instant::now();
+        client_manager.cleanup_disconnected_clients().await.unwrap_or_else(|e| {
+            error!("Error while cleaning up disconnected clients: {}", e);
+        });
         realm_packet_handler.handle_queue(&client_manager).await.unwrap_or_else(|e| {
             warn!("Error while handling packet: {}", e);
         });

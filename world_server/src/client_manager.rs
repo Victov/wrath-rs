@@ -5,7 +5,7 @@ use crate::world::World;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
 use async_std::stream::StreamExt;
-use async_std::sync::{Mutex, RwLock};
+use async_std::sync::{Mutex, RwLock, RwLockUpgradableReadGuard};
 use async_std::task;
 use rand::RngCore;
 use std::collections::HashMap;
@@ -31,6 +31,28 @@ impl ClientManager {
             clients: RwLock::new(HashMap::new()),
             world,
         }
+    }
+
+    pub async fn cleanup_disconnected_clients(&self) -> Result<()> {
+        let to_remove = {
+            let mut result = vec![];
+            let clients = self.clients.read().await;
+            for (id, client) in clients.iter() {
+                if client.read().await.client_state == ClientState::Disconnected {
+                    result.push(*id);
+                }
+            }
+            result
+        };
+        if to_remove.len() == 0 {
+            return Ok(());
+        }
+
+        let mut write_clients = self.clients.write().await;
+        write_clients.retain(|id, _| !to_remove.contains(&id));
+        info!("Cleaned up {} clients, {} clients left online", to_remove.len(), write_clients.len());
+
+        Ok(())
     }
 
     pub async fn accept_realm_connections(&self, packet_handle_sender: Sender<PacketToHandle>) -> Result<()> {
@@ -61,12 +83,18 @@ impl ClientManager {
             });
 
             task::spawn(async move {
-                handle_incoming_packets(client_lock, read_socket_wrapped, packet_channel_for_client)
+                handle_incoming_packets(client_lock.clone(), read_socket_wrapped, packet_channel_for_client)
                     .await
                     .unwrap_or_else(|e| {
                         warn!("Error while handling packet {:?}", e);
                     });
                 //Client stopped handling packets. Probably disconnected. Remove from client list?
+                client_lock
+                    .write()
+                    .await
+                    .disconnect()
+                    .await
+                    .unwrap_or_else(|e| warn!("Something went wrong while disconnecting client: {:?}", e));
             });
         }
 
@@ -92,8 +120,7 @@ async fn handle_incoming_packets(
             let mut read_socket = socket.write().await;
             read_length = read_socket.read(&mut buf).await?;
             if read_length == 0 {
-                info!("A client disconnected");
-                read_socket.shutdown(async_std::net::Shutdown::Both)?;
+                //Disconnected, break the loop and exit the function
                 break;
             }
         }

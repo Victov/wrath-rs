@@ -5,7 +5,6 @@ use super::opcodes::Opcodes;
 use super::packet::*;
 use super::wowcrypto::*;
 use crate::prelude::*;
-use crate::world::prelude::ReceiveUpdates;
 use async_std::net::TcpStream;
 use async_std::sync::{Mutex, RwLock};
 use num_bigint::RandBigInt;
@@ -16,6 +15,7 @@ use std::sync::Arc;
 pub enum ClientState {
     PreLogin,
     CharacterSelection,
+    Disconnected,
 }
 
 pub struct Client {
@@ -39,6 +39,16 @@ impl Client {
             account_id: None,
             active_character: None,
         }
+    }
+
+    pub async fn disconnect(&mut self) -> Result<()> {
+        info!("A client disconnected");
+        self.client_state = ClientState::Disconnected;
+        self.read_socket.write().await.shutdown(async_std::net::Shutdown::Both)?;
+        self.write_socket.lock().await.shutdown(std::net::Shutdown::Both)?;
+        //Save character to db?
+        self.active_character = None;
+        Ok(())
     }
 
     pub async fn send_auth_challenge(&self, realm_seed: u32) -> Result<()> {
