@@ -1,3 +1,4 @@
+use crate::client::Client;
 use crate::prelude::*;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
@@ -36,5 +37,22 @@ impl InstanceManager {
             .entry(instance_id)
             .or_insert(Arc::new(MapManager::new()))
             .clone()
+    }
+
+    pub async fn handle_client_disconnected(&self, client: &Client) -> Result<()> {
+        if let Some(character_lock) = &client.active_character {
+            let active_character = character_lock.read().await;
+            let character_instance_id = active_character.instance_id;
+
+            let mul_instances = self.multiple_instances.read().await;
+            if let Some(map_mgr) = mul_instances.get(&character_instance_id) {
+                use super::map_object::MapObject;
+                map_mgr.remove_object_by_guid(active_character.get_guid()).await?;
+            } else {
+                warn!("Handling disconnent, but no known map manager");
+            }
+        }
+
+        Ok(())
     }
 }

@@ -15,6 +15,7 @@ use std::sync::Arc;
 pub enum ClientState {
     PreLogin,
     CharacterSelection,
+    DisconnectPendingCleanup,
     Disconnected,
 }
 
@@ -42,11 +43,22 @@ impl Client {
     }
 
     pub async fn disconnect(&mut self) -> Result<()> {
+        //Kill all networking, but allow the world one frame to do cleanup
+        //For example, keep around the active character, so that the instance manager can see that
+        //we're disconnected, but still access the character to do world cleanup
         info!("A client disconnected");
-        self.client_state = ClientState::Disconnected;
+        self.client_state = ClientState::DisconnectPendingCleanup;
         self.read_socket.write().await.shutdown(async_std::net::Shutdown::Both)?;
         self.write_socket.lock().await.shutdown(std::net::Shutdown::Both)?;
         //Save character to db?
+        Ok(())
+    }
+
+    pub async fn disconnected_post_cleanup(&mut self) -> Result<()> {
+        //Cleanup time has passed. Now this client is really really disconnected and
+        //will be fully removed from memory
+        self.client_state = ClientState::Disconnected;
+        self.account_id = None;
         self.active_character = None;
         Ok(())
     }

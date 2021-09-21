@@ -5,21 +5,38 @@ use super::map_object::MapObject;
 use super::prelude::*;
 use crate::prelude::*;
 use async_std::sync::RwLock;
-use kdtree::distance::squared_euclidean;
-use kdtree::KdTree;
+use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
-const NUM_MAP_DIMENSIONS: usize = 2;
+#[derive(Clone, Copy, PartialEq, Debug)]
+struct RStarTreeItem {
+    x: f32,
+    y: f32,
+    guid: Guid,
+}
 
+impl RTreeObject for RStarTreeItem {
+    type Envelope = AABB<[f32; 2]>;
+
+    fn envelope(&self) -> Self::Envelope {
+        AABB::from_point([self.x, self.y])
+    }
+}
+
+impl PointDistance for RStarTreeItem {
+    fn distance_2(&self, point: &<Self::Envelope as rstar::Envelope>::Point) -> <<Self::Envelope as rstar::Envelope>::Point as rstar::Point>::Scalar {
+        self.envelope().distance_2(point)
+    }
+}
 pub struct MapManager {
     objects_on_map: RwLock<HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>>,
-    kd_tree: RwLock<KdTree<f32, Weak<RwLock<dyn MapObjectWithValueFields>>, [f32; NUM_MAP_DIMENSIONS]>>,
+    query_tree: RwLock<RTree<RStarTreeItem>>,
 }
 
 impl MapManager {
     pub fn new() -> Self {
         Self {
             objects_on_map: RwLock::new(HashMap::new()),
-            kd_tree: RwLock::new(KdTree::new(NUM_MAP_DIMENSIONS)),
+            query_tree: RwLock::new(RTree::new()),
         }
     }
 
@@ -44,12 +61,13 @@ impl MapManager {
         if let Some(object_lock) = object_ref.upgrade() {
             {
                 let object = object_lock.read().await;
-                self.kd_tree
-                    .write()
-                    .await
-                    .add([object.get_position().x, object.get_position().y], object_ref.clone())?;
-
                 self.objects_on_map.write().await.insert(object.get_guid().clone(), object_ref.clone());
+                let query_item = RStarTreeItem {
+                    x: object.get_position().x,
+                    y: object.get_position().y,
+                    guid: object.get_guid().clone(),
+                };
+                self.query_tree.write().await.insert(query_item);
             }
 
             object_lock.write().await.on_pushed_to_map(self)?;
@@ -64,61 +82,92 @@ impl MapManager {
     async fn update_in_range_set(&self, object_ref: Weak<RwLock<impl MapObjectWithValueFields + 'static>>) -> Result<()> {
         let target_object_lock = object_ref.upgrade().unwrap();
 
-        let tree = self.kd_tree.read().await;
-        let within_range: Vec<(f32, &Weak<RwLock<dyn MapObjectWithValueFields>>)> = {
+        let tree = self.query_tree.read().await;
+        let within_range = {
             let object = target_object_lock.read().await;
-            let object_pos = &[object.get_position().x, object.get_position().y];
-            tree.within(object_pos, 20.0f32, &squared_euclidean)?
+            let object_pos = [object.get_position().x, object.get_position().y];
+            tree.locate_within_distance(object_pos, 20.0f32)
         };
 
-        for (range, lock_ptr) in within_range {
-            if let Some(in_range_object_lock) = lock_ptr.upgrade() {
-                //Only read locks required here
-                {
-                    let read_obj = in_range_object_lock.read().await;
-                    let target_object = target_object_lock.read().await;
-                    if read_obj.get_guid() == target_object.get_guid() {
-                        //skip ourselves
-                        continue;
-                    }
-
-                    if read_obj.is_in_range(target_object.get_guid()) {
-                        //skip if we already know this object in our range
-                        continue;
-                    }
-                    info!("New object in range! Dist: {}, Guid: {}", range, read_obj.get_guid());
+        let objects_on_map = self.objects_on_map.read().await;
+        for tree_item in within_range {
+            let guid = tree_item.guid;
+            //Only read locks required here
+            {
+                let target_object = target_object_lock.read().await;
+                if &guid == target_object.get_guid() {
+                    //skip ourselves
+                    continue;
                 }
 
-                {
-                    let mut write_obj = in_range_object_lock.write().await;
-                    write_obj.add_in_range_object(target_object_lock.read().await.get_guid(), object_ref.clone())?;
-                    if write_obj.wants_updates() {
-                        let (block_count, mut buffer) = build_create_update_block_for_player(&*write_obj, &*target_object_lock.read().await)?;
-                        if let Some(wants_updates) = write_obj.as_update_receiver_mut() {
-                            wants_updates.push_creation_data(&mut buffer, block_count);
-                        }
-                    }
+                if target_object.is_in_range(&guid) {
+                    //skip if we already know this object in our range
+                    continue;
                 }
-                {
-                    let mut write_target_object = target_object_lock.write().await;
-                    write_target_object.add_in_range_object(in_range_object_lock.read().await.get_guid(), lock_ptr.clone())?;
-                    if write_target_object.wants_updates() {
-                        let (block_count, mut buffer) =
-                            build_create_update_block_for_player(&*write_target_object, &*in_range_object_lock.read().await)?;
-                        if let Some(wants_updates) = write_target_object.as_update_receiver_mut() {
-                            wants_updates.push_creation_data(&mut buffer, block_count);
+                info!("New object in range! Guid: {}", guid);
+            }
+
+            if let Some(weak_ptr_to_lock) = objects_on_map.get(&guid) {
+                if let Some(upgraded_lock_from_guid) = weak_ptr_to_lock.upgrade() {
+                    {
+                        let mut write_obj = upgraded_lock_from_guid.write().await;
+                        write_obj.add_in_range_object(target_object_lock.read().await.get_guid(), object_ref.clone())?;
+                        if write_obj.wants_updates() {
+                            let (block_count, mut buffer) = build_create_update_block_for_player(&*write_obj, &*target_object_lock.read().await)?;
+                            if let Some(wants_updates) = write_obj.as_update_receiver_mut() {
+                                wants_updates.push_creation_data(&mut buffer, block_count);
+                            }
                         }
                     }
+                    {
+                        let mut write_target_object = target_object_lock.write().await;
+                        write_target_object.add_in_range_object(&guid, weak_ptr_to_lock.clone())?;
+                        if write_target_object.wants_updates() {
+                            let (block_count, mut buffer) =
+                                build_create_update_block_for_player(&*write_target_object, &*upgraded_lock_from_guid.read().await)?;
+                            if let Some(wants_updates) = write_target_object.as_update_receiver_mut() {
+                                wants_updates.push_creation_data(&mut buffer, block_count);
+                            }
+                        }
+                    }
+                } else {
+                    //The object should have been cleaned up, so at this point this is a warning
+                    //Don't do clean-up here. This exposes a problem elsewhere, don't try to fix it
+                    //here
+                    warn!("We got an object in range that's no longer active on the server, weakref failed to upgrade");
+                    continue;
                 }
             } else {
-                //The object should have been cleaned up, so at this point this is a warning
-                //Don't do clean-up here. This exposes a problem elsewhere, don't try to fix it
-                //here
-                warn!("We got an object in range that's no longer active on the server, weakref failed to upgrade");
+                error!("Map manager had a GUID in its spacial querying tree that wasn't known in the objects on the map");
                 continue;
             }
         }
 
+        Ok(())
+    }
+
+    pub async fn remove_object_by_guid(&self, guid: &Guid) -> Result<()> {
+        {
+            let mut objects_on_map = self.objects_on_map.write().await;
+            objects_on_map.remove(guid);
+        }
+        //Leave write lock asap
+        let objects_on_map = self.objects_on_map.read().await;
+
+        let mut obj_list = vec![];
+        for (guid, obj_weak_ptr) in objects_on_map.iter() {
+            if let Some(lock) = obj_weak_ptr.upgrade() {
+                let map_obj = lock.read().await;
+                obj_list.push(RStarTreeItem {
+                    guid: *guid,
+                    x: map_obj.get_position().x,
+                    y: map_obj.get_position().y,
+                });
+            }
+        }
+
+        let mut query_tree = self.query_tree.write().await;
+        *query_tree = RTree::bulk_load(obj_list);
         Ok(())
     }
 }

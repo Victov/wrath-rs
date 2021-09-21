@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use std::fmt::Display;
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct Guid(u64);
 
 //from: https://github.com/azerothcore/azerothcore-wotlk/blob/master/src/server/game/Entities/Object/ObjectDefines.h

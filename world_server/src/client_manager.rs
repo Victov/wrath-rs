@@ -37,8 +37,18 @@ impl ClientManager {
         let to_remove = {
             let mut result = vec![];
             let clients = self.clients.read().await;
-            for (id, client) in clients.iter() {
-                if client.read().await.client_state == ClientState::Disconnected {
+            for (id, client_lock) in clients.iter() {
+                let client = client_lock.upgradable_read().await;
+                //Cleanup is two-staged. Sockets are already closed here, but we take this frame to
+                //be able to remove them from the world and all that cleanup
+                if client.client_state == ClientState::DisconnectPendingCleanup {
+                    self.world.get_instance_manager().handle_client_disconnected(&client).await?;
+                    //insert more cleanup actions here
+                    let mut client = RwLockUpgradableReadGuard::upgrade(client).await;
+                    client.disconnected_post_cleanup().await?;
+                } else if client.client_state == ClientState::Disconnected {
+                    //Here the client is disconnected and cleanup is done.
+                    //insert id so we can clean that hashmap later
                     result.push(*id);
                 }
             }
