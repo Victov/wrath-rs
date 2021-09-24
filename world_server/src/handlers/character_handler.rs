@@ -28,7 +28,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
     writer.write_u8(characters.len() as u8)?;
 
     for character in characters {
-        let guid = Guid::new(character.id, 0, HighGuid::Player);
+        let guid = Guid::new(character.id, HighGuid::Player);
         let character_flags = 0; //todo: stuff like being ghost, hide cloak, hide helmet, etc
         let is_first_login = 0u8;
 

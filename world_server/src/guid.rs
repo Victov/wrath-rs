@@ -22,8 +22,8 @@ pub enum HighGuid {
 }
 
 impl Guid {
-    pub fn new(low: u32, mid: u32, high: HighGuid) -> Self {
-        Self((low as u64) | ((mid as u64) << 24) | ((high as u64) << 48))
+    pub fn new(low: u32, high: HighGuid) -> Self {
+        Self((low as u64) | (high as u64) << 32)
     }
 
     pub fn get_low_part(&self) -> u32 {
@@ -90,6 +90,6 @@ impl<R: std::io::Read> ReadGuid for R {
 
 impl Display for Guid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Guid(0x{:08x})", self.0)
+        write!(f, "Guid(0x{:016x})", self.0)
     }
 }
