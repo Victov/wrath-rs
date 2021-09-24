@@ -58,7 +58,7 @@ impl<W: std::io::Write> WriteGuid for W {
 
         use podio::WritePodExt;
         self.write_u8(mask)?;
-        for i in (0..8).rev() {
+        for i in 0..8 {
             let val = get_byte_value_at(inner, i);
             if val > 0 {
                 self.write_u8(val)?;

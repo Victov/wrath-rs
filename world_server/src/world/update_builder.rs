@@ -11,9 +11,9 @@ use super::prelude::{HasValueFields, MapObject, ObjectFields, UpdateMask};
 
 #[async_trait::async_trait]
 pub trait ReceiveUpdates {
-    fn push_creation_data(&mut self, data: &mut Vec<u8>, block_count: u32);
-    fn get_creation_data(&self) -> (u32, &Vec<u8>);
-    fn clear_creation_data(&mut self);
+    fn push_update_block(&mut self, data: &mut Vec<u8>, block_count: u32);
+    fn get_update_blocks(&self) -> (u32, &Vec<u8>);
+    fn clear_update_blocks(&mut self);
     async fn process_pending_updates(&mut self) -> Result<()>;
 }
 
@@ -44,13 +44,7 @@ pub fn build_create_update_block_for_player(player: &dyn MapObjectWithValueField
     }
 
     writer.write_u8(update_type)?;
-    //We should be writing the object guid, however since we still have a hardcoded
-    //GUID in the build_values_update they need to match. So until we have flexible
-    //values update that's built up from actual values, leave the temp hardcoded guid here
     writer.write_guid_compressed(&object.get_guid())?;
-
-    //let guid = Guid::new(0x00010203, 0, guid::HighGuid::Player);
-    //writer.write_guid_compressed(&guid)?;
 
     writer.write_u8(object.get_type() as u8)?;
 
@@ -62,6 +56,29 @@ pub fn build_create_update_block_for_player(player: &dyn MapObjectWithValueField
 
     build_values_update(&mut writer, player, object, &update_mask)?;
     block_count += 1;
+    Ok((block_count, writer.into_inner()))
+}
+
+pub fn build_out_of_range_update_block_for_player(player: &dyn MapObjectWithValueFields) -> Result<(u32, Vec<u8>)> {
+    let out_of_range_guids = player.get_recently_removed_range_guids();
+    if out_of_range_guids.len() == 0 {
+        return Ok((0, vec![]));
+    }
+
+    let outputbuf = Vec::<u8>::new();
+    let update_type = ObjectUpdateType::OutOfRangeObjects as u8;
+    let mut writer = Cursor::new(outputbuf);
+
+    //These three are todo
+    let block_count = 1;
+    let num_out_of_range_guids = out_of_range_guids.len() as u32;
+
+    writer.write_u8(update_type)?;
+    writer.write_u32::<LittleEndian>(num_out_of_range_guids)?;
+    for guid in out_of_range_guids {
+        writer.write_guid_compressed(guid)?;
+    }
+
     Ok((block_count, writer.into_inner()))
 }
 

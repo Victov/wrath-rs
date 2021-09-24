@@ -46,6 +46,9 @@ impl MapManager {
             if let Some(valid_object_lock) = map_object.upgrade() {
                 let mut valid_object = valid_object_lock.write().await;
                 if valid_object.wants_updates() {
+                    let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object)?;
+                    valid_object.clear_recently_removed_range_guids()?;
+                    valid_object.as_update_receiver_mut().unwrap().push_update_block(&mut buf, num_blocks);
                     valid_object.as_update_receiver_mut().unwrap().process_pending_updates().await?;
                 }
             }
@@ -115,7 +118,7 @@ impl MapManager {
                         if write_obj.wants_updates() {
                             let (block_count, mut buffer) = build_create_update_block_for_player(&*write_obj, &*target_object_lock.read().await)?;
                             if let Some(wants_updates) = write_obj.as_update_receiver_mut() {
-                                wants_updates.push_creation_data(&mut buffer, block_count);
+                                wants_updates.push_update_block(&mut buffer, block_count);
                             }
                         }
                     }
@@ -126,7 +129,7 @@ impl MapManager {
                             let (block_count, mut buffer) =
                                 build_create_update_block_for_player(&*write_target_object, &*upgraded_lock_from_guid.read().await)?;
                             if let Some(wants_updates) = write_target_object.as_update_receiver_mut() {
-                                wants_updates.push_creation_data(&mut buffer, block_count);
+                                wants_updates.push_update_block(&mut buffer, block_count);
                             }
                         }
                     }
@@ -146,15 +149,9 @@ impl MapManager {
         Ok(())
     }
 
-    pub async fn remove_object_by_guid(&self, guid: &Guid) -> Result<()> {
-        {
-            let mut objects_on_map = self.objects_on_map.write().await;
-            objects_on_map.remove(guid);
-        }
-        //Leave write lock asap
-        let objects_on_map = self.objects_on_map.read().await;
-
+    async fn rebuild_object_querying_tree(&self) -> Result<()> {
         let mut obj_list = vec![];
+        let objects_on_map = self.objects_on_map.read().await;
         for (guid, obj_weak_ptr) in objects_on_map.iter() {
             if let Some(lock) = obj_weak_ptr.upgrade() {
                 let map_obj = lock.read().await;
@@ -168,6 +165,29 @@ impl MapManager {
 
         let mut query_tree = self.query_tree.write().await;
         *query_tree = RTree::bulk_load(obj_list);
+        Ok(())
+    }
+
+    pub async fn remove_object_by_guid(&self, guid: &Guid) -> Result<()> {
+        if let Some(weak_removed_object) = {
+            let mut objects_on_map = self.objects_on_map.write().await;
+            objects_on_map.remove(guid)
+        } {
+            if let Some(removed_object_lock) = weak_removed_object.upgrade() {
+                let removed_object = removed_object_lock.read().await;
+                let objects_on_map = self.objects_on_map.read().await;
+                for guid in removed_object.get_in_range_guids() {
+                    if let Some(weak_in_range_object) = objects_on_map.get(guid) {
+                        if let Some(in_range_object_lock) = weak_in_range_object.upgrade() {
+                            info!("removed {} from range of {}", removed_object.get_guid(), guid);
+                            in_range_object_lock.write().await.remove_in_range_object(guid)?;
+                        }
+                    }
+                }
+            }
+
+            self.rebuild_object_querying_tree().await?;
+        }
         Ok(())
     }
 }

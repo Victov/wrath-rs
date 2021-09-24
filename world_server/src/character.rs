@@ -37,6 +37,7 @@ pub struct Character {
 
     //things required to keep MapObject working
     in_range_objects: HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>,
+    recently_removed_guids: Vec<Guid>,
 }
 
 impl Character {
@@ -57,6 +58,7 @@ impl Character {
             creation_buffer: vec![],
             unit_value_fields: [0; NUM_UNIT_FIELDS],
             in_range_objects: HashMap::new(),
+            recently_removed_guids: vec![],
         }
     }
 
@@ -147,7 +149,7 @@ impl MapObject for Character {
 
     fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
         let (block_count, mut update_data) = build_create_update_block_for_player(self, self)?;
-        self.push_creation_data(&mut update_data, block_count);
+        self.push_update_block(&mut update_data, block_count);
         Ok(())
     }
 
@@ -161,8 +163,22 @@ impl MapObject for Character {
         Ok(())
     }
 
+    fn get_in_range_guids(&self) -> Vec<&Guid> {
+        self.in_range_objects.keys().collect()
+    }
+
     fn remove_in_range_object(&mut self, guid: &Guid) -> Result<()> {
         self.in_range_objects.remove(guid);
+        self.recently_removed_guids.push(guid.clone());
+        Ok(())
+    }
+
+    fn get_recently_removed_range_guids(&self) -> &Vec<Guid> {
+        &self.recently_removed_guids
+    }
+
+    fn clear_recently_removed_range_guids(&mut self) -> Result<()> {
+        self.recently_removed_guids.clear();
         Ok(())
     }
 
@@ -177,23 +193,23 @@ impl MapObject for Character {
 
 #[async_trait::async_trait]
 impl ReceiveUpdates for Character {
-    fn push_creation_data(&mut self, data: &mut Vec<u8>, block_count: u32) {
+    fn push_update_block(&mut self, data: &mut Vec<u8>, block_count: u32) {
         self.creation_buffer.append(data);
         self.creation_block_count += block_count;
     }
-    fn get_creation_data(&self) -> (u32, &Vec<u8>) {
+    fn get_update_blocks(&self) -> (u32, &Vec<u8>) {
         (self.creation_block_count, &self.creation_buffer)
     }
-    fn clear_creation_data(&mut self) {
+    fn clear_update_blocks(&mut self) {
         self.creation_block_count = 0;
         self.creation_buffer.clear();
     }
 
     async fn process_pending_updates(&mut self) -> Result<()> {
-        let (num, buf) = self.get_creation_data();
+        let (num, buf) = self.get_update_blocks();
         if num > 0 {
             handlers::send_update_packet(self, num, &buf).await?;
-            self.clear_creation_data();
+            self.clear_update_blocks();
         }
         Ok(())
     }
