@@ -42,3 +42,10 @@ pub async fn send_update_packet(character: &Character, num_blocks: u32, data: &[
 
     send_packet_to_character(character, header, &writer).await
 }
+
+pub async fn send_destroy_object(character: &Character, object_guid: &Guid, is_death: bool) -> Result<()> {
+    let (header, mut writer) = create_packet(Opcodes::SMSG_DESTROY_OBJECT, 9);
+    writer.write_guid_compressed(object_guid)?;
+    writer.write_u8(is_death as u8)?;
+    send_packet_to_character(character, header, &writer).await
+}

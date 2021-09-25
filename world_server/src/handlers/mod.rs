@@ -38,6 +38,7 @@ mod talent_handler;
 pub use talent_handler::send_talents_info;
 
 mod world_handler;
+pub use world_handler::send_destroy_object;
 pub use world_handler::send_initial_world_states;
 pub use world_handler::send_update_packet;
 pub use world_handler::send_world_state_update;

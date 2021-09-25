@@ -5,6 +5,7 @@ use async_std::sync::RwLock;
 pub use super::map_cell::MapCell;
 use super::map_manager::MapManager;
 use super::update_builder::{MapObjectWithValueFields, ReceiveUpdates};
+use crate::character::Character;
 use crate::prelude::*;
 use crate::{constants::updates::ObjectType, data_types::PositionAndOrientation, guid::Guid};
 
@@ -22,6 +23,7 @@ pub trait MapObject: Send + Sync {
     fn clear_recently_removed_range_guids(&mut self) -> Result<()>;
     fn wants_updates(&self) -> bool;
     fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates>;
+    fn as_character(&self) -> Option<&Character>;
 
     fn is_player(&self) -> bool {
         self.get_type() as u8 & ObjectType::Player as u8 > 0

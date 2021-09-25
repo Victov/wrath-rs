@@ -196,6 +196,10 @@ impl MapObject for Character {
     fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates> {
         Some(self)
     }
+
+    fn as_character(&self) -> Option<&Character> {
+        Some(self)
+    }
 }
 
 #[async_trait::async_trait]
@@ -215,7 +219,6 @@ impl ReceiveUpdates for Character {
     async fn process_pending_updates(&mut self) -> Result<()> {
         let (num, buf) = self.get_update_blocks();
         if num > 0 {
-            info!("Character {} has {} updates to send", self.guid, num);
             handlers::send_update_packet(self, num, &buf).await?;
             self.clear_update_blocks();
         }

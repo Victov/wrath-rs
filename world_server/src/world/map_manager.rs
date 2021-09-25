@@ -57,7 +57,6 @@ impl MapManager {
                         _ => 19724,
                     };
                     valid_object.set_unit_field_u32(UnitFields::Displayid, new_display_id)?;
-                    info!("swapped model!");
                 }
                 //------------------END UGLY TEMP TESTING CODE -----------------------
 
@@ -145,7 +144,7 @@ impl MapManager {
                     //skip if we already know this object in our range
                     continue;
                 }
-                info!("New object in range! Guid: {}", guid);
+                trace!("New object in range! Guid: {}", guid);
             }
 
             if let Some(weak_ptr_to_lock) = objects_on_map.get(&guid) {
@@ -214,11 +213,15 @@ impl MapManager {
             if let Some(removed_object_lock) = weak_removed_object.upgrade() {
                 let removed_object = removed_object_lock.read().await;
                 let objects_on_map = self.objects_on_map.read().await;
-                for guid in removed_object.get_in_range_guids() {
-                    if let Some(weak_in_range_object) = objects_on_map.get(guid) {
+                for in_range_guid in removed_object.get_in_range_guids() {
+                    if let Some(weak_in_range_object) = objects_on_map.get(in_range_guid) {
                         if let Some(in_range_object_lock) = weak_in_range_object.upgrade() {
-                            info!("removed {} from range of {}", removed_object.get_guid(), guid);
-                            in_range_object_lock.write().await.remove_in_range_object(guid)?;
+                            let mut in_range_object = in_range_object_lock.write().await;
+                            if let Some(character) = in_range_object.as_character() {
+                                handlers::send_destroy_object(character, guid, true).await?;
+                            }
+                            trace!("removed {} from range of {}", removed_object.get_guid(), in_range_guid);
+                            in_range_object.remove_in_range_object(guid)?;
                         }
                     }
                 }
