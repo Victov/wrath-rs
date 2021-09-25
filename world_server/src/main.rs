@@ -79,9 +79,7 @@ async fn main() -> Result<()> {
         client_manager.cleanup_disconnected_clients().await.unwrap_or_else(|e| {
             error!("Error while cleaning up disconnected clients: {}", e);
         });
-        realm_packet_handler.handle_queue(&client_manager).await.unwrap_or_else(|e| {
-            warn!("Error while handling packet: {}", e);
-        });
+        realm_packet_handler.handle_queue(&client_manager).await?;
         world.tick(previous_loop_total).await?;
         let after = std::time::Instant::now();
         let update_duration = after.duration_since(before);

@@ -26,8 +26,10 @@ impl PacketHandler {
     }
 
     pub async fn handle_queue(&self, client_manager: &Arc<ClientManager>) -> Result<()> {
-        while let Ok(packet) = self.receive_channel.try_recv() {
-            self.handle_packet(client_manager, &packet).await?;
+        for packet in self.receive_channel.try_iter() {
+            self.handle_packet(client_manager, &packet).await.unwrap_or_else(|e| {
+                warn!("Error while handling packet: {}", e);
+            });
         }
 
         Ok(())
