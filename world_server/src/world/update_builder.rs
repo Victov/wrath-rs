@@ -48,15 +48,26 @@ pub fn build_create_update_block_for_player(player: &dyn MapObjectWithValueField
 
     writer.write_u8(object.get_type() as u8)?;
 
-    build_movement_update(&mut writer, flags, flags2, player, object)?;
+    build_movement_update(&mut writer, flags, flags2, object)?;
 
     let mut update_mask = UpdateMask::new(object.get_num_value_fields());
     object.set_mask_for_create_bits(&mut &mut update_mask)?;
     update_mask.set_bit(ObjectFields::HighGuid as usize, true)?; //override if it wasn't detected
 
-    build_values_update(&mut writer, player, object, &update_mask)?;
+    build_values_update(&mut writer, object, &update_mask)?;
     block_count += 1;
     Ok((block_count, writer.into_inner()))
+}
+
+pub fn build_values_update_block(object: &dyn MapObjectWithValueFields) -> Result<(u32, Vec<u8>)> {
+    let mut writer = Cursor::new(Vec::<u8>::new());
+
+    writer.write_u8(ObjectUpdateType::Values as u8)?;
+    writer.write_guid_compressed(object.get_guid())?;
+
+    build_values_update(&mut writer, object, object.get_update_mask())?;
+
+    Ok((1, writer.into_inner()))
 }
 
 pub fn build_out_of_range_update_block_for_player(player: &dyn MapObjectWithValueFields) -> Result<(u32, Vec<u8>)> {
@@ -65,11 +76,9 @@ pub fn build_out_of_range_update_block_for_player(player: &dyn MapObjectWithValu
         return Ok((0, vec![]));
     }
 
-    let outputbuf = Vec::<u8>::new();
     let update_type = ObjectUpdateType::OutOfRangeObjects as u8;
-    let mut writer = Cursor::new(outputbuf);
+    let mut writer = Cursor::new(Vec::<u8>::new());
 
-    //These three are todo
     let block_count = 1;
     let num_out_of_range_guids = out_of_range_guids.len() as u32;
 
@@ -82,13 +91,18 @@ pub fn build_out_of_range_update_block_for_player(player: &dyn MapObjectWithValu
     Ok((block_count, writer.into_inner()))
 }
 
-fn build_movement_update(
-    writer: &mut Cursor<Vec<u8>>,
-    flags: u16,
-    flags2: u32,
-    _player: &dyn MapObjectWithValueFields,
-    object: &dyn MapObjectWithValueFields,
-) -> Result<()> {
+pub fn build_movement_update_block(object: &dyn MapObjectWithValueFields) -> Result<(u32, Vec<u8>)> {
+    let outputbuf = Vec::<u8>::new();
+    let update_type = ObjectUpdateType::Movement as u8;
+    let mut writer = Cursor::new(outputbuf);
+
+    writer.write_u8(update_type)?;
+    writer.write_guid_compressed(object.get_guid())?;
+    build_movement_update(&mut writer, 0x70, 0, object)?;
+    Ok((1, writer.into_inner()))
+}
+
+fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, flags2: u32, object: &dyn MapObjectWithValueFields) -> Result<()> {
     writer.write_u16::<LittleEndian>(flags)?;
 
     //Only implemented for living things for now
@@ -121,7 +135,12 @@ fn build_movement_update(
         writer.write_u32::<LittleEndian>(object.get_guid().get_low_part())?;
     }
     if flags & (ObjectUpdateFlags::HighGuid as u16) > 0 {
-        writer.write_u32::<LittleEndian>(object.get_guid().get_high_part())?;
+        //writer.write_u32::<LittleEndian>(object.get_guid().get_high_part())?;
+        if flags & (ObjectUpdateFlags::UpdateSelf as u16) > 0 {
+            writer.write_u32::<LittleEndian>(0x2F)?;
+        } else {
+            writer.write_u32::<LittleEndian>(0x08)?;
+        }
     }
 
     //todo: flag has target
@@ -132,12 +151,7 @@ fn build_movement_update(
     Ok(())
 }
 
-fn build_values_update(
-    writer: &mut Cursor<Vec<u8>>,
-    _player: &dyn MapObjectWithValueFields,
-    object: &dyn MapObjectWithValueFields,
-    update_mask: &UpdateMask,
-) -> Result<()> {
+fn build_values_update(writer: &mut Cursor<Vec<u8>>, object: &dyn MapObjectWithValueFields, update_mask: &UpdateMask) -> Result<()> {
     let num_values = object.get_num_value_fields();
     assert_eq!(num_values, update_mask.get_num_fields());
 

@@ -40,15 +40,53 @@ impl MapManager {
         }
     }
 
-    pub async fn tick(&self, _delta_time: f32) -> Result<()> {
+    pub async fn tick(&self, delta_time: f32) -> Result<()> {
         let map_objects = self.objects_on_map.read().await;
         for map_object in (*map_objects).values() {
             if let Some(valid_object_lock) = map_object.upgrade() {
                 let mut valid_object = valid_object_lock.write().await;
+
+                //--------------------UGLY TEMP TESTING CODE -------------------------
+                valid_object.advance_x(1.0f32 * delta_time);
+                if valid_object.get_position().x > 10f32 {
+                    valid_object.advance_x(-10f32);
+                    let cur_displ_id = valid_object.get_unit_field_u32(UnitFields::Displayid)?;
+                    let new_display_id = match cur_displ_id {
+                        10000 => 19724,
+                        19724 => 10000,
+                        _ => 19724,
+                    };
+                    valid_object.set_unit_field_u32(UnitFields::Displayid, new_display_id)?;
+                    info!("swapped model!");
+                }
+                //------------------END UGLY TEMP TESTING CODE -----------------------
+
                 if valid_object.wants_updates() {
-                    let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object)?;
-                    valid_object.clear_recently_removed_range_guids()?;
-                    valid_object.as_update_receiver_mut().unwrap().push_update_block(&mut buf, num_blocks);
+                    if valid_object.get_update_mask().has_any_bit() {
+                        let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object)?;
+                        valid_object.clear_recently_removed_range_guids()?;
+                        valid_object.as_update_receiver_mut().unwrap().push_update_block(&mut buf, num_blocks);
+
+                        let (num_blocks, buf) = build_values_update_block(&*valid_object)?;
+                        valid_object
+                            .as_update_receiver_mut()
+                            .unwrap()
+                            .push_update_block(&mut buf.clone(), num_blocks);
+                        let in_range_guids = valid_object.get_in_range_guids();
+                        for in_range_guid in in_range_guids {
+                            if let Some(in_range_object_weak) = map_objects.get(in_range_guid) {
+                                if let Some(in_range_object_lock) = in_range_object_weak.upgrade() {
+                                    let mut in_range_object = in_range_object_lock.write().await;
+                                    in_range_object
+                                        .as_update_receiver_mut()
+                                        .unwrap()
+                                        .push_update_block(&mut buf.clone(), num_blocks);
+                                }
+                            }
+                        }
+                        valid_object.clear_update_mask();
+                    }
+
                     valid_object.as_update_receiver_mut().unwrap().process_pending_updates().await?;
                 }
             }
@@ -89,7 +127,7 @@ impl MapManager {
         let within_range = {
             let object = target_object_lock.read().await;
             let object_pos = [object.get_position().x, object.get_position().y];
-            tree.locate_within_distance(object_pos, 20.0f32)
+            tree.locate_within_distance(object_pos, 200.0f32)
         };
 
         let objects_on_map = self.objects_on_map.read().await;

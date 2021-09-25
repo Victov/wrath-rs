@@ -26,4 +26,7 @@ pub trait MapObject: Send + Sync {
     fn is_player(&self) -> bool {
         self.get_type() as u8 & ObjectType::Player as u8 > 0
     }
+
+    //TEMP function for testing, should definitely be removed later
+    fn advance_x(&mut self, add: f32);
 }

@@ -34,6 +34,7 @@ pub struct Character {
     //required for unit values and implementing ValueFieldsRaw trait, which in turn will grant us
     //HasvalueFields trait, with all sorts of goodies
     unit_value_fields: [u32; NUM_UNIT_FIELDS],
+    changed_update_mask: UpdateMask,
 
     //things required to keep MapObject working
     in_range_objects: HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>,
@@ -57,6 +58,7 @@ impl Character {
             creation_block_count: 0,
             creation_buffer: vec![],
             unit_value_fields: [0; NUM_UNIT_FIELDS],
+            changed_update_mask: UpdateMask::new(NUM_UNIT_FIELDS),
             in_range_objects: HashMap::new(),
             recently_removed_guids: vec![],
         }
@@ -143,6 +145,11 @@ impl MapObject for Character {
         }
     }
 
+    //Super duper temp function to be able to test value changes
+    fn advance_x(&mut self, add: f32) {
+        self.x += add;
+    }
+
     fn get_type(&self) -> updates::ObjectType {
         ObjectType::Player
     }
@@ -208,6 +215,7 @@ impl ReceiveUpdates for Character {
     async fn process_pending_updates(&mut self) -> Result<()> {
         let (num, buf) = self.get_update_blocks();
         if num > 0 {
+            info!("Character {} has {} updates to send", self.guid, num);
             handlers::send_update_packet(self, num, &buf).await?;
             self.clear_update_blocks();
         }
@@ -221,6 +229,7 @@ impl ValueFieldsRaw for Character {
             bail!("Out-of-range unit field being set")
         }
         self.unit_value_fields[field] = value;
+        self.changed_update_mask.set_bit(field, true)?;
         Ok(())
     }
 
@@ -233,5 +242,13 @@ impl ValueFieldsRaw for Character {
 
     fn get_num_value_fields(&self) -> usize {
         NUM_UNIT_FIELDS
+    }
+
+    fn clear_update_mask(&mut self) {
+        self.changed_update_mask.clear();
+    }
+
+    fn get_update_mask(&self) -> &UpdateMask {
+        &self.changed_update_mask
     }
 }

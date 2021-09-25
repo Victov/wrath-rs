@@ -19,6 +19,10 @@ pub trait HasValueFields: ValueFieldsRaw {
         self.set_field_u32(field as usize, value)
     }
 
+    fn get_unit_field_u32(&self, field: UnitFields) -> Result<u32> {
+        self.get_field_u32(field as usize)
+    }
+
     //Sets the bit in the UpdateMask for every field that is not zero
     //This updatemask goes to new players, who still need all information
     fn set_mask_for_create_bits(&self, mask: &mut UpdateMask) -> Result<()> {
@@ -36,6 +40,8 @@ pub trait ValueFieldsRaw {
     fn set_field_u32(&mut self, field: usize, value: u32) -> Result<()>;
     fn get_field_u32(&self, field: usize) -> Result<u32>;
     fn get_num_value_fields(&self) -> usize;
+    fn clear_update_mask(&mut self);
+    fn get_update_mask(&self) -> &UpdateMask;
 }
 
 pub type UpdateMaskBlockType = u32;
@@ -78,5 +84,15 @@ impl UpdateMask {
 
     pub fn get_blocks(&self) -> &[UpdateMaskBlockType] {
         &self.data
+    }
+
+    pub fn clear(&mut self) {
+        for i in self.data.iter_mut() {
+            *i = 0;
+        }
+    }
+
+    pub fn has_any_bit(&self) -> bool {
+        self.data.iter().any(|a| *a > 0)
     }
 }
