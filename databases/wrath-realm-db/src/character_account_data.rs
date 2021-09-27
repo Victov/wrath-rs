@@ -21,6 +21,17 @@ impl super::RealmDatabase {
         Ok(res)
     }
 
+    pub async fn get_character_account_data_of_type(&self, character_id: u32, data_type: u8) -> Result<DBCharacterAccountData> {
+        Ok(sqlx::query_as!(
+            DBCharacterAccountData,
+            "SELECT * FROM character_account_data WHERE character_id = ? AND data_type = ?",
+            character_id,
+            data_type
+        )
+        .fetch_one(&self.connection_pool)
+        .await?)
+    }
+
     pub async fn create_character_account_data(&self, character_id: u32, data_type: u8) -> Result<()> {
         sqlx::query!(
             "INSERT INTO character_account_data (character_id, data_type, time, decompressed_size, data) VALUES (?,?, 0, 0, NULL)",
