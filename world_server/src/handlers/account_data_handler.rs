@@ -6,6 +6,7 @@ use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::ClientManager;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
+use std::io::Write;
 use std::sync::Arc;
 use wrath_auth_db::DBAccountData;
 use wrath_realm_db::RealmDatabase;
@@ -158,4 +159,51 @@ pub async fn handle_csmg_update_account_data(client_manager: &Arc<ClientManager>
     send_packet(&client, header, &writer).await?;
 
     Ok(())
+}
+
+pub async fn handle_cmsg_request_account_data(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+
+    let client = client_lock.read().await;
+    if !client.is_authenticated() {
+        bail!("Client is trying to get account data but is not authenticated");
+    }
+
+    let mut reader = std::io::Cursor::new(&packet.payload);
+    let data_type = reader.read_u32::<LittleEndian>()?;
+    let (decompressed_size, account_data_bytes) = {
+        if 1 << data_type & CacheMask::GlobalCache as u8 > 0 {
+            let account_id = client
+                .account_id
+                .ok_or_else(|| anyhow!("Account had no account_id even though it was is authenticated"))?;
+
+            let db_data = client_manager.auth_db.get_account_data_of_type(account_id, data_type as u8).await?;
+            if let Some(bytes) = db_data.data {
+                (db_data.decompressed_size, bytes)
+            } else {
+                (0, vec![])
+            }
+        } else {
+            if let Some(active_character_lock) = &client.active_character {
+                let character_id = active_character_lock.read().await.guid.get_low_part();
+                let db_data = client_manager
+                    .realm_db
+                    .get_character_account_data_of_type(character_id, data_type as u8)
+                    .await?;
+                if let Some(bytes) = db_data.data {
+                    (db_data.decompressed_size, bytes)
+                } else {
+                    (0, vec![])
+                }
+            } else {
+                bail!("Requested account data for active character but no character is logged in as active.");
+            }
+        }
+    };
+
+    let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_ACCOUNT_DATA, account_data_bytes.len() + 8);
+    writer.write_u32::<LittleEndian>(data_type)?;
+    writer.write_u32::<LittleEndian>(decompressed_size)?;
+    writer.write(&account_data_bytes)?;
+    send_packet(&client, header, &writer).await
 }

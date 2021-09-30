@@ -74,6 +74,17 @@ impl AuthDatabase {
         Ok(acc_data)
     }
 
+    pub async fn get_account_data_of_type(&self, account_id: u32, data_type: u8) -> Result<DBAccountData> {
+        Ok(sqlx::query_as!(
+            DBAccountData,
+            "SELECT * FROM account_data WHERE account_id = ? AND data_type = ?",
+            account_id,
+            data_type
+        )
+        .fetch_one(&self.connection_pool)
+        .await?)
+    }
+
     pub async fn create_account_data(&self, account_id: u32, data_type: u8) -> Result<()> {
         sqlx::query!(
             "INSERT INTO account_data (account_id, data_type, time, decompressed_size, data) VALUES (?,?, 0, 0, NULL)",
