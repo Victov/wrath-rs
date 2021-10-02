@@ -9,6 +9,7 @@ use crate::ClientManager;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::Weak;
+use std::time::{SystemTime, UNIX_EPOCH};
 use wrath_realm_db::RealmDatabase;
 
 const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
@@ -26,6 +27,11 @@ pub struct Character {
     pub bind_location: Option<WorldZoneLocation>,
     pub tutorial_flags: TutorialFlags,
     pub action_bar: ActionBar,
+
+    //Stuff to keep track of playtime
+    pub seconds_played_total: u32,
+    pub seconds_played_at_level: u32,
+    pub last_playtime_calculation_timestamp: u32,
 
     //required for world updates and implenting ReceiveUpdates trait
     creation_buffer: Vec<u8>,
@@ -55,6 +61,9 @@ impl Character {
             bind_location: None,
             tutorial_flags: [0; 32].into(),
             action_bar: ActionBar::new(),
+            seconds_played_total: 0,
+            seconds_played_at_level: 0,
+            last_playtime_calculation_timestamp: 0,
             creation_block_count: 0,
             creation_buffer: vec![],
             unit_value_fields: [0; NUM_UNIT_FIELDS],
@@ -78,13 +87,18 @@ impl Character {
         self.z = db_entry.z;
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
-
         let character_id = self.guid.get_low_part();
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
         if character_account_data.len() == 0 {
             handlers::create_empty_character_account_data_rows(realm_database, character_id).await?;
         }
+
+        let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
+
+        self.last_playtime_calculation_timestamp = unix_time;
+        self.seconds_played_total = db_entry.playtime_total;
+        self.seconds_played_at_level = db_entry.playtime_level;
 
         let race = 1u32; //human
         let class = 1u32; //warrior

@@ -46,3 +46,6 @@ pub use world_handler::send_world_state_update;
 
 mod social_handler;
 pub use social_handler::send_contact_list;
+
+mod queries_handler;
+pub use queries_handler::handle_cmsg_played_time;
