@@ -61,6 +61,7 @@ impl PacketHandler {
             Opcodes::CMSG_REQUEST_ACCOUNT_DATA => handle_cmsg_request_account_data(client_manager, packet).await,
             Opcodes::CMSG_PLAYED_TIME => handle_cmsg_played_time(client_manager, packet).await,
             Opcodes::CMSG_QUERY_TIME => handle_cmsg_query_time(client_manager, packet).await,
+            Opcodes::CMSG_WORLD_STATE_UI_TIMER_UPDATE => handle_cmsg_world_state_ui_timer_update(client_manager, packet).await,
             op => Err(anyhow!("Unhandled opcode {:?}", op)),
         }
     }

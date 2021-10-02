@@ -52,3 +52,13 @@ pub async fn handle_cmsg_query_time(client_manager: &Arc<ClientManager>, packet:
     send_packet(&client, header, &writer).await?;
     Ok(())
 }
+
+pub async fn handle_cmsg_world_state_ui_timer_update(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_lock.read().await;
+    let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
+    let (header, mut writer) = create_packet(Opcodes::SMSG_WORLD_STATE_UI_TIMER_UPDATE, 4);
+    writer.write_u32::<LittleEndian>(unix_time)?;
+    send_packet(&client, header, &writer).await?;
+    Ok(())
+}
