@@ -41,3 +41,14 @@ pub async fn handle_cmsg_played_time(client_manager: &Arc<ClientManager>, packet
     send_packet(&client, header, &writer).await?;
     Ok(())
 }
+
+pub async fn handle_cmsg_query_time(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_lock.read().await;
+    let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
+    let (header, mut writer) = create_packet(Opcodes::SMSG_QUERY_TIME_RESPONSE, 8);
+    writer.write_u32::<LittleEndian>(unix_time)?;
+    writer.write_u32::<LittleEndian>(0)?; //unknown?
+    send_packet(&client, header, &writer).await?;
+    Ok(())
+}
