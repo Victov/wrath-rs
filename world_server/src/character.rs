@@ -260,7 +260,7 @@ impl ValueFieldsRaw for Character {
         }
         self.unit_value_fields[field] = value;
         self.changed_update_mask.set_bit(field, true)?;
-        info!("unit field {} set to {:#08x}", field, value);
+        trace!("Unit field {} on character {} set to {:#08x}", field, self.name, value);
         Ok(())
     }
 

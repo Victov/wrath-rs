@@ -33,6 +33,7 @@ mod faction_handler;
 pub use faction_handler::send_faction_list;
 
 mod spell_handler;
+pub use spell_handler::handle_cmsg_set_actionbar_toggles;
 pub use spell_handler::send_aura_update_all;
 pub use spell_handler::send_initial_spells;
 
