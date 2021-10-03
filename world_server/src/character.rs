@@ -4,6 +4,7 @@ use crate::constants::social::RelationType;
 use crate::data_types::{ActionBar, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::guid::*;
 use crate::prelude::*;
+use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
 use crate::ClientManager;
 use async_std::sync::RwLock;
@@ -112,7 +113,7 @@ impl Character {
         self.race = db_entry.race;
         self.class = db_entry.class;
         self.gender = db_entry.gender;
-        let power_type = 1u32; //rage
+        let power_type = 1; //rage
 
         self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().get_low_part())?;
         self.set_object_field_u32(ObjectFields::HighGuid, self.get_guid().get_high_part())?;
@@ -121,10 +122,10 @@ impl Character {
             1 << ObjectType::Unit as u32 | 1 << ObjectType::Player as u32 | 1 << ObjectType::Object as u32,
         )?;
         self.set_object_field_f32(ObjectFields::Scale, 1.0f32)?;
-        self.set_unit_field_u32(
-            UnitFields::UnitBytes0,
-            ((self.race as u32) << 24) | ((self.class as u32) << 16) | ((self.gender as u32) << 8) | power_type,
-        )?;
+        self.set_class(self.class)?;
+        self.set_race(self.race)?;
+        self.set_gender(self.gender)?;
+        self.set_power_type(power_type)?;
         self.set_unit_field_u32(UnitFields::Health, 100)?;
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
@@ -259,6 +260,7 @@ impl ValueFieldsRaw for Character {
         }
         self.unit_value_fields[field] = value;
         self.changed_update_mask.set_bit(field, true)?;
+        info!("unit field {} set to {:#08x}", field, value);
         Ok(())
     }
 
