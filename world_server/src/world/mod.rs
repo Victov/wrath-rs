@@ -6,7 +6,7 @@ mod instance_manager;
 pub mod map_cell;
 mod map_manager;
 pub mod map_object;
-mod update_builder;
+pub mod update_builder;
 mod value_fields;
 
 pub mod prelude {

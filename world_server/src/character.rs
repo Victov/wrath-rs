@@ -17,6 +17,10 @@ const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 pub struct Character {
     pub guid: Guid,
     pub client: Weak<RwLock<Client>>,
+    pub name: String,
+    pub race: u8,
+    pub class: u8,
+    pub gender: u8,
 
     pub x: f32,
     pub y: f32,
@@ -52,6 +56,10 @@ impl Character {
         Self {
             guid,
             client,
+            name: String::new(),
+            race: 0,
+            class: 0,
+            gender: 0,
             x: 0.0f32,
             y: 0.0f32,
             z: 0.0f32,
@@ -85,6 +93,7 @@ impl Character {
         self.x = db_entry.x;
         self.y = db_entry.y;
         self.z = db_entry.z;
+        self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
         let character_id = self.guid.get_low_part();
@@ -100,9 +109,9 @@ impl Character {
         self.seconds_played_total = db_entry.playtime_total;
         self.seconds_played_at_level = db_entry.playtime_level;
 
-        let race = 1u32; //human
-        let class = 1u32; //warrior
-        let gender = 1u32; //female
+        self.race = db_entry.race;
+        self.class = db_entry.class;
+        self.gender = db_entry.gender;
         let power_type = 1u32; //rage
 
         self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().get_low_part())?;
@@ -112,7 +121,10 @@ impl Character {
             1 << ObjectType::Unit as u32 | 1 << ObjectType::Player as u32 | 1 << ObjectType::Object as u32,
         )?;
         self.set_object_field_f32(ObjectFields::Scale, 1.0f32)?;
-        self.set_unit_field_u32(UnitFields::UnitBytes0, (race << 24) | (class << 16) | (gender << 8) | power_type)?;
+        self.set_unit_field_u32(
+            UnitFields::UnitBytes0,
+            ((self.race as u32) << 24) | ((self.class as u32) << 16) | ((self.gender as u32) << 8) | power_type,
+        )?;
         self.set_unit_field_u32(UnitFields::Health, 100)?;
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
