@@ -28,6 +28,7 @@ pub struct Character {
     pub z: f32,
     pub orientation: f32,
     pub map: u32,
+    pub zone: u32,
     pub instance_id: u32,
     pub bind_location: Option<WorldZoneLocation>,
     pub tutorial_flags: TutorialFlags,
@@ -66,6 +67,7 @@ impl Character {
             z: 0.0f32,
             orientation: 0.0f32,
             map: 0,
+            zone: 0,
             instance_id: 0,
             bind_location: None,
             tutorial_flags: [0; 32].into(),
@@ -155,6 +157,16 @@ impl Character {
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
 
         Ok(())
+    }
+
+    pub async fn zone_update(&mut self, zone: u32) -> Result<()> {
+        if self.zone == zone {
+            return Ok(());
+        }
+
+        trace!("Received zone update for character {} into zone {}", self.name, zone);
+        self.zone = zone;
+        handlers::send_initial_world_states(self).await
     }
 }
 
