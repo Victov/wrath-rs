@@ -1,7 +1,10 @@
 use super::prelude::*;
+use crate::packet::server::{Realm, ServerPacket};
+use crate::packet::PacketWriter;
 use anyhow::Result;
 use async_std::prelude::*;
-use podio::{BigEndian, ReadPodExt, WritePodExt};
+use byteorder::{BigEndian, ReadBytesExt};
+use std::io::Cursor;
 use std::time::Instant;
 use wrath_auth_db::AuthDatabase;
 
@@ -59,58 +62,17 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
     }
 }
 
-pub async fn handle_realmlist_request(
+pub async fn handle_realm_list_request(
     stream: &mut async_std::net::TcpStream,
-    logindata: &super::auth::LoginNumbers,
-    auth_database: &std::sync::Arc<AuthDatabase>,
+    username: &str,
+    auth_database: std::sync::Arc<AuthDatabase>,
 ) -> Result<()> {
-    use std::io::Write;
-
-    info!("Received a realmlist request");
-
-    let realms = (*auth_database).get_all_realms().await?;
-
-    let realms_info = Vec::<u8>::new();
-    let mut writer = std::io::Cursor::new(realms_info);
-
-    let account = auth_database.get_account_by_username(&logindata.username).await?;
-
-    for realm in &realms {
-        let mut realm_flags = realm.flags as u8;
-        if realm.online == 0 {
-            realm_flags |= RealmFlags::Offline as u8;
-        }
-        let num_characters = auth_database.get_num_characters_on_realm(account.id, realm.id).await?;
-
-        writer.write_u8(realm.realm_type as u8)?;
-        writer.write_u8(0)?; //realm locked
-        writer.write_u8(realm_flags)?;
-        writer.write(realm.name.as_bytes())?;
-        writer.write_u8(0)?; //string terminator
-        writer.write(realm.ip.as_bytes())?;
-        writer.write_u8(0)?; //string terminator
-        writer.write_f32::<podio::LittleEndian>(realm.population)?;
-        writer.write_u8(num_characters)?; //num characters on this realm
-        writer.write_u8(realm.timezone as u8)?;
-        writer.write_u8(0)?; //realm.id as u8)?;
-    }
-
-    writer.write_u8(0x10)?; //??
-    writer.write_u8(0)?; //??
-
-    let realms_info_length = writer.get_ref().len();
-    let num_realms = realms.len();
-
-    let return_packet = Vec::<u8>::new();
-    let mut packet_writer = std::io::Cursor::new(return_packet);
-    packet_writer.write_u8(16)?; //REALM_LIST
-    packet_writer.write_u16::<podio::LittleEndian>(realms_info_length as u16 + 6)?;
-    packet_writer.write_u32::<podio::LittleEndian>(0)?;
-    packet_writer.write_u16::<podio::LittleEndian>(num_realms as u16)?;
-    packet_writer.write(&writer.get_ref())?;
-
-    stream.write(&packet_writer.into_inner()).await?;
+    let buf = Vec::new();
+    let mut cursor = Cursor::new(buf);
+    let account = auth_database.get_account_by_username(username).await?;
+    let realms = Realm::from_db(auth_database, account.id).await?;
+    ServerPacket::RealmListRequest(realms).write_packet(&mut cursor)?;
+    stream.write(&cursor.get_ref()).await?;
     stream.flush().await?;
-
     Ok(())
 }
