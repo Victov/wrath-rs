@@ -122,19 +122,17 @@ pub async fn handle_logon_challenge_srp(
 
     let username = NormalizedString::new(&account.username)?;
     let s = if account.v.is_empty() || account.s.is_empty() {
-        let g = SrpVerifier::from_username_and_password_hashed(username, &account.sha_pass_hash)?;
+        let sha_pass_bytes = hex::decode(&account.sha_pass_hash)?;
+        let g = SrpVerifier::from_with_username_specific_hashed_p(username, &sha_pass_bytes);
         let v = g.password_verifier();
         let s = g.salt();
         auth_database.set_account_v_s(account.id, &hex::encode(v), &hex::encode(s)).await?;
         g
     } else {
-        //FIXME(wmxd): maybe this section can be done simpler
         let mut password_verifier: [u8; PASSWORD_VERIFIER_LENGTH as usize] = Default::default();
         let mut salt: [u8; SALT_LENGTH as usize] = Default::default();
-        let big_v = hex::decode(account.v.as_bytes())?;
-        let big_s = hex::decode(account.s.as_bytes())?;
-        password_verifier.copy_from_slice(&big_v);
-        salt.copy_from_slice(&big_s);
+        hex::decode_to_slice(account.v.as_bytes(), &mut password_verifier)?;
+        hex::decode_to_slice(account.s.as_bytes(), &mut salt)?;
         SrpVerifier::from_database_values(username, password_verifier, salt)
     };
 

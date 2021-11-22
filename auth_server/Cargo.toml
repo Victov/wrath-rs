@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wow_srp = { git = "https://github.com/WeaponMan/wow_srp.git", rev = "66bcf26369dca4cb25556e2e22ea41639e7357ef" }
+wow_srp = { git = "https://github.com/WeaponMan/wow_srp.git", rev = "8e38d0ece4f8ebe2fff37e464b921fdf543992b8" }
 byteorder = { version = '1' }
 async-std = { version = "*", features = ["attributes"] }
 anyhow = { version = "*" }
