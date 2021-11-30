@@ -1,13 +1,37 @@
 use crate::character::*;
+use crate::client_manager::ClientManager;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::prelude::*;
-use podio::{LittleEndian, WritePodExt};
+use crate::PacketToHandle;
+use podio::{LittleEndian, ReadPodExt, WritePodExt};
+use std::sync::Arc;
+
+pub async fn handle_cmsg_zoneupdate(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_lock.read().await;
+    if !client.is_authenticated() {
+        bail!("Trying to handle zoneupdate for character that isn't authenticated");
+    }
+    let character_lock = client
+        .active_character
+        .as_ref()
+        .ok_or(anyhow!("Trying to handle zoneupdate, but no character is active for this client"))?
+        .clone();
+
+    let zone_id = {
+        let mut reader = std::io::Cursor::new(&packet.payload);
+        reader.read_u32::<LittleEndian>()?
+    };
+
+    let mut character = character_lock.write().await;
+    (*character).zone_update(zone_id).await
+}
 
 pub async fn send_initial_world_states(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_INIT_WORLD_STATES, 8);
     writer.write_u32::<LittleEndian>(character.map)?;
-    writer.write_u32::<LittleEndian>(0)?; //zone
+    writer.write_u32::<LittleEndian>(character.zone)?;
     writer.write_u32::<LittleEndian>(0)?; //area
 
     //hardcode for now, should be dynamic

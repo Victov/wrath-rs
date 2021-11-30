@@ -26,12 +26,14 @@ mod voice_chat_handler;
 pub use voice_chat_handler::send_voice_chat_status;
 
 mod tutorial_handler;
+pub use tutorial_handler::handle_cmsg_tutorial_flag;
 pub use tutorial_handler::send_tutorial_flags;
 
 mod faction_handler;
 pub use faction_handler::send_faction_list;
 
 mod spell_handler;
+pub use spell_handler::handle_cmsg_set_actionbar_toggles;
 pub use spell_handler::send_aura_update_all;
 pub use spell_handler::send_initial_spells;
 
@@ -39,6 +41,7 @@ mod talent_handler;
 pub use talent_handler::send_talents_info;
 
 mod world_handler;
+pub use world_handler::handle_cmsg_zoneupdate;
 pub use world_handler::send_destroy_object;
 pub use world_handler::send_initial_world_states;
 pub use world_handler::send_update_packet;
@@ -46,3 +49,9 @@ pub use world_handler::send_world_state_update;
 
 mod social_handler;
 pub use social_handler::send_contact_list;
+
+mod queries_handler;
+pub use queries_handler::handle_cmsg_name_query;
+pub use queries_handler::handle_cmsg_played_time;
+pub use queries_handler::handle_cmsg_query_time;
+pub use queries_handler::handle_cmsg_world_state_ui_timer_update;

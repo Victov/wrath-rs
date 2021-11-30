@@ -59,6 +59,13 @@ impl PacketHandler {
             Opcodes::CMSG_UPDATE_ACCOUNT_DATA => handle_csmg_update_account_data(client_manager, packet).await,
             Opcodes::CMSG_PLAYER_LOGIN => handle_cmsg_player_login(client_manager, packet).await,
             Opcodes::CMSG_REQUEST_ACCOUNT_DATA => handle_cmsg_request_account_data(client_manager, packet).await,
+            Opcodes::CMSG_PLAYED_TIME => handle_cmsg_played_time(client_manager, packet).await,
+            Opcodes::CMSG_QUERY_TIME => handle_cmsg_query_time(client_manager, packet).await,
+            Opcodes::CMSG_WORLD_STATE_UI_TIMER_UPDATE => handle_cmsg_world_state_ui_timer_update(client_manager, packet).await,
+            Opcodes::CMSG_TUTORIAL_FLAG => handle_cmsg_tutorial_flag(client_manager, packet).await,
+            Opcodes::CMSG_NAME_QUERY => handle_cmsg_name_query(client_manager, packet).await,
+            Opcodes::CMSG_SET_ACTIONBAR_TOGGLES => handle_cmsg_set_actionbar_toggles(client_manager, packet).await,
+            Opcodes::CMSG_ZONEUPDATE => handle_cmsg_zoneupdate(client_manager, packet).await,
             op => Err(anyhow!("Unhandled opcode {:?}", op)),
         }
     }

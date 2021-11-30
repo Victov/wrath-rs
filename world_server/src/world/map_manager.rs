@@ -3,7 +3,7 @@ use std::sync::Weak;
 
 use super::map_object::MapObject;
 use super::prelude::*;
-use crate::prelude::*;
+use crate::{character::Character, prelude::*};
 use async_std::sync::RwLock;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
@@ -38,6 +38,11 @@ impl MapManager {
             objects_on_map: RwLock::new(HashMap::new()),
             query_tree: RwLock::new(RTree::new()),
         }
+    }
+
+    pub async fn try_get_object(&self, guid: &Guid) -> Option<Weak<RwLock<dyn MapObjectWithValueFields>>> {
+        let map_objects = self.objects_on_map.read().await;
+        map_objects.get(guid).and_then(|a| Some(a.clone()))
     }
 
     pub async fn tick(&self, delta_time: f32) -> Result<()> {

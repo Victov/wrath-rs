@@ -1,3 +1,5 @@
+use podio::ReadPodExt;
+
 use crate::prelude::*;
 use std::fmt::Display;
 
@@ -78,18 +80,37 @@ fn get_byte_value_at(input: u64, index: isize) -> u8 {
 
 pub trait ReadGuid {
     fn read_guid<T: podio::Endianness>(&mut self) -> Result<Guid>;
+    fn read_guid_compressed(&mut self) -> Result<Guid>;
 }
 
 impl<R: std::io::Read> ReadGuid for R {
     fn read_guid<T: podio::Endianness>(&mut self) -> Result<Guid> {
-        use podio::ReadPodExt;
         let val = self.read_u64::<T>()?;
         Ok(Guid(val))
+    }
+
+    fn read_guid_compressed(&mut self) -> Result<Guid> {
+        use bit_field::BitField;
+        let mask = self.read_u8()?;
+        let mut guid = 0u64;
+        for i in 0..8 {
+            if mask.get_bit(i) {
+                let byte = self.read_u8()?;
+                guid |= (byte as u64) << (i * 8);
+            }
+        }
+        Ok(guid.into())
     }
 }
 
 impl Display for Guid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Guid(0x{:016x})", self.0)
+    }
+}
+
+impl From<u64> for Guid {
+    fn from(val: u64) -> Self {
+        Self(val)
     }
 }

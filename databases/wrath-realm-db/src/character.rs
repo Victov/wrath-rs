@@ -28,6 +28,8 @@ pub struct DBCharacter {
     pub bind_z: f32,
     pub guild_id: u32,
     pub tutorial_data: Vec<u8>,
+    pub playtime_total: u32,
+    pub playtime_level: u32,
 }
 
 pub struct DBCharacterCreateParameters {

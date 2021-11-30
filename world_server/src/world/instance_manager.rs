@@ -30,6 +30,14 @@ impl InstanceManager {
         Ok(())
     }
 
+    pub async fn try_get_map_for_instance(&self, instance_id: InstanceID) -> Option<Arc<MapManager>> {
+        if let Some(map) = self.multiple_instances.write().await.get(&instance_id) {
+            Some(map.clone())
+        } else {
+            None
+        }
+    }
+
     pub async fn get_map_for_instance(&self, instance_id: InstanceID) -> Arc<MapManager> {
         self.multiple_instances
             .write()

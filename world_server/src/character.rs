@@ -4,11 +4,13 @@ use crate::constants::social::RelationType;
 use crate::data_types::{ActionBar, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::guid::*;
 use crate::prelude::*;
+use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
 use crate::ClientManager;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::Weak;
+use std::time::{SystemTime, UNIX_EPOCH};
 use wrath_realm_db::RealmDatabase;
 
 const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
@@ -16,16 +18,26 @@ const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 pub struct Character {
     pub guid: Guid,
     pub client: Weak<RwLock<Client>>,
+    pub name: String,
+    pub race: u8,
+    pub class: u8,
+    pub gender: u8,
 
     pub x: f32,
     pub y: f32,
     pub z: f32,
     pub orientation: f32,
     pub map: u32,
+    pub zone: u32,
     pub instance_id: u32,
     pub bind_location: Option<WorldZoneLocation>,
     pub tutorial_flags: TutorialFlags,
     pub action_bar: ActionBar,
+
+    //Stuff to keep track of playtime
+    pub seconds_played_total: u32,
+    pub seconds_played_at_level: u32,
+    pub last_playtime_calculation_timestamp: u32,
 
     //required for world updates and implenting ReceiveUpdates trait
     creation_buffer: Vec<u8>,
@@ -46,15 +58,23 @@ impl Character {
         Self {
             guid,
             client,
+            name: String::new(),
+            race: 0,
+            class: 0,
+            gender: 0,
             x: 0.0f32,
             y: 0.0f32,
             z: 0.0f32,
             orientation: 0.0f32,
             map: 0,
+            zone: 0,
             instance_id: 0,
             bind_location: None,
             tutorial_flags: [0; 32].into(),
             action_bar: ActionBar::new(),
+            seconds_played_total: 0,
+            seconds_played_at_level: 0,
+            last_playtime_calculation_timestamp: 0,
             creation_block_count: 0,
             creation_buffer: vec![],
             unit_value_fields: [0; NUM_UNIT_FIELDS],
@@ -76,9 +96,9 @@ impl Character {
         self.x = db_entry.x;
         self.y = db_entry.y;
         self.z = db_entry.z;
+        self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
-
         let character_id = self.guid.get_low_part();
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
@@ -86,10 +106,16 @@ impl Character {
             handlers::create_empty_character_account_data_rows(realm_database, character_id).await?;
         }
 
-        let race = 1u32; //human
-        let class = 1u32; //warrior
-        let gender = 1u32; //female
-        let power_type = 1u32; //rage
+        let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
+
+        self.last_playtime_calculation_timestamp = unix_time;
+        self.seconds_played_total = db_entry.playtime_total;
+        self.seconds_played_at_level = db_entry.playtime_level;
+
+        self.race = db_entry.race;
+        self.class = db_entry.class;
+        self.gender = db_entry.gender;
+        let power_type = 1; //rage
 
         self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().get_low_part())?;
         self.set_object_field_u32(ObjectFields::HighGuid, self.get_guid().get_high_part())?;
@@ -98,7 +124,10 @@ impl Character {
             1 << ObjectType::Unit as u32 | 1 << ObjectType::Player as u32 | 1 << ObjectType::Object as u32,
         )?;
         self.set_object_field_f32(ObjectFields::Scale, 1.0f32)?;
-        self.set_unit_field_u32(UnitFields::UnitBytes0, (race << 24) | (class << 16) | (gender << 8) | power_type)?;
+        self.set_class(self.class)?;
+        self.set_race(self.race)?;
+        self.set_gender(self.gender)?;
+        self.set_power_type(power_type)?;
         self.set_unit_field_u32(UnitFields::Health, 100)?;
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
@@ -128,6 +157,16 @@ impl Character {
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
 
         Ok(())
+    }
+
+    pub async fn zone_update(&mut self, zone: u32) -> Result<()> {
+        if self.zone == zone {
+            return Ok(());
+        }
+
+        trace!("Received zone update for character {} into zone {}", self.name, zone);
+        self.zone = zone;
+        handlers::send_initial_world_states(self).await
     }
 }
 
@@ -233,6 +272,7 @@ impl ValueFieldsRaw for Character {
         }
         self.unit_value_fields[field] = value;
         self.changed_update_mask.set_bit(field, true)?;
+        trace!("Unit field {} on character {} set to {:#08x}", field, self.name, value);
         Ok(())
     }
 
