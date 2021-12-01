@@ -26,3 +26,4 @@ async-ctrlc = {version="1.2", features=["termination"] }
 tracing = {version="0.1"}
 tracing-subscriber = {version = "0.2" }
 rstar = { version = "0.9" }
+hex = { version = "0.4" }

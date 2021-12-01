@@ -72,9 +72,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     let db_account = client_manager.auth_db.get_account_by_username(&name).await?;
     //Handle db_account failed to fetch with reponse
 
-    let sessionkey = BigUint::from_str_radix(&db_account.sessionkey, 16)?;
-    let sesskey_bytes = sessionkey.to_bytes_le();
-
+    let sesskey_bytes = hex::decode(&db_account.sessionkey)?;
     assert_eq!(sesskey_bytes.len(), 40);
     {
         let client = client_lock.read().await;
