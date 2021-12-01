@@ -4,6 +4,7 @@ use async_std::prelude::*;
 use async_std::sync::Arc;
 use async_std::task;
 use std::io::Cursor;
+use std::result::Result::Ok;
 use tracing_subscriber::EnvFilter;
 use wrath_auth_db::AuthDatabase;
 
