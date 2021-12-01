@@ -1,0 +1,42 @@
+name: wrath-rs
+
+on:
+  push:
+    branches: [ main, github_ci ]
+  pull_request:
+    branches: [ main, github_ci ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    services:
+      mysql:
+        image: mariadb:10.6
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: false
+          MYSQL_ROOT_PASSWORD: wrath
+          MYSQL_DATABASE: wrath
+        ports:
+          - 3306/tcp
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=10s --health-retries=10
+    runs-on: ubuntu-latest
+    name: Wrath-rs on stable rust
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install minimal stable with clippy and rustfmt
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Run migrations
+        run: |
+          mysql -h 127.0.0.1 -P ${{ job.services.mysql.ports['3306'] }} -u root -p'wrath' wrath < databases/wrath-auth-db/migrations/*
+          mysql -h 127.0.0.1 -P ${{ job.services.mysql.ports['3306'] }} -u root -p'wrath' wrath < databases/wrath-realm-db/migrations/*
+      - name: Build
+        run: cargo build
+        env:
+          DATABASE_URL: "mysql://root:wrath@localhost:${{ job.services.mysql.ports['3306'] }}/wrath"
+
