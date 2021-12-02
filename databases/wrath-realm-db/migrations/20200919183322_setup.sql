@@ -29,7 +29,7 @@ CREATE TABLE `characters` (
 	`playtime_total` int(10) unsigned NOT NULL DEFAULT '0',
 	`playtime_level` int(10) unsigned NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `character_account_data` (
 	`character_id` int(10) unsigned NOT NULL DEFAULT '0',
@@ -40,5 +40,5 @@ CREATE TABLE `character_account_data` (
 	KEY `FK_CHARACTER_ACCOUNT_DATA_CHARACTER` (`character_id`),
 	CONSTRAINT `FK_CHARACTER_ACCOUNT_DATA_CHARACTER` FOREIGN KEY (`character_id`) REFERENCES `characters` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
 	PRIMARY KEY (`character_id`, `data_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
