@@ -1,6 +1,6 @@
+use crate::constants::RealmFlags;
 use crate::packet::consts::{CMD_AUTH_LOGON_CHALLENGE, CMD_AUTH_LOGON_PROOF, CMD_AUTH_RECONNECT_CHALLENGE, CMD_AUTH_RECONNECT_PROOF, CMD_REALM_LIST};
 use crate::packet::PacketWriter;
-use crate::prelude::RealmFlags;
 use anyhow::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::io::{Cursor, Write};

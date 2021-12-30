@@ -1,11 +1,12 @@
-use anyhow::*;
+use anyhow::{anyhow, Result};
+use async_std::io::ReadExt;
 use async_std::net::{TcpListener, TcpStream};
-use async_std::prelude::*;
 use async_std::sync::RwLock;
 use async_std::task;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 use wrath_auth_db::AuthDatabase;
 
@@ -15,17 +16,11 @@ mod packet;
 mod realms;
 mod state;
 
-pub mod prelude {
-    pub use super::constants::*;
-    pub use tracing::{error, info, trace, warn};
-}
-
 use crate::auth::{handle_logon_challenge_srp, handle_logon_proof_srp, handle_reconnect_challenge_srp, handle_reconnect_proof_srp};
 use crate::packet::client::ClientPacket;
 use crate::packet::{AsyncPacketWriterExt, PacketReader};
 use crate::realms::handle_realm_list_request;
 use crate::state::{ActiveClients, ClientState};
-use prelude::*;
 
 #[async_std::main]
 async fn main() -> Result<()> {

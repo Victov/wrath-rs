@@ -1,6 +1,4 @@
-use super::constants;
-use super::prelude::*;
-use anyhow::*;
+use anyhow::{anyhow, Result};
 use async_std::net::TcpStream;
 use std::time::Instant;
 use wow_srp::normalized_string::NormalizedString;
@@ -8,6 +6,7 @@ use wow_srp::server::{SrpProof, SrpVerifier};
 use wow_srp::{PublicKey, GENERATOR, LARGE_SAFE_PRIME_LITTLE_ENDIAN, PASSWORD_VERIFIER_LENGTH, SALT_LENGTH};
 use wrath_auth_db::AuthDatabase;
 
+use crate::constants::AuthResult;
 use crate::packet::client::{LogonChallenge, LogonProof, ReconnectProof};
 use crate::packet::server::{LogonChallengeBody, LogonProofBody, ReconnectChallengeBody, ServerPacket};
 use crate::state::{ActiveClients, SrpServerTime};
@@ -75,16 +74,16 @@ pub async fn handle_logon_challenge_srp<'a>(
 ) -> Result<ClientState> {
     let account = match auth_database.get_account_by_username(&challenge.username).await? {
         Some(acc) if acc.banned != 0 => {
-            reject_logon_challenge(stream, constants::AuthResult::FailBanned).await?;
+            reject_logon_challenge(stream, AuthResult::FailBanned).await?;
             return Ok(ClientState::Connected);
         }
         Some(acc) if acc.v.is_empty() || acc.s.is_empty() => {
-            reject_logon_challenge(stream, constants::AuthResult::FailUnknownAccount).await?;
+            reject_logon_challenge(stream, AuthResult::FailUnknownAccount).await?;
             return Ok(ClientState::Connected);
         }
         Some(acc) => acc,
         None => {
-            reject_logon_challenge(stream, constants::AuthResult::FailUnknownAccount).await?;
+            reject_logon_challenge(stream, AuthResult::FailUnknownAccount).await?;
             return Ok(ClientState::Connected);
         }
     };
@@ -98,7 +97,7 @@ pub async fn handle_logon_challenge_srp<'a>(
     let srp_proof = srp_verifier.into_proof();
     stream
         .write_packet(ServerPacket::LogonChallenge {
-            result: constants::AuthResult::Success as u8,
+            result: AuthResult::Success as u8,
             body: Some(LogonChallengeBody {
                 public_key: srp_proof.server_public_key(),
                 generator: &[GENERATOR],
@@ -185,7 +184,7 @@ pub async fn handle_reconnect_proof_srp<'a>(
     }
 }
 
-async fn reject_logon_proof(stream: &mut TcpStream, result: constants::AuthResult) -> Result<()> {
+async fn reject_logon_proof(stream: &mut TcpStream, result: AuthResult) -> Result<()> {
     stream
         .write_packet(ServerPacket::LogonProof {
             result: result as u8,
@@ -196,7 +195,7 @@ async fn reject_logon_proof(stream: &mut TcpStream, result: constants::AuthResul
     Ok(())
 }
 
-async fn reject_logon_challenge(stream: &mut TcpStream, result: constants::AuthResult) -> Result<()> {
+async fn reject_logon_challenge(stream: &mut TcpStream, result: AuthResult) -> Result<()> {
     stream
         .write_packet(ServerPacket::LogonChallenge {
             result: result as u8,
