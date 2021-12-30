@@ -1,10 +1,9 @@
 use super::prelude::*;
 use crate::packet::server::{Realm, ServerPacket};
-use crate::packet::PacketWriter;
-use anyhow::Result;
+use crate::{AsyncPacketWriterExt, ClientState};
+use anyhow::{anyhow, Result};
 use async_std::prelude::*;
 use byteorder::{BigEndian, ReadBytesExt};
-use std::io::Cursor;
 use std::time::Instant;
 use wrath_auth_db::AuthDatabase;
 
@@ -64,15 +63,14 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
 
 pub async fn handle_realm_list_request(
     stream: &mut async_std::net::TcpStream,
-    username: &str,
+    username: String,
     auth_database: std::sync::Arc<AuthDatabase>,
-) -> Result<()> {
-    let buf = Vec::new();
-    let mut cursor = Cursor::new(buf);
-    let account = auth_database.get_account_by_username(username).await?;
+) -> Result<ClientState> {
+    let account = match auth_database.get_account_by_username(&username).await? {
+        Some(acc) => acc,
+        None => return Err(anyhow!("Username is not in database")),
+    };
     let realms = Realm::from_db(auth_database, account.id).await?;
-    ServerPacket::RealmListRequest(realms).write_packet(&mut cursor)?;
-    stream.write(&cursor.get_ref()).await?;
-    stream.flush().await?;
-    Ok(())
+    stream.write_packet(ServerPacket::RealmListRequest(realms)).await?;
+    Ok(ClientState::LogOnProof { username })
 }

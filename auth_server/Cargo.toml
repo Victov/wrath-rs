@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wow_srp = { git = "https://github.com/WeaponMan/wow_srp.git", rev = "8e38d0ece4f8ebe2fff37e464b921fdf543992b8" }
+wow_srp = '0.3.0'
 byteorder = { version = '1' }
 async-std = { version = "*", features = ["attributes"] }
 anyhow = { version = "*" }
@@ -16,3 +16,5 @@ hex = { version = "0.4" }
 wrath-auth-db = { path = "../databases/wrath-auth-db" }
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.2" }
+async-trait = "0.1"
+byte = "0.2"

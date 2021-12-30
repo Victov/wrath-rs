@@ -12,7 +12,7 @@ CREATE TABLE `accounts`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO accounts VALUES
-(NULL, 'test', "3d0d99423e31fcc67a6745ec89d70d700344bc76", '', '', '', '', 0),
+(NULL, 'test', "3d0d99423e31fcc67a6745ec89d70d700344bc76", '', '313f948708ea1a2e3ad354b888d56329725c445411086a36133c033bbea6823f', 'de30ae3c971092b5bf5ad33cf9dbfa4b35f7a72e812ef6c8f3596ea272ac5467', '', 0),
 (NULL, 'banned', "5a31ea4791dcb33648008d0c5c260baaa37e2a9a", '', '', '', '', 1);
 
 CREATE TABLE `realms` (
