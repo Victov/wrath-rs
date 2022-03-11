@@ -45,9 +45,9 @@ impl AuthDatabase {
         Ok(())
     }
 
-    pub async fn get_account_by_username(&self, username: &str) -> Result<DBAccount> {
+    pub async fn get_account_by_username(&self, username: &str) -> Result<Option<DBAccount>> {
         let acc = sqlx::query_as!(DBAccount, "SELECT * FROM accounts WHERE username = ?", username)
-            .fetch_one(&self.connection_pool)
+            .fetch_optional(&self.connection_pool)
             .await?;
         Ok(acc)
     }

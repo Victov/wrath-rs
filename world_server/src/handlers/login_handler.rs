@@ -69,7 +69,10 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     let client_digest = reader.read_exact(20)?;
     let decompressed_addon_data_length = reader.read_u32::<LittleEndian>()?;
     let compressed_addon_data = reader.read_exact(packet.header.length as usize - reader.position() as usize)?;
-    let db_account = client_manager.auth_db.get_account_by_username(&name).await?;
+    let db_account = match client_manager.auth_db.get_account_by_username(&name).await? {
+        Some(c) => c,
+        None => return Err(anyhow!("Account doesnt exist!")),
+    };
     //Handle db_account failed to fetch with reponse
 
     let sesskey_bytes = hex::decode(&db_account.sessionkey)?;
