@@ -55,7 +55,7 @@ async fn reconnect_clients_cleaner(clients: ActiveClients, timeout: Duration) ->
             let mut clients = clients.write().await;
             clients.retain(|_, srp_time| srp_time.created_at.elapsed() < timeout);
         }
-        task::sleep(Duration::from_millis(500)).await;
+        task::sleep(timeout).await;
     }
 }
 
@@ -72,7 +72,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
             break;
         }
         let packet = ClientPacket::read_packet(&buf)?;
-        println!("packet {:?}", packet);
+
         let result = match (client_state.take(), packet) {
             (_, ClientPacket::LogonChallenge(challenge)) => handle_logon_challenge_srp(&mut stream, &challenge, auth_database.clone()).await,
             (Some(ClientState::ChallengeProof { srp_proof, username }), ClientPacket::LogonProof(logon_proof)) => {
@@ -101,7 +101,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
                 break;
             }
             (_, ClientPacket::NotImplemented) => {
-                warn!("unhandled {}", buf[0]);
+                warn!("Unhandled {}", buf[0]);
                 return Err(anyhow!("Unhandled command header"));
             }
         };

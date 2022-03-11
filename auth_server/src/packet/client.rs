@@ -73,6 +73,8 @@ impl<'a> PacketReader<'a> for ClientPacket<'a> {
                         buffer.read_with(offset, Str::Len(len as usize)).map_err(BytesError::new)?
                     },
                 };
+                //TODO: reverse strings of game_name, platform, os and locale.
+
                 if cmd == CMD_AUTH_LOGON_CHALLENGE {
                     ClientPacket::LogonChallenge(challenge)
                 } else {
