@@ -18,3 +18,4 @@ tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.2" }
 async-trait = "0.1"
 byte = "0.2"
+cmdparse = { version = "0.1" }

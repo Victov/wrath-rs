@@ -31,6 +31,18 @@ impl AuthDatabase {
         Ok(sqlx::query_as!(DBRealm, "SELECT * FROM realms").fetch_all(&self.connection_pool).await?)
     }
 
+    pub async fn create_account(&self, username: &str, v: &str, s: &str) -> Result<()> {
+        sqlx::query!(
+            "INSERT INTO `accounts` (`username`, `v`, `s`) VALUES (?, ?, ?)",
+            username.to_lowercase(),
+            v,
+            s
+        )
+        .execute(&self.connection_pool)
+        .await?;
+        Ok(())
+    }
+
     pub async fn set_realm_online_status(&self, realm_id: u32, online: bool) -> Result<()> {
         sqlx::query!("UPDATE realms SET online = ? WHERE id = ?", online as u8, realm_id)
             .execute(&self.connection_pool)
@@ -50,14 +62,6 @@ impl AuthDatabase {
             .fetch_optional(&self.connection_pool)
             .await?;
         Ok(acc)
-    }
-
-    pub async fn set_account_v_s(&self, account_id: u32, v: &str, s: &str) -> Result<()> {
-        sqlx::query!("UPDATE accounts SET v = ?, s = ? WHERE id = ?", v, s, account_id)
-            .execute(&self.connection_pool)
-            .await?;
-
-        Ok(())
     }
 
     pub async fn set_account_sessionkey(&self, username: &str, session_key: &str) -> Result<()> {

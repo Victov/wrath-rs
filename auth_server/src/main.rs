@@ -11,6 +11,7 @@ use tracing_subscriber::EnvFilter;
 use wrath_auth_db::AuthDatabase;
 
 mod auth;
+mod console_input;
 mod constants;
 mod packet;
 mod realms;
@@ -41,6 +42,7 @@ async fn main() -> Result<()> {
 
     task::spawn(reconnect_clients_cleaner(clients.clone(), Duration::from_secs(auth_reconnect_lifetime)));
     task::spawn(realms::receive_realm_pings(auth_db.clone()));
+    task::spawn(console_input::process_console_commands(auth_db.clone()));
 
     let tcp_listener = TcpListener::bind("127.0.0.1:3724").await?;
     loop {

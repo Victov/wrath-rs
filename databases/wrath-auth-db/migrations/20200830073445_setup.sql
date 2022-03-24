@@ -2,7 +2,6 @@ CREATE TABLE `accounts`
 (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT 'Identifier',
   `username` varchar(32) NOT NULL DEFAULT '',
-  `sha_pass_hash` varchar(40) NOT NULL DEFAULT '',
   `sessionkey` varchar(80) NOT NULL DEFAULT '',
   `v` varchar(64) NOT NULL DEFAULT '',
   `s` varchar(64) NOT NULL DEFAULT '',
@@ -12,8 +11,8 @@ CREATE TABLE `accounts`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO accounts VALUES
-(NULL, 'test', "3d0d99423e31fcc67a6745ec89d70d700344bc76", '', '313f948708ea1a2e3ad354b888d56329725c445411086a36133c033bbea6823f', 'de30ae3c971092b5bf5ad33cf9dbfa4b35f7a72e812ef6c8f3596ea272ac5467', '', 0),
-(NULL, 'banned', "5a31ea4791dcb33648008d0c5c260baaa37e2a9a", '', '', '', '', 1);
+(NULL, 'test', '', '313f948708ea1a2e3ad354b888d56329725c445411086a36133c033bbea6823f', 'de30ae3c971092b5bf5ad33cf9dbfa4b35f7a72e812ef6c8f3596ea272ac5467', '', 0),
+(NULL, 'banned', '', '320dee7fd506db6b4d3d559ca1d0c405e43224b1760afc26222afb59fbb7b872', '50f83a15afe7f792f29fd8c22d856739c590702c4692a6fc9c99c081fcf4700a', '', 1);
 
 CREATE TABLE `realms` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,

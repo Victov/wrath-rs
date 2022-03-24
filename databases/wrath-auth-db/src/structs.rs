@@ -12,7 +12,6 @@ pub struct DBRealm {
 pub struct DBAccount {
     pub id: u32,
     pub username: String,
-    pub sha_pass_hash: String,
     pub sessionkey: String,
     pub v: String,
     pub s: String,
