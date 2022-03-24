@@ -33,10 +33,14 @@ pub async fn process_console_commands(auth_db: std::sync::Arc<AuthDatabase>) -> 
 }
 
 async fn handle_command(cmd: WrathConsoleCommand, auth_db: std::sync::Arc<AuthDatabase>) -> Result<()> {
-    match cmd {
-        WrathConsoleCommand::CreateAccount(username, password) => handle_create_account(&username, &password, &auth_db).await?,
-        WrathConsoleCommand::Ban(username) => handle_ban(&username, &auth_db).await?,
-        WrathConsoleCommand::Unban(username) => handle_unban(&username, &auth_db).await?,
+    let result = match cmd {
+        WrathConsoleCommand::CreateAccount(username, password) => handle_create_account(&username, &password, &auth_db).await,
+        WrathConsoleCommand::Ban(username) => handle_ban(&username, &auth_db).await,
+        WrathConsoleCommand::Unban(username) => handle_unban(&username, &auth_db).await,
+    };
+
+    if let Err(e) = result {
+        warn!("Error: {}", e);
     }
     Ok(())
 }

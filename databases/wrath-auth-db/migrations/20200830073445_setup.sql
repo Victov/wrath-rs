@@ -7,7 +7,8 @@ CREATE TABLE `accounts`
   `s` varchar(64) NOT NULL DEFAULT '',
   `token_key` varchar(100) NOT NULL DEFAULT '',
   `banned` tinyint(1) unsigned zerofill NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  CONSTRAINT `username_unique` UNIQUE (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO accounts VALUES
