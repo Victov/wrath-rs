@@ -5,15 +5,14 @@ CREATE TABLE `accounts`
   `sessionkey` varchar(80) NOT NULL DEFAULT '',
   `v` varchar(64) NOT NULL DEFAULT '',
   `s` varchar(64) NOT NULL DEFAULT '',
-  `token_key` varchar(100) NOT NULL DEFAULT '',
   `banned` tinyint(1) unsigned zerofill NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   CONSTRAINT `username_unique` UNIQUE (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO accounts VALUES
-(NULL, 'test', '', '313f948708ea1a2e3ad354b888d56329725c445411086a36133c033bbea6823f', 'de30ae3c971092b5bf5ad33cf9dbfa4b35f7a72e812ef6c8f3596ea272ac5467', '', 0),
-(NULL, 'banned', '', '320dee7fd506db6b4d3d559ca1d0c405e43224b1760afc26222afb59fbb7b872', '50f83a15afe7f792f29fd8c22d856739c590702c4692a6fc9c99c081fcf4700a', '', 1);
+(NULL, 'test', '', '313f948708ea1a2e3ad354b888d56329725c445411086a36133c033bbea6823f', 'de30ae3c971092b5bf5ad33cf9dbfa4b35f7a72e812ef6c8f3596ea272ac5467', 0),
+(NULL, 'banned', '', '320dee7fd506db6b4d3d559ca1d0c405e43224b1760afc26222afb59fbb7b872', '50f83a15afe7f792f29fd8c22d856739c590702c4692a6fc9c99c081fcf4700a', 1);
 
 CREATE TABLE `realms` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,

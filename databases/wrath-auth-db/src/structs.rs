@@ -15,7 +15,6 @@ pub struct DBAccount {
     pub sessionkey: String,
     pub v: String,
     pub s: String,
-    pub token_key: String,
     pub banned: u8,
 }
 

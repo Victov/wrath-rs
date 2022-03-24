@@ -29,6 +29,7 @@ cp .env.template .env
 cargo run
 ```
 Repeat these steps for the `world_server` folder to kick off a world server. You should now be able to log in with user `test` with password `test` using a 3.3.5(12340) game client and create your first character.
+
 ### After initial setup
 Some progress on the server code may change the database tables. In that case you will have to go into the database folders and run to bring your database up to the latest structure. This will wipe your database. This shouldn't be an issue since the server is nowhere near being able to host actual players anyway. 
 ```
@@ -37,3 +38,13 @@ cargo sqlx database create
 cargo sqlx migrate run
 ``` 
 
+Hint: Windows users can run `reset_db.bat` to quickly reset both the authentication and world databases. This requires `sqlx-cli` to be correctly installed.
+
+## Console Commands
+The authentication server accepts console commands to be typed while it's running. This is useful to control certain aspects of the authentication server and database, without having to resort to third-party database editing tools. Currently available console commands are:
+
+| Command                                | Description                                                                           |
+|----------------------------------------|---------------------------------------------------------------------------------------|
+| `create-account <username> <password>` | Inserts a fresh user into the database with the given username and password.          |
+| `ban <username>`                       | Bans a user in the database (does not currently disconnect them if they're connected) |
+| `unban <username>`                     | Unbans a user.                                                                        |
