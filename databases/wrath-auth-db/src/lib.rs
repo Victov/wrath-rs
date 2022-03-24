@@ -71,6 +71,14 @@ impl AuthDatabase {
         Ok(())
     }
 
+    pub async fn set_account_ban_status(&self, username: &str, banned: bool) -> Result<()> {
+        let banned_int = banned as u8;
+        sqlx::query!("UPDATE `accounts` SET banned = ? WHERE username = ?;", banned_int, username)
+            .execute(&self.connection_pool)
+            .await?;
+        Ok(())
+    }
+
     pub async fn get_account_data(&self, account_id: u32) -> Result<Vec<DBAccountData>> {
         let acc_data = sqlx::query_as!(DBAccountData, "SELECT * FROM account_data WHERE account_id = ?", account_id)
             .fetch_all(&self.connection_pool)
