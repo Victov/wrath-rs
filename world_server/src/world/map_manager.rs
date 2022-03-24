@@ -3,7 +3,7 @@ use std::sync::Weak;
 
 use super::map_object::MapObject;
 use super::prelude::*;
-use crate::{character::Character, prelude::*};
+use crate::prelude::*;
 use async_std::sync::RwLock;
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 

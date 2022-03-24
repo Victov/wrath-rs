@@ -39,7 +39,6 @@ enum AuthResponse {
 pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
     use crypto::digest::Digest;
     use num_bigint::BigUint;
-    use num_traits::Num;
     use std::io::{BufRead, Seek, SeekFrom};
 
     let client_lock = client_manager.get_client(packet.client_id).await?;
