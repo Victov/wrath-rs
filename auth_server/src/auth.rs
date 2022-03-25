@@ -88,7 +88,7 @@ pub async fn handle_logon_challenge_srp<'a>(
         }
     };
 
-    let username = NormalizedString::new(&account.username)?;
+    let username = NormalizedString::from(&account.username)?;
     let mut password_verifier: [u8; PASSWORD_VERIFIER_LENGTH as usize] = Default::default();
     let mut salt: [u8; SALT_LENGTH as usize] = Default::default();
     hex::decode_to_slice(account.v.as_bytes(), &mut password_verifier)?;

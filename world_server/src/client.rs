@@ -7,7 +7,6 @@ use super::wowcrypto::*;
 use crate::prelude::*;
 use async_std::net::TcpStream;
 use async_std::sync::{Mutex, RwLock};
-use num_bigint::RandBigInt;
 use rand::RngCore;
 use std::sync::Arc;
 
@@ -64,6 +63,7 @@ impl Client {
     }
 
     pub async fn send_auth_challenge(&self, realm_seed: u32) -> Result<()> {
+        use num_bigint::RandBigInt;
         use podio::{LittleEndian, WritePodExt};
         use std::io::Write;
 

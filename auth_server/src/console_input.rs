@@ -46,8 +46,8 @@ async fn handle_command(cmd: WrathConsoleCommand, auth_db: std::sync::Arc<AuthDa
 }
 
 async fn handle_create_account(username: &str, password: &str, auth_db: &std::sync::Arc<AuthDatabase>) -> Result<()> {
-    let u_normalised = NormalizedString::new(username)?;
-    let p_normalised = NormalizedString::new(password)?;
+    let u_normalised = NormalizedString::from(username)?;
+    let p_normalised = NormalizedString::from(password)?;
     let v = SrpVerifier::from_username_and_password(u_normalised, p_normalised);
 
     auth_db

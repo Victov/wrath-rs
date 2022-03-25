@@ -1,5 +1,4 @@
 use crate::character::*;
-use crate::client::Client;
 use crate::client_manager::ClientManager;
 use crate::guid::WriteGuid;
 use crate::opcodes::Opcodes;
@@ -10,7 +9,6 @@ use crate::world::value_fields::HasValueFields;
 use crate::world::value_fields::PlayerFields;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub async fn send_initial_spells(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_INITIAL_SPELLS, 500);
