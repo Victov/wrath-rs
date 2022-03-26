@@ -1,10 +1,14 @@
-use std::sync::{atomic::AtomicBool, Arc};
+use std::{
+    sync::{atomic::AtomicBool, Arc},
+    time::Duration,
+};
 
 use async_ctrlc::CtrlC;
 use async_std::task;
 use client_manager::ClientManager;
 use packet_handler::{PacketHandler, PacketToHandle};
-use tracing_subscriber::EnvFilter;
+use time::macros::format_description;
+use tracing_subscriber::{fmt::time::UtcTime, EnvFilter};
 use wrath_auth_db::AuthDatabase;
 use wrath_realm_db::RealmDatabase;
 
@@ -33,10 +37,12 @@ use prelude::*;
 #[async_std::main]
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();
+
+    let timer = UtcTime::new(format_description!("[day]-[month]-[year] [hour]:[minute]:[second]"));
     tracing_subscriber::FmtSubscriber::builder()
         .with_env_filter(EnvFilter::new("wrath=info,sqlx=warn"))
         .with_env_filter(EnvFilter::from_default_env())
-        .with_timer(tracing_subscriber::fmt::time::time())
+        .with_timer(timer)
         .init();
 
     info!("Starting World Server");
@@ -49,10 +55,11 @@ async fn main() -> Result<()> {
         r.store(false, std::sync::atomic::Ordering::Relaxed);
     });
 
-    let auth_database = AuthDatabase::new(&std::env::var("AUTH_DATABASE_URL")?).await?;
+    let db_connect_timeout = Duration::from_secs(std::env::var("DB_CONNECT_TIMEOUT_SECONDS")?.parse()?);
+    let auth_database = AuthDatabase::new(&std::env::var("AUTH_DATABASE_URL")?, db_connect_timeout).await?;
     let auth_database_ref = std::sync::Arc::new(auth_database);
 
-    let realm_database = RealmDatabase::new(&std::env::var("REALM_DATABASE_URL")?).await?;
+    let realm_database = RealmDatabase::new(&std::env::var("REALM_DATABASE_URL")?, db_connect_timeout).await?;
     let realm_database_ref = std::sync::Arc::new(realm_database);
 
     task::spawn(auth::auth_server_heartbeats());
