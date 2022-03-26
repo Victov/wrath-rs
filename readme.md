@@ -41,10 +41,16 @@ cargo sqlx migrate run
 Hint: Windows users can run `reset_db.bat` to quickly reset both the authentication and world databases. This requires `sqlx-cli` to be correctly installed.
 
 ## Console Commands
-The authentication server accepts console commands to be typed while it's running. This is useful to control certain aspects of the authentication server and database, without having to resort to third-party database editing tools. Currently available console commands are:
+Both the authentication server and the world server accept console commands to be typed while they're running. This is useful to control certain aspects of the servers and databases, without having to resort to third-party database editing tools. Currently available console commands are:
 
+### On the auth server
 | Command                                | Description                                                                           |
 |----------------------------------------|---------------------------------------------------------------------------------------|
 | `create-account <username> <password>` | Inserts a fresh user into the database with the given username and password.          |
 | `ban <username>`                       | Bans a user in the database (does not currently disconnect them if they're connected) |
 | `unban <username>`                     | Unbans a user.                                                                        |
+
+### On the world server
+| Command                                | Description                                                                           |
+|----------------------------------------|---------------------------------------------------------------------------------------|
+| `exit` 				 | Gracefully shuts down the world server. 						 | 
