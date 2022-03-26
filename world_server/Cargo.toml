@@ -28,3 +28,4 @@ tracing = {version="0.1"}
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 rstar = { version = "0.9" }
 hex = { version = "0.4" }
+cmdparse = { version = "0.1" }

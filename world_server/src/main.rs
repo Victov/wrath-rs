@@ -16,6 +16,7 @@ mod auth;
 mod character;
 mod client;
 mod client_manager;
+mod console_input;
 mod constants;
 mod data_types;
 mod guid;
@@ -79,6 +80,8 @@ async fn main() -> Result<()> {
             .unwrap_or_else(|e| warn!("Error in realm_socket::accept_realm_connections: {:?}", e))
     });
 
+    task::spawn(console_input::process_console_commands(running.clone()));
+
     let desired_timestep_sec: f32 = 1.0 / 10.0;
     let mut previous_loop_total: f32 = desired_timestep_sec;
     while running.load(std::sync::atomic::Ordering::Relaxed) {
@@ -97,5 +100,7 @@ async fn main() -> Result<()> {
         }
         previous_loop_total = std::time::Instant::now().duration_since(before).as_secs_f32();
     }
+
+    info!("World server shut down");
     Ok(())
 }
