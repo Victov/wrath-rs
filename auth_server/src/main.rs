@@ -6,8 +6,9 @@ use async_std::task;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use time::macros::format_description;
 use tracing::{error, info, warn};
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{fmt::time::UtcTime, EnvFilter};
 use wrath_auth_db::AuthDatabase;
 
 mod auth;
@@ -27,14 +28,18 @@ use crate::state::{ActiveClients, ClientState};
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();
 
+    let timer = UtcTime::new(format_description!("[day]-[month]-[year] [hour]:[minute]:[second]"));
     tracing_subscriber::FmtSubscriber::builder()
         .with_env_filter(EnvFilter::new("wrath=debug,sqlx=warn"))
         .with_env_filter(EnvFilter::from_default_env())
-        .with_timer(tracing_subscriber::fmt::time::time())
+        .with_timer(timer)
         .init();
 
+    info!("Auth serer starting");
+    info!("Connecting to auth database");
+    let db_connect_timeout = Duration::from_secs(std::env::var("DB_CONNECT_TIMEOUT_SECONDS")?.parse()?);
     let connect_string = std::env::var("AUTH_DATABASE_URL")?;
-    let auth_db = std::sync::Arc::new(AuthDatabase::new(&connect_string).await?);
+    let auth_db = std::sync::Arc::new(AuthDatabase::new(&connect_string, db_connect_timeout).await?);
     let auth_reconnect_lifetime = std::env::var("AUTH_RECONNECT_LIFETIME")
         .map(|x| x.parse::<u64>().unwrap_or(500))
         .unwrap_or(500);

@@ -23,7 +23,9 @@ flate2 = { version="1.0" }
 chrono = { version = "0.4" }
 bit_field = { version = "0.10" }
 async-ctrlc = {version="1.2", features=["termination"] }
+time = { version = "0.3", features = ["macros"] }
 tracing = {version="0.1"}
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 rstar = { version = "0.9" }
 hex = { version = "0.4" }
+cmdparse = { version = "0.1" }
