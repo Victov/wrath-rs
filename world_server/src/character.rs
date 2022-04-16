@@ -51,6 +51,10 @@ pub struct Character {
     //things required to keep MapObject working
     in_range_objects: HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>,
     recently_removed_guids: Vec<Guid>,
+
+    //time sync
+    pub time_sync_counter: u32,
+    time_sync_cooldown: f32,
 }
 
 impl Character {
@@ -81,6 +85,8 @@ impl Character {
             changed_update_mask: UpdateMask::new(NUM_UNIT_FIELDS),
             in_range_objects: HashMap::new(),
             recently_removed_guids: vec![],
+            time_sync_counter: 0,
+            time_sync_cooldown: 0f32,
         }
     }
 
@@ -153,6 +159,7 @@ impl Character {
         handlers::send_aura_update_all(&self).await?;
         handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
         handlers::send_initial_world_states(&self).await?;
+        handlers::send_time_sync(&self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
 
@@ -167,6 +174,16 @@ impl Character {
         trace!("Received zone update for character {} into zone {}", self.name, zone);
         self.zone = zone;
         handlers::send_initial_world_states(self).await
+    }
+
+    pub async fn tick(&mut self, delta_time: f32) -> Result<()> {
+        self.time_sync_cooldown -= delta_time;
+        if self.time_sync_cooldown < 0f32 {
+            self.time_sync_cooldown += 10f32;
+            self.time_sync_counter += 1;
+            handlers::send_time_sync(self).await?;
+        }
+        Ok(())
     }
 }
 

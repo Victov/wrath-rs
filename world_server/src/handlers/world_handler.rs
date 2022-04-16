@@ -73,3 +73,9 @@ pub async fn send_destroy_object(character: &Character, object_guid: &Guid, is_d
     writer.write_u8(is_death as u8)?;
     send_packet_to_character(character, header, &writer).await
 }
+
+pub async fn send_time_sync(character: &Character) -> Result<()> {
+    let (header, mut writer) = create_packet(Opcodes::SMSG_TIME_SYNC_REQ, 4);
+    writer.write_u32::<LittleEndian>(character.time_sync_counter)?;
+    send_packet_to_character(character, header, &writer).await
+}

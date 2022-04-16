@@ -41,6 +41,14 @@ impl Client {
         }
     }
 
+    pub async fn tick(&self, delta_time: f32) -> Result<()> {
+        if let Some(character_lock) = &self.active_character {
+            let mut character = character_lock.write().await;
+            character.tick(delta_time).await?;
+        }
+        Ok(())
+    }
+
     pub async fn disconnect(&mut self) -> Result<()> {
         //Kill all networking, but allow the world one frame to do cleanup
         //For example, keep around the active character, so that the instance manager can see that

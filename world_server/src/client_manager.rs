@@ -33,7 +33,18 @@ impl ClientManager {
         }
     }
 
-    pub async fn cleanup_disconnected_clients(&self) -> Result<()> {
+    pub async fn tick(&self, delta_time: f32) -> Result<()> {
+        self.cleanup_disconnected_clients().await?;
+        let clients = self.clients.read().await;
+        for (_, client_lock) in clients.iter() {
+            let client = client_lock.read().await;
+            client.tick(delta_time).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn cleanup_disconnected_clients(&self) -> Result<()> {
         let to_remove = {
             let mut result = vec![];
             let clients = self.clients.read().await;
