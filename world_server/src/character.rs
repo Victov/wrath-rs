@@ -99,6 +99,7 @@ impl Character {
             y: db_entry.bind_y,
             z: db_entry.bind_z,
         });
+        self.map = db_entry.map as u32;
         self.x = db_entry.x;
         self.y = db_entry.y;
         self.z = db_entry.z;
@@ -199,11 +200,6 @@ impl MapObject for Character {
             z: self.z,
             o: self.orientation,
         }
-    }
-
-    //Super duper temp function to be able to test value changes
-    fn advance_x(&mut self, add: f32) {
-        self.x += add;
     }
 
     fn get_type(&self) -> updates::ObjectType {
