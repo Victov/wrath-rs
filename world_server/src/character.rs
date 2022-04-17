@@ -1,7 +1,7 @@
 use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
-use crate::data_types::{ActionBar, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::data_types::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
@@ -169,6 +169,10 @@ impl Character {
         trace!("Received zone update for character {} into zone {}", self.name, zone);
         self.zone = zone;
         handlers::send_initial_world_states(self).await
+    }
+
+    pub fn process_movement(&mut self, movement_info: &MovementInfo) {
+        self.position = movement_info.position.clone();
     }
 
     pub async fn tick(&mut self, delta_time: f32) -> Result<()> {

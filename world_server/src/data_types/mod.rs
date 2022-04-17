@@ -22,7 +22,7 @@ pub struct WorldZoneLocation {
     pub map: u32,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PositionAndOrientation {
     pub x: f32,
     pub y: f32,

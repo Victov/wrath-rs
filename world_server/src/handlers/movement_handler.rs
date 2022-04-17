@@ -23,7 +23,10 @@ pub async fn handle_movement_generic(client_manager: &Arc<ClientManager>, packet
     let guid = reader.read_guid_compressed()?;
     let movement_info = reader.read_movement_info()?;
 
-    //update character position from movement info
+    {
+        let mut character = character_lock.write().await;
+        character.process_movement(&movement_info);
+    }
 
     let (header, mut writer) = create_packet(packet.header.get_cmd()?, 8);
     writer.write_guid_compressed(&guid)?;

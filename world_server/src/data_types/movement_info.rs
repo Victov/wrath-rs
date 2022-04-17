@@ -5,11 +5,11 @@ use anyhow::Result;
 
 #[derive(Default)]
 pub struct MovementInfo {
-    movement_flags: u32,
-    movement_flags2: u16,
-    time: u32,
-    position: PositionAndOrientation,
-    falltime: u32,
+    pub movement_flags: u32,
+    pub movement_flags2: u16,
+    pub time: u32,
+    pub position: PositionAndOrientation,
+    pub falltime: u32,
 }
 
 pub trait ReadMovementInfo {
