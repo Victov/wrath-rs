@@ -49,7 +49,11 @@ impl ClientManager {
             let mut result = vec![];
             let clients = self.clients.read().await;
             for (id, client_lock) in clients.iter() {
-                let client = client_lock.upgradable_read().await;
+                //We can put a time limit on this, to prevent Tick going over the tick budget when a client disconnects.
+                //Failing to meet the time limit probably means the client is busy with a disconnect action. (closing sockets)
+                //We'll pick up the cleaning some frames later. That's no problem
+                let client_lock_timeout_duration = std::time::Duration::from_millis(2);
+                let client = async_std::future::timeout(client_lock_timeout_duration, client_lock.upgradable_read()).await?;
                 //Cleanup is two-staged. Sockets are already closed here, but we take this frame to
                 //be able to remove them from the world and all that cleanup
                 if client.client_state == ClientState::DisconnectPendingCleanup {
