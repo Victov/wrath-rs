@@ -1,7 +1,7 @@
 use super::client::Client;
 use super::opcodes::Opcodes;
 use crate::{
-    character::{self, *},
+    character::*,
     prelude::*,
     world::{map_object::MapObject, World},
 };
@@ -44,7 +44,13 @@ pub fn create_packet(opcode: Opcodes, allocate_size: usize) -> (ServerPacketHead
     (header, writer)
 }
 
-pub async fn send_packet_to_all_in_range(character: &Character, world: &World, header: &ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()> {
+pub async fn send_packet_to_all_in_range(
+    character: &Character,
+    include_self: bool,
+    world: &World,
+    header: &ServerPacketHeader,
+    payload: &Cursor<Vec<u8>>,
+) -> Result<()> {
     if let Some(map) = world.get_instance_manager().try_get_map_for_character(character).await {
         let in_range_guids = character.get_in_range_guids();
         for guid in in_range_guids {
@@ -59,7 +65,9 @@ pub async fn send_packet_to_all_in_range(character: &Character, world: &World, h
                 send_packet_to_character(in_range_character, header, payload).await?;
             }
         }
-        send_packet_to_character(character, header, payload).await?;
+        if include_self {
+            send_packet_to_character(character, header, payload).await?;
+        }
     } else {
         warn!("Trying to send packet to all in range, but this character is not on a map");
     }

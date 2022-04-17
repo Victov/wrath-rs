@@ -1,7 +1,7 @@
 use crate::character::*;
 use crate::client::Client;
 use crate::client_manager::ClientManager;
-use crate::guid::{Guid, HighGuid, ReadGuid, WriteGuid};
+use crate::data_types::WritePositionAndOrientation;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
@@ -199,11 +199,7 @@ pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packe
 pub async fn send_verify_world(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_VERIFY_WORLD, 20);
     writer.write_u32::<LittleEndian>(character.map)?;
-    writer.write_f32::<LittleEndian>(character.x)?;
-    writer.write_f32::<LittleEndian>(character.y)?;
-    writer.write_f32::<LittleEndian>(character.z)?;
-    writer.write_f32::<LittleEndian>(character.orientation)?;
-
+    writer.write_position_and_orientation(&character.position)?;
     send_packet_to_character(&character, &header, &writer).await?;
 
     Ok(())

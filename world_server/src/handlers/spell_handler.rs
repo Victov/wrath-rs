@@ -1,6 +1,5 @@
 use crate::character::*;
 use crate::client_manager::ClientManager;
-use crate::guid::WriteGuid;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;

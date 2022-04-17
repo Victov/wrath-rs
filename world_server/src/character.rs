@@ -2,7 +2,6 @@ use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data_types::{ActionBar, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
-use crate::guid::*;
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
@@ -22,11 +21,8 @@ pub struct Character {
     pub race: u8,
     pub class: u8,
     pub gender: u8,
+    pub position: PositionAndOrientation,
 
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub orientation: f32,
     pub map: u32,
     pub zone: u32,
     pub instance_id: u32,
@@ -66,10 +62,7 @@ impl Character {
             race: 0,
             class: 0,
             gender: 0,
-            x: 0.0f32,
-            y: 0.0f32,
-            z: 0.0f32,
-            orientation: 0.0f32,
+            position: PositionAndOrientation::default(),
             map: 0,
             zone: 0,
             instance_id: 0,
@@ -100,9 +93,10 @@ impl Character {
             z: db_entry.bind_z,
         });
         self.map = db_entry.map as u32;
-        self.x = db_entry.x;
-        self.y = db_entry.y;
-        self.z = db_entry.z;
+        self.position.x = db_entry.x;
+        self.position.y = db_entry.y;
+        self.position.z = db_entry.z;
+        //orientation?
         self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
@@ -193,13 +187,8 @@ impl MapObject for Character {
         &self.guid
     }
 
-    fn get_position(&self) -> PositionAndOrientation {
-        PositionAndOrientation {
-            x: self.x,
-            y: self.y,
-            z: self.z,
-            o: self.orientation,
-        }
+    fn get_position(&self) -> &PositionAndOrientation {
+        &self.position
     }
 
     fn get_type(&self) -> updates::ObjectType {

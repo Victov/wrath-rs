@@ -1,6 +1,5 @@
 use super::character::*;
 use super::client_manager::ClientManager;
-use super::guid::*;
 use super::opcodes::Opcodes;
 use super::packet::*;
 use super::wowcrypto::*;

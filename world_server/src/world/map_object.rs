@@ -7,11 +7,11 @@ use super::map_manager::MapManager;
 use super::update_builder::{MapObjectWithValueFields, ReceiveUpdates};
 use crate::character::Character;
 use crate::prelude::*;
-use crate::{constants::updates::ObjectType, data_types::PositionAndOrientation, guid::Guid};
+use crate::{constants::updates::ObjectType, data_types::PositionAndOrientation};
 
 pub trait MapObject: Send + Sync {
     fn get_guid(&self) -> &Guid;
-    fn get_position(&self) -> PositionAndOrientation;
+    fn get_position(&self) -> &PositionAndOrientation;
     fn get_type(&self) -> ObjectType;
 
     fn on_pushed_to_map(&mut self, map_manager: &MapManager) -> Result<()>;
