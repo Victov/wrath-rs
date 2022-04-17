@@ -3,5 +3,6 @@ members = [
     "auth_server",
     "databases/wrath-auth-db",
     "databases/wrath-realm-db",
+    "databases/dbc",
     "world_server"
 ]

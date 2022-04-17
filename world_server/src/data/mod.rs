@@ -14,6 +14,8 @@ pub use movement_info::*;
 
 pub mod guid;
 
+pub use dbc::*;
+
 pub struct WorldZoneLocation {
     pub x: f32,
     pub y: f32,

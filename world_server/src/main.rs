@@ -62,6 +62,12 @@ async fn main() -> Result<()> {
     let realm_database = RealmDatabase::new(&std::env::var("REALM_DATABASE_URL")?, db_connect_timeout).await?;
     let realm_database_ref = std::sync::Arc::new(realm_database);
 
+    //BEGIN BLOCK FOR TESTING DBC STUFF - REMOVE ME
+    let mut dbc_storage = data::DBCStorage::new("../target/debug/dbc");
+    let races_data = dbc_storage.get_dbc::<dbc::DBCCharRacesRow>().await?;
+    info!("header: {:?}", races_data.header);
+    //END BLOCK FOR TESTING DBC STUFF - REMOVE ME
+
     task::spawn(auth::auth_server_heartbeats());
 
     let world = std::sync::Arc::new(world::World::new());
