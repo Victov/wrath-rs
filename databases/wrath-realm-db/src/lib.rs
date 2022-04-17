@@ -1,9 +1,9 @@
-use std::time::Duration;
-
 use anyhow::Result;
+use std::time::Duration;
 
 pub mod character;
 pub mod character_account_data;
+pub mod player_create_info;
 
 pub struct RealmDatabase {
     connection_pool: sqlx::MySqlPool,

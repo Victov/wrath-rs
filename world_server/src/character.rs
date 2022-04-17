@@ -96,7 +96,7 @@ impl Character {
         self.position.x = db_entry.x;
         self.position.y = db_entry.y;
         self.position.z = db_entry.z;
-        //orientation?
+        self.position.o = db_entry.o;
         self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;

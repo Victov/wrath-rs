@@ -18,6 +18,7 @@ CREATE TABLE `characters` (
 	`x` float NOT NULL DEFAULT '0',
 	`y` float NOT NULL DEFAULT '0',
 	`z` float NOT NULL DEFAULT '0',
+	`o` float NOT NULL DEFAULT '0',
 	`instance_id` int (10) unsigned NOT NULL DEFAULT '0',
 	`bind_zone` smallint(5) unsigned NOT NULL DEFAULT '0',
 	`bind_map` smallint(5) unsigned NOT NULL DEFAULT '0',
@@ -42,3 +43,14 @@ CREATE TABLE `character_account_data` (
 	PRIMARY KEY (`character_id`, `data_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `playercreateinfo` (
+	`race` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT 'A bit-mask corresponding to races that should get the spell. ',
+	`class` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT 'A bit-mask corresponding to class that should get the spell.',
+	`map` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'The map ID (See Map.dbc)',
+	`zone` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'A zone identifier.',
+	`position_x` float NOT NULL DEFAULT '0' COMMENT 'The X position for the characters initial position.',
+	`position_y` float NOT NULL DEFAULT '0' COMMENT 'The Y position for the characters initial position.',
+	`position_z` float NOT NULL DEFAULT '0' COMMENT 'The Z position for the characters initial position.',
+	`orientation` float NOT NULL DEFAULT '0' COMMENT 'The orientation for the characters initial position.',
+	PRIMARY KEY (`race`,`class`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;

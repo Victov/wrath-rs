@@ -123,9 +123,15 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
         let hair_color = reader.read_u8()?;
         let facial_style = reader.read_u8()?;
         let outfit = reader.read_u8()?;
-        let x = -8949.95f32; //Human starting pos x
-        let y = -132.493f32; //Human starting pos y
-        let z = 83.53f32; //Human starting posz
+
+        let realm_db = &client_manager.realm_db;
+        let player_create_info = realm_db.get_player_create_info(race, class).await?;
+
+        let x = player_create_info.position_x;
+        let y = player_create_info.position_y;
+        let z = player_create_info.position_z;
+        let o = player_create_info.orientation;
+        let map = player_create_info.map;
 
         DBCharacterCreateParameters {
             account_id,
@@ -139,9 +145,11 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
             hair_color,
             facial_style,
             outfit,
+            map,
             x,
             y,
             z,
+            o,
         }
     };
 
