@@ -13,6 +13,6 @@ pub async fn send_talents_info(character: &Character) -> Result<()> {
     writer.write_u8(0)?; //Number of talent specs
     writer.write_u8(0)?; //Id of current active spec
 
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
     Ok(())
 }

@@ -1,7 +1,6 @@
 //see https://github.com/arcemu/arcemu/blob/master/src/world/Game/Entities/Update/UpdateBuilder.cpp
 //for reference
 
-use crate::guid::WriteGuid;
 use crate::prelude::*;
 use podio::{LittleEndian, WritePodExt};
 use std::io::Cursor;

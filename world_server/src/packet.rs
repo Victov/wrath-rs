@@ -1,6 +1,10 @@
 use super::client::Client;
 use super::opcodes::Opcodes;
-use crate::prelude::*;
+use crate::{
+    character::*,
+    prelude::*,
+    world::{map_object::MapObject, World},
+};
 use async_std::prelude::*;
 use podio::{BigEndian, LittleEndian, WritePodExt};
 use std::convert::TryFrom;
@@ -40,17 +44,48 @@ pub fn create_packet(opcode: Opcodes, allocate_size: usize) -> (ServerPacketHead
     (header, writer)
 }
 
-pub async fn send_packet_to_character(character: &super::character::Character, header: ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()> {
+pub async fn send_packet_to_all_in_range(
+    character: &Character,
+    include_self: bool,
+    world: &World,
+    header: &ServerPacketHeader,
+    payload: &Cursor<Vec<u8>>,
+) -> Result<()> {
+    if let Some(map) = world.get_instance_manager().try_get_map_for_character(character).await {
+        let in_range_guids = character.get_in_range_guids();
+        for guid in in_range_guids {
+            let object_lock = map
+                .try_get_object(guid)
+                .await
+                .ok_or(anyhow!("GUID is in range, but not a valid object"))?
+                .upgrade()
+                .ok_or(anyhow!("object was on the map, but is no longer valid to send packets to"))?;
+            let read_obj = object_lock.read().await;
+            if let Some(in_range_character) = read_obj.as_character() {
+                send_packet_to_character(in_range_character, header, payload).await?;
+            }
+        }
+        if include_self {
+            send_packet_to_character(character, header, payload).await?;
+        }
+    } else {
+        warn!("Trying to send packet to all in range, but this character is not on a map");
+    }
+
+    Ok(())
+}
+
+pub async fn send_packet_to_character(character: &Character, header: &ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()> {
     let client_lock = character
         .client
         .upgrade()
         .ok_or_else(|| anyhow!("failed to get associated client from character"))?;
     let client = client_lock.read().await;
 
-    send_packet(&client, header, &payload).await
+    send_packet(&client, header, payload).await
 }
 
-pub async fn send_packet(client: &Client, header: ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()> {
+pub async fn send_packet(client: &Client, header: &ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()> {
     use std::io::Write;
 
     let payload_length = payload.get_ref().len();

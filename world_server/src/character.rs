@@ -1,8 +1,7 @@
 use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
-use crate::data_types::{ActionBar, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
-use crate::guid::*;
+use crate::data_types::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
@@ -22,11 +21,8 @@ pub struct Character {
     pub race: u8,
     pub class: u8,
     pub gender: u8,
+    pub position: PositionAndOrientation,
 
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub orientation: f32,
     pub map: u32,
     pub zone: u32,
     pub instance_id: u32,
@@ -51,6 +47,10 @@ pub struct Character {
     //things required to keep MapObject working
     in_range_objects: HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>,
     recently_removed_guids: Vec<Guid>,
+
+    //time sync
+    pub time_sync_counter: u32,
+    time_sync_cooldown: f32,
 }
 
 impl Character {
@@ -62,10 +62,7 @@ impl Character {
             race: 0,
             class: 0,
             gender: 0,
-            x: 0.0f32,
-            y: 0.0f32,
-            z: 0.0f32,
-            orientation: 0.0f32,
+            position: PositionAndOrientation::default(),
             map: 0,
             zone: 0,
             instance_id: 0,
@@ -81,6 +78,8 @@ impl Character {
             changed_update_mask: UpdateMask::new(NUM_UNIT_FIELDS),
             in_range_objects: HashMap::new(),
             recently_removed_guids: vec![],
+            time_sync_counter: 0,
+            time_sync_cooldown: 0f32,
         }
     }
 
@@ -93,9 +92,11 @@ impl Character {
             y: db_entry.bind_y,
             z: db_entry.bind_z,
         });
-        self.x = db_entry.x;
-        self.y = db_entry.y;
-        self.z = db_entry.z;
+        self.map = db_entry.map as u32;
+        self.position.x = db_entry.x;
+        self.position.y = db_entry.y;
+        self.position.z = db_entry.z;
+        //orientation?
         self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
@@ -153,6 +154,7 @@ impl Character {
         handlers::send_aura_update_all(&self).await?;
         handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
         handlers::send_initial_world_states(&self).await?;
+        handlers::send_time_sync(&self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
 
@@ -168,6 +170,20 @@ impl Character {
         self.zone = zone;
         handlers::send_initial_world_states(self).await
     }
+
+    pub fn process_movement(&mut self, movement_info: &MovementInfo) {
+        self.position = movement_info.position.clone();
+    }
+
+    pub async fn tick(&mut self, delta_time: f32) -> Result<()> {
+        self.time_sync_cooldown -= delta_time;
+        if self.time_sync_cooldown < 0f32 {
+            self.time_sync_cooldown += 10f32;
+            self.time_sync_counter += 1;
+            handlers::send_time_sync(self).await?;
+        }
+        Ok(())
+    }
 }
 
 impl MapObject for Character {
@@ -175,18 +191,8 @@ impl MapObject for Character {
         &self.guid
     }
 
-    fn get_position(&self) -> PositionAndOrientation {
-        PositionAndOrientation {
-            x: self.x,
-            y: self.y,
-            z: self.z,
-            o: self.orientation,
-        }
-    }
-
-    //Super duper temp function to be able to test value changes
-    fn advance_x(&mut self, add: f32) {
-        self.x += add;
+    fn get_position(&self) -> &PositionAndOrientation {
+        &self.position
     }
 
     fn get_type(&self) -> updates::ObjectType {

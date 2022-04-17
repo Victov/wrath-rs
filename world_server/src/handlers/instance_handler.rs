@@ -22,7 +22,7 @@ pub async fn send_dungeon_difficulty(character: &Character) -> Result<()> {
     writer.write_u32::<LittleEndian>(1)?; //unknown?
     writer.write_u32::<LittleEndian>(0)?; //bool IsInGroup
 
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
 
     Ok(())
 }

@@ -41,9 +41,11 @@ mod talent_handler;
 pub use talent_handler::send_talents_info;
 
 mod world_handler;
+pub use world_handler::handle_cmsg_time_sync_resp;
 pub use world_handler::handle_cmsg_zoneupdate;
 pub use world_handler::send_destroy_object;
 pub use world_handler::send_initial_world_states;
+pub use world_handler::send_time_sync;
 pub use world_handler::send_update_packet;
 pub use world_handler::send_world_state_update;
 
@@ -55,3 +57,6 @@ pub use queries_handler::handle_cmsg_name_query;
 pub use queries_handler::handle_cmsg_played_time;
 pub use queries_handler::handle_cmsg_query_time;
 pub use queries_handler::handle_cmsg_world_state_ui_timer_update;
+
+pub mod movement_handler;
+pub use movement_handler::handle_movement_generic;

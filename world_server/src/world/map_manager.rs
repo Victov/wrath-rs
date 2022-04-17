@@ -45,26 +45,11 @@ impl MapManager {
         map_objects.get(guid).and_then(|a| Some(a.clone()))
     }
 
-    pub async fn tick(&self, delta_time: f32) -> Result<()> {
+    pub async fn tick(&self, _delta_time: f32) -> Result<()> {
         let map_objects = self.objects_on_map.read().await;
         for map_object in (*map_objects).values() {
             if let Some(valid_object_lock) = map_object.upgrade() {
                 let mut valid_object = valid_object_lock.write().await;
-
-                //--------------------UGLY TEMP TESTING CODE -------------------------
-                valid_object.advance_x(1.0f32 * delta_time);
-                if valid_object.get_position().x > 10f32 {
-                    valid_object.advance_x(-10f32);
-                    let cur_displ_id = valid_object.get_unit_field_u32(UnitFields::Displayid)?;
-                    let new_display_id = match cur_displ_id {
-                        10000 => 19724,
-                        19724 => 10000,
-                        _ => 19724,
-                    };
-                    valid_object.set_unit_field_u32(UnitFields::Displayid, new_display_id)?;
-                }
-                //------------------END UGLY TEMP TESTING CODE -----------------------
-
                 if valid_object.wants_updates() {
                     if valid_object.get_update_mask().has_any_bit() {
                         let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object)?;

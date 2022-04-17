@@ -1,3 +1,4 @@
+use crate::character::Character;
 use crate::client::Client;
 use crate::prelude::*;
 use async_std::sync::RwLock;
@@ -31,14 +32,19 @@ impl InstanceManager {
     }
 
     pub async fn try_get_map_for_instance(&self, instance_id: InstanceID) -> Option<Arc<MapManager>> {
-        if let Some(map) = self.multiple_instances.write().await.get(&instance_id) {
+        if let Some(map) = self.multiple_instances.read().await.get(&instance_id) {
             Some(map.clone())
         } else {
             None
         }
     }
 
-    pub async fn get_map_for_instance(&self, instance_id: InstanceID) -> Arc<MapManager> {
+    pub async fn try_get_map_for_character(&self, character: &Character) -> Option<Arc<MapManager>> {
+        //TODO: when adding support for non-instanced maps, adjust this function
+        self.try_get_map_for_instance(character.instance_id).await
+    }
+
+    pub async fn get_or_create_map_for_instance(&self, instance_id: InstanceID) -> Arc<MapManager> {
         self.multiple_instances
             .write()
             .await

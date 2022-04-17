@@ -4,7 +4,9 @@ This is an educational project to create  a server emulator for World of Warcraf
 ## Current Feature Status
 - [x] Login and character creation.
 - [x] Getting into the world. 
-- [ ] Movement
+- [x] Movement
+- [ ] Equipment
+- [ ] Creatures
 
 ## Getting Started
 Install Rust and clone the repo. Set up a MySQL server. wrath-rs requires a MySQL connection to manage its data. Queries in code are checked at compile-time with a live database connection, so a fully set-up database is required in order to compile the project. 

@@ -16,6 +16,6 @@ pub async fn send_faction_list(character: &Character) -> Result<()> {
         writer.write_u8(0)?;
         writer.write_u32::<LittleEndian>(0)?;
     }
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
     Ok(())
 }

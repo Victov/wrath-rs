@@ -86,7 +86,7 @@ async fn send_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> 
         }
     }
 
-    send_packet(client, header, &writer).await?;
+    send_packet(client, &header, &writer).await?;
     Ok(())
 }
 
@@ -114,7 +114,7 @@ pub async fn send_character_account_data_times(client_manager: &ClientManager, c
 
     {
         let client = client_lock.read().await;
-        send_packet(&client, header, &writer).await?;
+        send_packet(&client, &header, &writer).await?;
     }
 
     Ok(())
@@ -156,7 +156,7 @@ pub async fn handle_csmg_update_account_data(client_manager: &Arc<ClientManager>
     let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_ACCOUNT_DATA_COMPLETE, 8);
     writer.write_u32::<LittleEndian>(data_type as u32)?;
     writer.write_u32::<LittleEndian>(0)?;
-    send_packet(&client, header, &writer).await?;
+    send_packet(&client, &header, &writer).await?;
 
     Ok(())
 }
@@ -205,5 +205,5 @@ pub async fn handle_cmsg_request_account_data(client_manager: &Arc<ClientManager
     writer.write_u32::<LittleEndian>(data_type)?;
     writer.write_u32::<LittleEndian>(decompressed_size)?;
     writer.write(&account_data_bytes)?;
-    send_packet(&client, header, &writer).await
+    send_packet(&client, &header, &writer).await
 }

@@ -19,7 +19,6 @@ mod client_manager;
 mod console_input;
 mod constants;
 mod data_types;
-mod guid;
 pub mod handlers;
 mod opcodes;
 mod packet;
@@ -28,7 +27,7 @@ mod world;
 mod wowcrypto;
 
 pub mod prelude {
-    pub use super::guid::*;
+    pub use super::data_types::guid::*;
     pub use super::handlers;
     pub use anyhow::{anyhow, bail, Result};
     pub use tracing::{error, info, trace, warn};
@@ -86,8 +85,8 @@ async fn main() -> Result<()> {
     let mut previous_loop_total: f32 = desired_timestep_sec;
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let before = std::time::Instant::now();
-        client_manager.cleanup_disconnected_clients().await.unwrap_or_else(|e| {
-            error!("Error while cleaning up disconnected clients: {}", e);
+        client_manager.tick(previous_loop_total).await.unwrap_or_else(|e| {
+            error!("Error while ticking clients: {}", e);
         });
         realm_packet_handler.handle_queue(&client_manager).await?;
         world.tick(previous_loop_total).await?;
