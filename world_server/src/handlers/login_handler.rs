@@ -146,7 +146,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
 
     {
         let client = client_lock.read().await;
-        send_packet(&client, addon_packet_header, &addon_packet_writer).await?;
+        send_packet(&client, &addon_packet_header, &addon_packet_writer).await?;
         send_clientcache_version(0, &client).await?;
         send_tutorial_flags(&client).await?;
     }
@@ -171,7 +171,7 @@ async fn send_auth_response(response: AuthResponse, receiver: &Client) -> Result
         writer.write_u8(2)?; //0= vanilla, 1=tbc, 2=wotlk
     }
 
-    send_packet(receiver, header, &writer).await?;
+    send_packet(receiver, &header, &writer).await?;
 
     Ok(())
 }
@@ -179,7 +179,7 @@ async fn send_auth_response(response: AuthResponse, receiver: &Client) -> Result
 async fn send_clientcache_version(version: u32, receiver: &Client) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_CLIENTCACHE_VERSION, 4);
     writer.write_u32::<LittleEndian>(version)?;
-    send_packet(receiver, header, &writer).await
+    send_packet(receiver, &header, &writer).await
 }
 
 async fn send_tutorial_flags(receiver: &Client) -> Result<()> {
@@ -191,7 +191,7 @@ async fn send_tutorial_flags(receiver: &Client) -> Result<()> {
     for _ in 0..8 {
         writer.write_u32::<LittleEndian>(0)?;
     }
-    send_packet(receiver, header, &writer).await
+    send_packet(receiver, &header, &writer).await
 }
 
 #[allow(dead_code)]
@@ -218,7 +218,7 @@ pub async fn handle_cmsg_realm_split(client_manager: &Arc<ClientManager>, packet
     {
         let client_lock = client_manager.get_client(packet.client_id).await?;
         let client = client_lock.read().await;
-        send_packet(&client, header, &writer).await?;
+        send_packet(&client, &header, &writer).await?;
     }
     Ok(())
 }
@@ -233,7 +233,7 @@ pub async fn handle_cmsg_ping(client_manager: &Arc<ClientManager>, packet: &Pack
 
     let lock = client_manager.get_client(packet.client_id).await?;
     let client = lock.read().await;
-    send_packet(&client, header, &writer).await?;
+    send_packet(&client, &header, &writer).await?;
 
     Ok(())
 }
@@ -245,7 +245,7 @@ pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
     writer.write_packed_time::<LittleEndian>(&chrono::Local::now().into())?;
     writer.write_f32::<LittleEndian>(0.01667)?; //Seems to be hardcoded value
     writer.write_u32::<LittleEndian>(0)?;
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
 
     Ok(())
 }

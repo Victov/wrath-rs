@@ -42,7 +42,7 @@ pub async fn send_initial_world_states(character: &Character) -> Result<()> {
     writer.write_u32::<LittleEndian>(3901)?; //arena progress world state id
     writer.write_u32::<LittleEndian>(1)?;
 
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
     Ok(())
 }
 
@@ -52,7 +52,7 @@ pub async fn send_world_state_update(character: &Character, world_state: u32, va
     writer.write_u32::<LittleEndian>(world_state)?;
     writer.write_u32::<LittleEndian>(value)?;
 
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
     Ok(())
 }
 
@@ -64,18 +64,18 @@ pub async fn send_update_packet(character: &Character, num_blocks: u32, data: &[
         writer.write(data)?;
     }
 
-    send_packet_to_character(character, header, &writer).await
+    send_packet_to_character(character, &header, &writer).await
 }
 
 pub async fn send_destroy_object(character: &Character, object_guid: &Guid, is_death: bool) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_DESTROY_OBJECT, 9);
     writer.write_guid_compressed(object_guid)?;
     writer.write_u8(is_death as u8)?;
-    send_packet_to_character(character, header, &writer).await
+    send_packet_to_character(character, &header, &writer).await
 }
 
 pub async fn send_time_sync(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_TIME_SYNC_REQ, 4);
     writer.write_u32::<LittleEndian>(character.time_sync_counter)?;
-    send_packet_to_character(character, header, &writer).await
+    send_packet_to_character(character, &header, &writer).await
 }

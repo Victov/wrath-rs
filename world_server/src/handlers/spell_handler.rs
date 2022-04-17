@@ -24,7 +24,7 @@ pub async fn send_initial_spells(character: &Character) -> Result<()> {
     //Cheese out and don't send any cooldowns
     writer.write_u16::<LittleEndian>(0)?; //Number of cooldowns
 
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
     Ok(())
 }
 
@@ -32,7 +32,7 @@ pub async fn send_aura_update_all(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_AURA_UPDATE_ALL, 200);
     writer.write_guid_compressed(&character.guid)?;
 
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
     Ok(())
 }
 

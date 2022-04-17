@@ -65,7 +65,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
     }
 
     let client = client_lock.read().await;
-    send_packet(&client, header, &writer).await?;
+    send_packet(&client, &header, &writer).await?;
     Ok(())
 }
 
@@ -172,7 +172,7 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
 async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_CREATE, 1);
     writer.write_u8(resp as u8)?;
-    send_packet(client, header, &writer).await
+    send_packet(client, &header, &writer).await
 }
 
 pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
@@ -204,7 +204,7 @@ pub async fn send_verify_world(character: &Character) -> Result<()> {
     writer.write_f32::<LittleEndian>(character.z)?;
     writer.write_f32::<LittleEndian>(character.orientation)?;
 
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
 
     Ok(())
 }
@@ -217,7 +217,7 @@ pub async fn send_bind_update(character: &Character) -> Result<()> {
         writer.write_f32::<LittleEndian>(bind_location.z)?;
         writer.write_u32::<LittleEndian>(bind_location.map)?;
         writer.write_u32::<LittleEndian>(bind_location.zone)?;
-        send_packet_to_character(&character, header, &writer).await?;
+        send_packet_to_character(&character, &header, &writer).await?;
     } else {
         bail!("Requested to send Bind Update but character has no bind location")
     }
@@ -230,6 +230,6 @@ pub async fn send_action_buttons(character: &Character) -> Result<()> {
     writer.write_u8(0)?; //Talent specialization
     writer.write(&character.action_bar.data)?;
 
-    send_packet_to_character(&character, header, &writer).await?;
+    send_packet_to_character(&character, &header, &writer).await?;
     Ok(())
 }

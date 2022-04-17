@@ -81,7 +81,7 @@ impl Client {
         let seed1 = rand::thread_rng().gen_biguint(32 * 8);
         writer.write(&seed1.to_bytes_le())?;
 
-        send_packet(self, header, &writer).await?;
+        send_packet(self, &header, &writer).await?;
         Ok(())
     }
 
@@ -112,7 +112,7 @@ impl Client {
         client_manager
             .world
             .get_instance_manager()
-            .get_map_for_instance(character_instance_id)
+            .get_or_create_map_for_instance(character_instance_id)
             .await
             .push_object(Arc::downgrade(&character_lock))
             .await?;
