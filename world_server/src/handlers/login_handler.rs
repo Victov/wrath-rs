@@ -239,7 +239,7 @@ pub async fn handle_cmsg_ping(client_manager: &Arc<ClientManager>, packet: &Pack
 }
 
 pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
-    use crate::data_types::WritePackedTime;
+    use crate::data::WritePackedTime;
 
     let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_SETTIMESPEED, 20);
     writer.write_packed_time::<LittleEndian>(&chrono::Local::now().into())?;

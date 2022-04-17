@@ -18,7 +18,7 @@ mod client;
 mod client_manager;
 mod console_input;
 mod constants;
-mod data_types;
+mod data;
 pub mod handlers;
 mod opcodes;
 mod packet;
@@ -27,7 +27,7 @@ mod world;
 mod wowcrypto;
 
 pub mod prelude {
-    pub use super::data_types::guid::*;
+    pub use super::data::guid::*;
     pub use super::handlers;
     pub use anyhow::{anyhow, bail, Result};
     pub use tracing::{error, info, trace, warn};

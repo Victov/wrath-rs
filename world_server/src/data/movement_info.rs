@@ -1,4 +1,4 @@
-use crate::data_types::{ReadPositionAndOrientation, WritePositionAndOrientation};
+use crate::data::{ReadPositionAndOrientation, WritePositionAndOrientation};
 
 use super::PositionAndOrientation;
 use anyhow::Result;

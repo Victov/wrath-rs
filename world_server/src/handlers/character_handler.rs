@@ -1,7 +1,7 @@
 use crate::character::*;
 use crate::client::Client;
 use crate::client_manager::ClientManager;
-use crate::data_types::WritePositionAndOrientation;
+use crate::data::WritePositionAndOrientation;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
