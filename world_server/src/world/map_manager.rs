@@ -45,7 +45,7 @@ impl MapManager {
         map_objects.get(guid).and_then(|a| Some(a.clone()))
     }
 
-    pub async fn tick(&self, delta_time: f32) -> Result<()> {
+    pub async fn tick(&self, _delta_time: f32) -> Result<()> {
         let map_objects = self.objects_on_map.read().await;
         for map_object in (*map_objects).values() {
             if let Some(valid_object_lock) = map_object.upgrade() {

@@ -1,5 +1,3 @@
-use crate::character::Character;
-use crate::client::Client;
 use crate::client_manager::ClientManager;
 use crate::data_types::{guid::*, ReadMovementInfo, WriteMovementInfo};
 use crate::packet::*;
