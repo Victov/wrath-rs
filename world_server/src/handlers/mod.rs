@@ -41,6 +41,7 @@ mod talent_handler;
 pub use talent_handler::send_talents_info;
 
 mod world_handler;
+pub use world_handler::handle_cmsg_time_sync_resp;
 pub use world_handler::handle_cmsg_zoneupdate;
 pub use world_handler::send_destroy_object;
 pub use world_handler::send_initial_world_states;

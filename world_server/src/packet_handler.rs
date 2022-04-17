@@ -87,6 +87,7 @@ impl PacketHandler {
             Opcodes::MSG_MOVE_SET_FACING => handle_movement_generic(client_manager, packet).await,
             Opcodes::MSG_MOVE_SET_PITCH => handle_movement_generic(client_manager, packet).await,
             Opcodes::MSG_MOVE_HEARTBEAT => handle_movement_generic(client_manager, packet).await,
+            Opcodes::CMSG_TIME_SYNC_RESP => handle_cmsg_time_sync_resp(client_manager, packet).await,
 
             op => Err(anyhow!("Unhandled opcode {:?}", op)),
         }

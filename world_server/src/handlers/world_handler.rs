@@ -79,3 +79,29 @@ pub async fn send_time_sync(character: &Character) -> Result<()> {
     writer.write_u32::<LittleEndian>(character.time_sync_counter)?;
     send_packet_to_character(character, &header, &writer).await
 }
+
+pub async fn handle_cmsg_time_sync_resp(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_lock.read().await;
+    if !client.is_authenticated() {
+        bail!("Trying to handle time sync response for character that isn't authenticated");
+    }
+    let character_lock = client
+        .active_character
+        .as_ref()
+        .ok_or(anyhow!("Trying to handle time sync response, but no character is active for this client"))?
+        .clone();
+
+    let mut reader = std::io::Cursor::new(&packet.payload);
+    let counter = reader.read_u32::<LittleEndian>()?;
+    let _client_ticks = reader.read_u32::<LittleEndian>()?;
+
+    let character = character_lock.read().await;
+    if counter != character.time_sync_counter {
+        warn!(
+            "Character {} has time sync issues. Reported: {}, expected {}, Could be cheating?",
+            character.name, counter, character.time_sync_counter
+        );
+    }
+    Ok(())
+}
