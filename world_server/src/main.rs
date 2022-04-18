@@ -18,7 +18,7 @@ mod client;
 mod client_manager;
 mod console_input;
 mod constants;
-mod data_types;
+mod data;
 pub mod handlers;
 mod opcodes;
 mod packet;
@@ -27,7 +27,7 @@ mod world;
 mod wowcrypto;
 
 pub mod prelude {
-    pub use super::data_types::guid::*;
+    pub use super::data::guid::*;
     pub use super::handlers;
     pub use anyhow::{anyhow, bail, Result};
     pub use tracing::{error, info, trace, warn};
@@ -62,6 +62,14 @@ async fn main() -> Result<()> {
     let realm_database = RealmDatabase::new(&std::env::var("REALM_DATABASE_URL")?, db_connect_timeout).await?;
     let realm_database_ref = std::sync::Arc::new(realm_database);
 
+    let dbc_path = std::env::var("DBC_FOLDER_PATH")?;
+    info!("Loading DBC files from folder: {}", dbc_path);
+    let mut dbc_storage = data::DBCStorage::new(dbc_path);
+    dbc_storage.load_dbc_char_races().await?;
+    dbc_storage.load_dbc_char_classes().await?;
+    let dbc_storage_ref = std::sync::Arc::new(dbc_storage);
+    info!("Finished loading DBC files");
+
     task::spawn(auth::auth_server_heartbeats());
 
     let world = std::sync::Arc::new(world::World::new());
@@ -69,7 +77,12 @@ async fn main() -> Result<()> {
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver, world.clone());
 
-    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), realm_database_ref.clone(), world.clone()));
+    let client_manager = std::sync::Arc::new(ClientManager::new(
+        auth_database_ref.clone(),
+        realm_database_ref.clone(),
+        dbc_storage_ref.clone(),
+        world.clone(),
+    ));
     let client_manager_for_acceptloop = client_manager.clone();
 
     task::spawn(async move {

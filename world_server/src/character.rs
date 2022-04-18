@@ -1,7 +1,8 @@
 use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
-use crate::data_types::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::data::DBCStorage;
+use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
@@ -83,7 +84,7 @@ impl Character {
         }
     }
 
-    pub async fn load_from_database(&mut self, realm_database: &RealmDatabase) -> Result<()> {
+    pub async fn load_from_database(&mut self, dbc_storage: &DBCStorage, realm_database: &RealmDatabase) -> Result<()> {
         let db_entry = realm_database.get_character(self.guid.get_low_part()).await?;
         self.bind_location = Some(WorldZoneLocation {
             zone: db_entry.bind_zone as u32,
@@ -96,7 +97,7 @@ impl Character {
         self.position.x = db_entry.x;
         self.position.y = db_entry.y;
         self.position.z = db_entry.z;
-        //orientation?
+        self.position.o = db_entry.o;
         self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
@@ -113,10 +114,21 @@ impl Character {
         self.seconds_played_total = db_entry.playtime_total;
         self.seconds_played_at_level = db_entry.playtime_level;
 
-        self.race = db_entry.race;
-        self.class = db_entry.class;
         self.gender = db_entry.gender;
-        let power_type = 1; //rage
+        self.race = db_entry.race;
+        if let Some(race_info) = dbc_storage.get_dbc_char_races()?.get_entry(self.race as u32) {
+            let display_id = match self.gender {
+                0 => race_info.male_model_id,
+                _ => race_info.female_model_id,
+            };
+            self.set_unit_field_u32(UnitFields::Displayid, display_id)?;
+            self.set_unit_field_u32(UnitFields::Nativedisplayid, display_id)?;
+        }
+
+        self.class = db_entry.class;
+        if let Some(class_info) = dbc_storage.get_dbc_char_classes()?.get_entry(self.class as u32) {
+            self.set_power_type(class_info.power_type as u8)?;
+        }
 
         self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().get_low_part())?;
         self.set_object_field_u32(ObjectFields::HighGuid, self.get_guid().get_high_part())?;
@@ -128,13 +140,10 @@ impl Character {
         self.set_class(self.class)?;
         self.set_race(self.race)?;
         self.set_gender(self.gender)?;
-        self.set_power_type(power_type)?;
         self.set_unit_field_u32(UnitFields::Health, 100)?;
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
         self.set_unit_field_u32(UnitFields::Factiontemplate, 1)?;
-        self.set_unit_field_u32(UnitFields::Displayid, 19724)?; //human female
-        self.set_unit_field_u32(UnitFields::Nativedisplayid, 19724)?;
 
         Ok(())
     }

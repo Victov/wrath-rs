@@ -91,7 +91,9 @@ impl Client {
     pub async fn load_and_set_active_character(&mut self, client_manager: &ClientManager, character_guid: Guid) -> Result<()> {
         let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?.clone());
         let mut character = Character::new(weakself, character_guid);
-        character.load_from_database(&client_manager.realm_db).await?;
+        character
+            .load_from_database(&client_manager.dbc_storage, &client_manager.realm_db)
+            .await?;
         self.active_character = Some(Arc::new(RwLock::new(character)));
         Ok(())
     }
