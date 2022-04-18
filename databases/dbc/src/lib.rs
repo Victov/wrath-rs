@@ -7,6 +7,9 @@ use std::fmt::Debug;
 pub mod chr_races;
 pub use chr_races::*;
 
+pub mod chr_classes;
+pub use chr_classes::*;
+
 //See: https://wowdev.wiki/DBC
 #[derive(Debug, Default)]
 pub struct DBCHeader {
@@ -49,11 +52,6 @@ impl<T: DBCTable> DBCFile<T> {
     }
 }
 
-pub struct DBCStorage {
-    dbc_files_path: String,
-    chr_races: Option<DBCFile<DBCCharRaces>>,
-}
-
 macro_rules! define_dbc_getter {
     ($typename:path,$propname:ident,$fnname:ident) => {
         pub fn $fnname(&self) -> Result<&DBCFile<$typename>> {
@@ -86,12 +84,19 @@ macro_rules! define_dbc {
     };
 }
 
+pub struct DBCStorage {
+    dbc_files_path: String,
+    chr_races: Option<DBCFile<DBCCharRaces>>,
+    chr_classes: Option<DBCFile<DBCCharClasses>>,
+}
+
 use chr_races::DBCCharRaces;
 impl DBCStorage {
     pub fn new(dbc_files_path: String) -> Self {
         DBCStorage {
             dbc_files_path,
             chr_races: None,
+            chr_classes: None,
         }
     }
 
@@ -100,6 +105,13 @@ impl DBCStorage {
         chr_races,
         get_dbc_char_races,
         load_dbc_char_races
+    );
+
+    define_dbc!(
+        chr_classes::DBCCharClasses,
+        chr_classes,
+        get_dbc_char_classes,
+        load_dbc_char_classes
     );
 
     async fn load_dbc<T: DBCTable + Debug>(&self) -> Result<DBCFile<T>> {

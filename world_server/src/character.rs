@@ -126,7 +126,9 @@ impl Character {
         }
 
         self.class = db_entry.class;
-        let power_type = 1; //rage
+        if let Some(class_info) = dbc_storage.get_dbc_char_classes()?.get_entry(self.class as u32) {
+            self.set_power_type(class_info.power_type as u8)?;
+        }
 
         self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().get_low_part())?;
         self.set_object_field_u32(ObjectFields::HighGuid, self.get_guid().get_high_part())?;
@@ -138,7 +140,6 @@ impl Character {
         self.set_class(self.class)?;
         self.set_race(self.race)?;
         self.set_gender(self.gender)?;
-        self.set_power_type(power_type)?;
         self.set_unit_field_u32(UnitFields::Health, 100)?;
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
