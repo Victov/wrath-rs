@@ -33,8 +33,8 @@ jobs:
           components: rustfmt, clippy
       - name: Run migrations
         run: |
-          mysql -h 127.0.0.1 -P ${{ job.services.mysql.ports['3306'] }} -u root -p'wrath' wrath < databases/wrath-auth-db/migrations/*
-          mysql -h 127.0.0.1 -P ${{ job.services.mysql.ports['3306'] }} -u root -p'wrath' wrath < databases/wrath-realm-db/migrations/*
+          mysql -h 127.0.0.1 -P ${{ job.services.mysql.ports['3306'] }} -u root -p'wrath' wrath < databases/wrath-auth-db/migrations/20200830073445_setup.sql
+          mysql -h 127.0.0.1 -P ${{ job.services.mysql.ports['3306'] }} -u root -p'wrath' wrath < databases/wrath-realm-db/migrations/20200919183322_setup.sql
       - name: Build
         run: cargo build
         env:
