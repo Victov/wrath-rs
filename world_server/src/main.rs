@@ -64,8 +64,11 @@ async fn main() -> Result<()> {
 
     //BEGIN BLOCK FOR TESTING DBC STUFF - REMOVE ME
     let mut dbc_storage = data::DBCStorage::new("../target/debug/dbc");
-    let races_data = dbc_storage.get_dbc::<dbc::DBCCharRacesRow>().await?;
-    info!("header: {:?}", races_data.header);
+    dbc_storage.load_dbc_char_races().await?;
+    let races_data = dbc_storage.get_dbc_char_races()?;
+    if let Some(row) = races_data.get_entry(2) {
+        info!("race 2 has model id {}", row.male_model_id);
+    }
     //END BLOCK FOR TESTING DBC STUFF - REMOVE ME
 
     task::spawn(auth::auth_server_heartbeats());

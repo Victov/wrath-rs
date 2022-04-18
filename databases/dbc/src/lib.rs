@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 pub mod chr_races;
-pub use chr_races::DBCCharRacesRow;
+pub use chr_races::*;
 
 //See: https://wowdev.wiki/DBC
 #[derive(Debug, Default)]
@@ -18,52 +18,92 @@ pub struct DBCHeader {
     string_block_size: u32,
 }
 
-pub trait DBCRowType<'a>: Debug {
+pub trait DBCTable<'a> {
+    type RowType: DBCRowType;
+
     fn get_dbc_filename() -> &'a str
     where
         Self: Sized;
+}
 
-    fn read_row<T: std::io::Read>(reader: &mut T) -> Result<Box<Self>>
+pub trait DBCRowType: Debug {
+    type PrimaryKeyType: Eq + std::hash::Hash;
+
+    fn read_row<T: std::io::Read>(reader: &mut T) -> Result<Self>
     where
         Self: Sized;
+
+    fn get_primary_key(&self) -> Self::PrimaryKeyType;
 }
 
-pub struct DBCFile<'a> {
+pub struct DBCFile<'a, T: DBCTable<'a>> {
     pub header: DBCHeader,
-    rows: Vec<Box<dyn DBCRowType<'a>>>,
+    rows: HashMap<<T::RowType as DBCRowType>::PrimaryKeyType, T::RowType>,
 }
 
-type DBCFilesMap<'a> = HashMap<&'a str, DBCFile<'a>>;
+impl<'a, T: DBCTable<'a>> DBCFile<'a, T> {
+    pub fn get_entry(
+        &self,
+        key: <T::RowType as DBCRowType>::PrimaryKeyType,
+    ) -> Option<&T::RowType> {
+        self.rows.get(&key)
+    }
+}
+
 pub struct DBCStorage<'a> {
     dbc_files_path: &'a str,
-    files: DBCFilesMap<'a>,
+    chr_races: Option<DBCFile<'a, DBCCharRaces>>,
 }
 
+macro_rules! define_dbc_getter {
+    ($typename:path,$propname:ident,$fnname:ident) => {
+        pub fn $fnname(&self) -> Result<&DBCFile<'a, $typename>> {
+            self.$propname
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("DBC $a is not loaded yet"))
+        }
+    };
+}
+
+macro_rules! define_dbc_loader {
+    ($typename:path,$propname:ident,$fnname:ident) => {
+        pub async fn $fnname(&mut self) -> Result<()> {
+            let name = stringify!($fnname);
+            assert!(
+                self.$propname.is_none(),
+                "DBC {} is already loaded",
+                name.to_string()
+            );
+            self.$propname = Some(self.load_dbc::<$typename>().await?);
+            Ok(())
+        }
+    };
+}
+
+macro_rules! define_dbc {
+    ($typename:path, $propname:ident, $getter:ident, $loader:ident) => {
+        define_dbc_getter!($typename, $propname, $getter);
+        define_dbc_loader!($typename, $propname, $loader);
+    };
+}
+
+use chr_races::DBCCharRaces;
 impl<'a> DBCStorage<'a> {
     pub fn new(dbc_files_path: &'a str) -> Self {
         DBCStorage {
             dbc_files_path,
-            files: DBCFilesMap::default(),
+            chr_races: None,
         }
     }
 
-    pub async fn get_dbc<T: DBCRowType<'a> + Debug + 'static>(&mut self) -> Result<&DBCFile<'a>> {
-        if self.files.contains_key(T::get_dbc_filename()) {
-            return self
-                .files
-                .get(T::get_dbc_filename())
-                .ok_or(anyhow!("Failed to get DBC"));
-        } else {
-            let dbc = self.load_dbc::<T>().await?;
-            self.files.insert(T::get_dbc_filename(), dbc);
-            return self
-                .files
-                .get(T::get_dbc_filename())
-                .ok_or(anyhow!("failed to get DBC"));
-        }
-    }
+    define_dbc!(
+        chr_races::DBCCharRaces,
+        chr_races,
+        get_dbc_char_races,
+        load_dbc_char_races
+    );
 
-    async fn load_dbc<T: DBCRowType<'a> + Debug + 'static>(&mut self) -> Result<DBCFile<'a>> {
+    async fn load_dbc<T: DBCTable<'a> + Debug>(&self) -> Result<DBCFile<'a, T>> {
         use async_std::io::BufReader;
         use async_std::path::PathBuf;
 
@@ -84,11 +124,10 @@ impl<'a> DBCStorage<'a> {
         header.row_size = reader.read_u32::<LittleEndian>()?;
         header.string_block_size = reader.read_u32::<LittleEndian>()?;
 
-        let mut rows = vec![];
+        let mut rows = HashMap::<<T::RowType as DBCRowType>::PrimaryKeyType, T::RowType>::new();
         for _ in 0..header.rows_count {
-            let row: Box<dyn DBCRowType<'a> + 'static> = T::read_row(&mut reader)?;
-            println!("Row: {:?}", row);
-            rows.push(row);
+            let row = <T::RowType as DBCRowType>::read_row(&mut reader)?;
+            rows.insert(row.get_primary_key(), row);
         }
 
         Ok(DBCFile { header, rows })
