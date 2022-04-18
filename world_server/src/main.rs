@@ -62,14 +62,12 @@ async fn main() -> Result<()> {
     let realm_database = RealmDatabase::new(&std::env::var("REALM_DATABASE_URL")?, db_connect_timeout).await?;
     let realm_database_ref = std::sync::Arc::new(realm_database);
 
-    //BEGIN BLOCK FOR TESTING DBC STUFF - REMOVE ME
-    let mut dbc_storage = data::DBCStorage::new("../target/debug/dbc");
+    let dbc_path = std::env::var("DBC_FOLDER_PATH")?;
+    info!("Loading DBC files from folder: {}", dbc_path);
+    let mut dbc_storage = data::DBCStorage::new(dbc_path);
     dbc_storage.load_dbc_char_races().await?;
-    let races_data = dbc_storage.get_dbc_char_races()?;
-    if let Some(row) = races_data.get_entry(2) {
-        info!("race 2 has model id {}", row.male_model_id);
-    }
-    //END BLOCK FOR TESTING DBC STUFF - REMOVE ME
+    let dbc_storage_ref = std::sync::Arc::new(dbc_storage);
+    info!("Finished loading DBC files");
 
     task::spawn(auth::auth_server_heartbeats());
 
@@ -78,7 +76,12 @@ async fn main() -> Result<()> {
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver, world.clone());
 
-    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), realm_database_ref.clone(), world.clone()));
+    let client_manager = std::sync::Arc::new(ClientManager::new(
+        auth_database_ref.clone(),
+        realm_database_ref.clone(),
+        dbc_storage_ref.clone(),
+        world.clone(),
+    ));
     let client_manager_for_acceptloop = client_manager.clone();
 
     task::spawn(async move {

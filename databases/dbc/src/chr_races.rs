@@ -11,10 +11,10 @@ pub struct DBCCharRacesRow {
     pub required_expansion: u32,
 }
 
-impl<'a> super::DBCTable<'a> for DBCCharRaces {
+impl super::DBCTable for DBCCharRaces {
     type RowType = DBCCharRacesRow;
 
-    fn get_dbc_filename() -> &'a str
+    fn get_dbc_filename() -> &'static str
     where
         Self: Sized,
     {

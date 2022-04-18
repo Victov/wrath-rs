@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use anyhow::Result;
 use async_std::{fs::File, io::ReadExt};
 use podio::{LittleEndian, ReadPodExt};
@@ -18,10 +17,10 @@ pub struct DBCHeader {
     string_block_size: u32,
 }
 
-pub trait DBCTable<'a> {
+pub trait DBCTable {
     type RowType: DBCRowType;
 
-    fn get_dbc_filename() -> &'a str
+    fn get_dbc_filename() -> &'static str
     where
         Self: Sized;
 }
@@ -36,12 +35,12 @@ pub trait DBCRowType: Debug {
     fn get_primary_key(&self) -> Self::PrimaryKeyType;
 }
 
-pub struct DBCFile<'a, T: DBCTable<'a>> {
+pub struct DBCFile<T: DBCTable> {
     pub header: DBCHeader,
     rows: HashMap<<T::RowType as DBCRowType>::PrimaryKeyType, T::RowType>,
 }
 
-impl<'a, T: DBCTable<'a>> DBCFile<'a, T> {
+impl<T: DBCTable> DBCFile<T> {
     pub fn get_entry(
         &self,
         key: <T::RowType as DBCRowType>::PrimaryKeyType,
@@ -50,14 +49,14 @@ impl<'a, T: DBCTable<'a>> DBCFile<'a, T> {
     }
 }
 
-pub struct DBCStorage<'a> {
-    dbc_files_path: &'a str,
-    chr_races: Option<DBCFile<'a, DBCCharRaces>>,
+pub struct DBCStorage {
+    dbc_files_path: String,
+    chr_races: Option<DBCFile<DBCCharRaces>>,
 }
 
 macro_rules! define_dbc_getter {
     ($typename:path,$propname:ident,$fnname:ident) => {
-        pub fn $fnname(&self) -> Result<&DBCFile<'a, $typename>> {
+        pub fn $fnname(&self) -> Result<&DBCFile<$typename>> {
             self.$propname
                 .as_ref()
                 .ok_or_else(|| anyhow::anyhow!("DBC $a is not loaded yet"))
@@ -88,8 +87,8 @@ macro_rules! define_dbc {
 }
 
 use chr_races::DBCCharRaces;
-impl<'a> DBCStorage<'a> {
-    pub fn new(dbc_files_path: &'a str) -> Self {
+impl DBCStorage {
+    pub fn new(dbc_files_path: String) -> Self {
         DBCStorage {
             dbc_files_path,
             chr_races: None,
@@ -103,14 +102,14 @@ impl<'a> DBCStorage<'a> {
         load_dbc_char_races
     );
 
-    async fn load_dbc<T: DBCTable<'a> + Debug>(&self) -> Result<DBCFile<'a, T>> {
+    async fn load_dbc<T: DBCTable + Debug>(&self) -> Result<DBCFile<T>> {
         use async_std::io::BufReader;
         use async_std::path::PathBuf;
 
         let filename = T::get_dbc_filename();
         let mut buffer = Vec::<u8>::new();
         {
-            let path: PathBuf = [self.dbc_files_path, filename].iter().collect();
+            let path: PathBuf = [&self.dbc_files_path, filename].iter().collect();
             let file_handle = File::open(path).await?;
             let mut buf_reader = BufReader::new(file_handle);
             buf_reader.read_to_end(&mut buffer).await?;

@@ -1,4 +1,5 @@
 /target
+/dbc
 .env
 Cargo.lock
 .idea/
