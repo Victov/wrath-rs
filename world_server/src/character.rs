@@ -1,6 +1,7 @@
 use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
+use crate::data::DBCStorage;
 use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
@@ -83,7 +84,7 @@ impl Character {
         }
     }
 
-    pub async fn load_from_database(&mut self, realm_database: &RealmDatabase) -> Result<()> {
+    pub async fn load_from_database(&mut self, dbc_storage: &DBCStorage, realm_database: &RealmDatabase) -> Result<()> {
         let db_entry = realm_database.get_character(self.guid.get_low_part()).await?;
         self.bind_location = Some(WorldZoneLocation {
             zone: db_entry.bind_zone as u32,
@@ -113,9 +114,18 @@ impl Character {
         self.seconds_played_total = db_entry.playtime_total;
         self.seconds_played_at_level = db_entry.playtime_level;
 
-        self.race = db_entry.race;
-        self.class = db_entry.class;
         self.gender = db_entry.gender;
+        self.race = db_entry.race;
+        if let Some(race_info) = dbc_storage.get_dbc_char_races()?.get_entry(self.race as u32) {
+            let display_id = match self.gender {
+                0 => race_info.male_model_id,
+                _ => race_info.female_model_id,
+            };
+            self.set_unit_field_u32(UnitFields::Displayid, display_id)?;
+            self.set_unit_field_u32(UnitFields::Nativedisplayid, display_id)?;
+        }
+
+        self.class = db_entry.class;
         let power_type = 1; //rage
 
         self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().get_low_part())?;
@@ -133,8 +143,6 @@ impl Character {
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
         self.set_unit_field_u32(UnitFields::Factiontemplate, 1)?;
-        self.set_unit_field_u32(UnitFields::Displayid, 19724)?; //human female
-        self.set_unit_field_u32(UnitFields::Nativedisplayid, 19724)?;
 
         Ok(())
     }
