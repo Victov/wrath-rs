@@ -3,6 +3,7 @@ use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::DBCStorage;
 use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::handlers::movement_handler::{TeleportationDistance, TeleportationState};
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
@@ -22,7 +23,7 @@ pub struct Character {
     pub race: u8,
     pub class: u8,
     pub gender: u8,
-    pub position: PositionAndOrientation,
+    pub movement_info: MovementInfo,
 
     pub map: u32,
     pub zone: u32,
@@ -52,6 +53,9 @@ pub struct Character {
     //time sync
     pub time_sync_counter: u32,
     time_sync_cooldown: f32,
+
+    //Teleporting
+    pub teleportation_state: TeleportationState,
 }
 
 impl Character {
@@ -63,7 +67,7 @@ impl Character {
             race: 0,
             class: 0,
             gender: 0,
-            position: PositionAndOrientation::default(),
+            movement_info: MovementInfo::default(),
             map: 0,
             zone: 0,
             instance_id: 0,
@@ -81,6 +85,7 @@ impl Character {
             recently_removed_guids: vec![],
             time_sync_counter: 0,
             time_sync_cooldown: 0f32,
+            teleportation_state: TeleportationState::None,
         }
     }
 
@@ -92,12 +97,18 @@ impl Character {
             x: db_entry.bind_x,
             y: db_entry.bind_y,
             z: db_entry.bind_z,
+            o: 0.0, //store in DB?
         });
         self.map = db_entry.map as u32;
-        self.position.x = db_entry.x;
-        self.position.y = db_entry.y;
-        self.position.z = db_entry.z;
-        self.position.o = db_entry.o;
+        self.movement_info = MovementInfo {
+            position: PositionAndOrientation {
+                x: db_entry.x,
+                y: db_entry.y,
+                z: db_entry.z,
+                o: db_entry.o,
+            },
+            ..Default::default()
+        };
         self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
@@ -181,7 +192,17 @@ impl Character {
     }
 
     pub fn process_movement(&mut self, movement_info: &MovementInfo) {
-        self.position = movement_info.position.clone();
+        self.movement_info = movement_info.clone();
+    }
+
+    pub fn set_position(&mut self, position: &PositionAndOrientation) {
+        self.movement_info.position = position.clone();
+    }
+
+    pub fn teleport_to(&mut self, destination: TeleportationDistance) {
+        if self.teleportation_state == TeleportationState::None {
+            self.teleportation_state = TeleportationState::Queued(destination);
+        }
     }
 
     pub async fn tick(&mut self, delta_time: f32) -> Result<()> {
@@ -190,7 +211,61 @@ impl Character {
             self.time_sync_cooldown += 10f32;
             self.time_sync_counter += 1;
             handlers::send_time_sync(self).await?;
+
+            //TEMP TESTING CODE DELETE ME
+            if self.time_sync_counter == 2 {
+                let mut dest_near = self.get_position().clone();
+                dest_near.x += 10.0;
+                self.teleport_to(TeleportationDistance::Near(dest_near));
+            } else if self.time_sync_counter == 4 {
+                let dest_far = WorldZoneLocation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    o: 0.0,
+                    zone: 0,
+                    map: 469, //bwl
+                };
+                self.teleport_to(TeleportationDistance::Far(dest_far));
+            }
+            //END TEMP TESTING CODE
         }
+
+        self.handle_queued_teleport()
+            .await
+            .unwrap_or_else(|e| warn!("Could not teleport player {}: Error {}", self.name, e));
+
+        Ok(())
+    }
+
+    async fn handle_queued_teleport(&mut self) -> Result<()> {
+        //Handle the possibility that the player may have logged out
+        //between queuing and handling the teleport
+
+        let state = self.teleportation_state.clone();
+        match state {
+            TeleportationState::Queued(TeleportationDistance::Near(dest)) => self.execute_near_teleport(dest.clone()).await?,
+            TeleportationState::Queued(TeleportationDistance::Far(dest)) => self.execute_far_teleport(dest.clone()).await?,
+            _ => {}
+        };
+
+        Ok(())
+    }
+
+    async fn execute_near_teleport(&mut self, destination: PositionAndOrientation) -> Result<()> {
+        //The rest of the teleportation is handled when the client sends back this packet
+
+        self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Near(destination.clone()));
+
+        handlers::send_msg_move_teleport_ack(self, &destination).await?;
+        Ok(())
+    }
+
+    async fn execute_far_teleport(&mut self, destination: WorldZoneLocation) -> Result<()> {
+        handlers::send_smsg_transfer_pending(self, destination.map).await?;
+        let wzl = destination.clone().into();
+        handlers::send_smsg_new_world(self, destination.map, &wzl).await?;
+        self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Far(destination));
         Ok(())
     }
 }
@@ -201,7 +276,7 @@ impl MapObject for Character {
     }
 
     fn get_position(&self) -> &PositionAndOrientation {
-        &self.position
+        &self.movement_info.position
     }
 
     fn get_type(&self) -> updates::ObjectType {

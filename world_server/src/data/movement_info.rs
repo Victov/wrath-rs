@@ -3,7 +3,7 @@ use crate::data::{ReadPositionAndOrientation, WritePositionAndOrientation};
 use super::PositionAndOrientation;
 use anyhow::Result;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct MovementInfo {
     pub movement_flags: u32,
     pub movement_flags2: u16,

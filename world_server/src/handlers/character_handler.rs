@@ -6,6 +6,7 @@ use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
+use crate::world::map_object::MapObject;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::io::Write;
 use std::sync::Arc;
@@ -207,7 +208,7 @@ pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packe
 pub async fn send_verify_world(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_VERIFY_WORLD, 20);
     writer.write_u32::<LittleEndian>(character.map)?;
-    writer.write_position_and_orientation(&character.position)?;
+    writer.write_position_and_orientation(&character.get_position())?;
     send_packet_to_character(&character, &header, &writer).await?;
 
     Ok(())
