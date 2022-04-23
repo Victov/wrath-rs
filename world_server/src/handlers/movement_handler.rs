@@ -1,8 +1,6 @@
 use crate::character::Character;
 use crate::client_manager::ClientManager;
-use crate::data::{
-    guid::*, MovementInfo, PositionAndOrientation, ReadMovementInfo, WorldZoneLocation, WriteMovementInfo, WritePositionAndOrientation,
-};
+use crate::data::{guid::*, PositionAndOrientation, ReadMovementInfo, WorldZoneLocation, WriteMovementInfo, WritePositionAndOrientation};
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
@@ -95,7 +93,6 @@ pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, p
 
     let character = character_lock.upgradable_read().await;
 
-    info!("goign to handled near tp, state = {:?}", character.teleportation_state.clone());
     if let TeleportationState::Executing(TeleportationDistance::Near(destination)) = character.teleportation_state.clone() {
         let mut reader = std::io::Cursor::new(&packet.payload);
 
@@ -107,7 +104,43 @@ pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, p
         let mut character = RwLockUpgradableReadGuard::upgrade(character).await;
         character.set_position(&destination);
         character.teleportation_state = TeleportationState::None;
-        info!("handled near teleport");
+    }
+
+    Ok(())
+}
+
+pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_lock.read().await;
+    if !client.is_authenticated() {
+        bail!("Character isn't authenticated");
+    }
+    let character_lock = client
+        .active_character
+        .as_ref()
+        .ok_or(anyhow!("Trying to obtain character, but no character is active for this client"))?
+        .clone();
+
+    let character = character_lock.upgradable_read().await;
+
+    info!("Going to handle far tp, state = {:?}", character.teleportation_state.clone());
+    if let TeleportationState::Executing(TeleportationDistance::Far(destination)) = character.teleportation_state.clone() {
+        let mut character = RwLockUpgradableReadGuard::upgrade(character).await;
+
+        let map = client_manager
+            .world
+            .get_instance_manager()
+            .get_or_create_map(&(*character), destination.map)
+            .await?;
+
+        character.map = destination.map;
+        character.set_position(&destination.into());
+        character.send_packets_before_add_to_map(client_manager).await?;
+        map.push_object(Arc::downgrade(&character_lock)).await;
+        character.send_packets_after_add_to_map(client_manager).await?;
+
+        character.teleportation_state = TeleportationState::None;
+        info!("handled far teleport");
     }
 
     Ok(())

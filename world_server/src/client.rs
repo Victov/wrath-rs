@@ -100,23 +100,18 @@ impl Client {
 
     pub async fn login_active_character(&self, client_manager: &ClientManager) -> Result<()> {
         let character_lock = self.active_character.as_ref().unwrap();
-        let character_instance_id;
+        let character = character_lock.read().await;
+        character.send_packets_before_add_to_map(client_manager).await?;
 
-        //Operations that can happen within a read lock
-        {
-            let character = character_lock.read().await;
-            character_instance_id = character.instance_id;
-            character.perform_login(client_manager).await?;
-        }
-
-        //This one must have no locks because it needs a write lock
         client_manager
             .world
             .get_instance_manager()
-            .get_or_create_map_for_instance(character_instance_id)
-            .await
+            .get_or_create_map(&(*character), character.map)
+            .await?
             .push_object(Arc::downgrade(&character_lock))
-            .await?;
+            .await;
+
+        character.send_packets_after_add_to_map(client_manager).await?;
 
         Ok(())
     }

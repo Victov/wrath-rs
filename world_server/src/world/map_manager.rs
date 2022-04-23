@@ -4,7 +4,7 @@ use std::sync::Weak;
 use super::map_object::MapObject;
 use super::prelude::*;
 use crate::prelude::*;
-use async_std::sync::RwLock;
+use async_std::sync::{Mutex, RwLock};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -30,6 +30,7 @@ impl PointDistance for RStarTreeItem {
 pub struct MapManager {
     objects_on_map: RwLock<HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>>,
     query_tree: RwLock<RTree<RStarTreeItem>>,
+    add_queue: Mutex<Vec<Weak<RwLock<dyn MapObjectWithValueFields>>>>,
 }
 
 impl MapManager {
@@ -37,6 +38,7 @@ impl MapManager {
         Self {
             objects_on_map: RwLock::new(HashMap::new()),
             query_tree: RwLock::new(RTree::new()),
+            add_queue: Mutex::new(Vec::new()),
         }
     }
 
@@ -46,12 +48,14 @@ impl MapManager {
     }
 
     pub async fn tick(&self, _delta_time: f32) -> Result<()> {
+        let any_added = self.process_add_queue().await?;
+
         let map_objects = self.objects_on_map.read().await;
         for map_object in (*map_objects).values() {
             if let Some(valid_object_lock) = map_object.upgrade() {
                 let mut valid_object = valid_object_lock.write().await;
                 if valid_object.wants_updates() {
-                    if valid_object.get_update_mask().has_any_bit() {
+                    if valid_object.get_update_mask().has_any_bit() || any_added {
                         let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object)?;
                         valid_object.clear_recently_removed_range_guids()?;
                         valid_object.as_update_receiver_mut().unwrap().push_update_block(&mut buf, num_blocks);
@@ -84,10 +88,27 @@ impl MapManager {
         Ok(())
     }
 
-    pub async fn push_object<T>(&self, object_ref: Weak<RwLock<T>>) -> Result<()>
+    pub async fn push_object<T>(&self, object_ref: Weak<RwLock<T>>)
     where
         T: MapObject + HasValueFields + 'static,
     {
+        let mut add_queue = self.add_queue.lock().await;
+        add_queue.push(object_ref);
+    }
+
+    async fn process_add_queue(&self) -> Result<bool> {
+        let add_queue = &mut *self.add_queue.lock().await;
+        let has_any_added = !add_queue.is_empty();
+
+        for to_add in add_queue.iter() {
+            self.push_object_internal(to_add.clone()).await?;
+        }
+        add_queue.clear();
+
+        Ok(has_any_added)
+    }
+
+    async fn push_object_internal(&self, object_ref: Weak<RwLock<dyn MapObjectWithValueFields>>) -> Result<()> {
         if let Some(object_lock) = object_ref.upgrade() {
             {
                 let object = object_lock.read().await;
@@ -109,7 +130,7 @@ impl MapManager {
         Ok(())
     }
 
-    async fn update_in_range_set(&self, object_ref: Weak<RwLock<impl MapObjectWithValueFields + 'static>>) -> Result<()> {
+    async fn update_in_range_set(&self, object_ref: Weak<RwLock<dyn MapObjectWithValueFields + 'static>>) -> Result<()> {
         let target_object_lock = object_ref.upgrade().unwrap();
 
         let tree = self.query_tree.read().await;

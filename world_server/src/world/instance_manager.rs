@@ -6,29 +6,61 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::map_manager::MapManager;
+use super::map_object::MapObject;
 
 type InstanceID = u32;
+type MapID = u32;
 
 pub struct InstanceManager {
     //Multiple instances are things like raids and dungeons which can spawn many times for
     //different groups
     multiple_instances: RwLock<HashMap<InstanceID, Arc<MapManager>>>,
+    world_maps: RwLock<HashMap<MapID, Arc<MapManager>>>,
 }
 
 impl InstanceManager {
     pub fn new() -> Self {
         Self {
             multiple_instances: RwLock::new(HashMap::default()),
+            world_maps: RwLock::new(HashMap::default()),
         }
     }
 
     pub async fn tick(&self, delta_time: f32) -> Result<()> {
-        let maps_table = self.multiple_instances.read().await;
-        for map in maps_table.values() {
+        let instances_table = self.multiple_instances.read().await;
+        for map in instances_table.values() {
+            map.tick(delta_time).await?;
+        }
+
+        let world_maps = self.world_maps.read().await;
+        for map in world_maps.values() {
             map.tick(delta_time).await?;
         }
 
         Ok(())
+    }
+
+    fn is_instance(&self, _map_id: MapID) -> bool {
+        //TODO: implement based on DBC storage
+        return false;
+    }
+
+    pub async fn get_or_create_map(&self, object: &impl MapObject, map_id: MapID) -> Result<Arc<MapManager>> {
+        let map = if !self.is_instance(map_id) {
+            Ok(self.world_maps.write().await.entry(map_id).or_insert(Arc::new(MapManager::new())).clone())
+        } else if let Some(character) = object.as_character() {
+            Ok(self.get_or_create_map_for_instance(character.instance_id).await)
+        } else {
+            Err(anyhow!("Not a valid map"))
+        };
+
+        info!(
+            "get_or_create_map: there are now {} world maps and {} instances",
+            self.world_maps.read().await.len(),
+            self.multiple_instances.read().await.len()
+        );
+
+        map
     }
 
     pub async fn try_get_map_for_instance(&self, instance_id: InstanceID) -> Option<Arc<MapManager>> {
@@ -40,11 +72,10 @@ impl InstanceManager {
     }
 
     pub async fn try_get_map_for_character(&self, character: &Character) -> Option<Arc<MapManager>> {
-        //TODO: when adding support for non-instanced maps, adjust this function
-        self.try_get_map_for_instance(character.instance_id).await
+        self.get_or_create_map(character, character.map).await.ok()
     }
 
-    pub async fn get_or_create_map_for_instance(&self, instance_id: InstanceID) -> Arc<MapManager> {
+    async fn get_or_create_map_for_instance(&self, instance_id: InstanceID) -> Arc<MapManager> {
         self.multiple_instances
             .write()
             .await
@@ -56,14 +87,9 @@ impl InstanceManager {
     pub async fn handle_client_disconnected(&self, client: &Client) -> Result<()> {
         if let Some(character_lock) = &client.active_character {
             let active_character = character_lock.read().await;
-            let character_instance_id = active_character.instance_id;
-
-            let mul_instances = self.multiple_instances.read().await;
-            if let Some(map_mgr) = mul_instances.get(&character_instance_id) {
-                use super::map_object::MapObject;
-                map_mgr.remove_object_by_guid(active_character.get_guid()).await?;
-            } else {
-                warn!("Handling disconnent, but no known map manager");
+            let map = self.try_get_map_for_character(&*active_character).await;
+            if let Some(map) = map {
+                map.remove_object_by_guid(active_character.get_guid()).await?;
             }
         }
 

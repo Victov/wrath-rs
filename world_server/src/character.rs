@@ -159,21 +159,24 @@ impl Character {
         Ok(())
     }
 
-    pub async fn perform_login(&self, client_manager: &ClientManager) -> Result<()> {
-        handlers::send_verify_world(&self).await?;
+    pub async fn send_packets_before_add_to_map(&self, _client_manager: &ClientManager) -> Result<()> {
+        handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
+        handlers::send_bind_update(&self).await?;
+        handlers::send_talents_info(&self).await?;
         handlers::send_dungeon_difficulty(&self).await?;
+        handlers::send_initial_spells(&self).await?;
+        handlers::send_action_buttons(&self).await?;
+        handlers::send_initial_world_states(&self).await?;
+        handlers::send_login_set_time_speed(&self).await
+    }
+
+    pub async fn send_packets_after_add_to_map(&self, client_manager: &ClientManager) -> Result<()> {
+        handlers::send_verify_world(&self).await?;
         handlers::send_character_account_data_times(client_manager, &self).await?;
         handlers::send_voice_chat_status(&self, false).await?;
-        handlers::send_bind_update(&self).await?;
         handlers::send_tutorial_flags(&self).await?;
-        handlers::send_login_set_time_speed(&self).await?;
-        handlers::send_action_buttons(&self).await?;
         handlers::send_faction_list(&self).await?;
-        handlers::send_initial_spells(&self).await?;
-        handlers::send_talents_info(&self).await?;
         handlers::send_aura_update_all(&self).await?;
-        handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
-        handlers::send_initial_world_states(&self).await?;
         handlers::send_time_sync(&self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
@@ -219,12 +222,12 @@ impl Character {
                 self.teleport_to(TeleportationDistance::Near(dest_near));
             } else if self.time_sync_counter == 4 {
                 let dest_far = WorldZoneLocation {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                    o: 0.0,
+                    x: -6240.0,
+                    y: 331.0,
+                    z: 390.0,
+                    o: 6.0,
                     zone: 0,
-                    map: 469, //bwl
+                    map: 0,
                 };
                 self.teleport_to(TeleportationDistance::Far(dest_far));
             }

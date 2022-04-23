@@ -89,13 +89,7 @@ pub async fn handle_cmsg_name_query(client_manager: &Arc<ClientManager>, packet:
     }
 
     //We are requesting somebody else. Search the map
-    if let Some(map) = {
-        client_manager
-            .world
-            .get_instance_manager()
-            .try_get_map_for_instance(character.instance_id)
-            .await
-    } {
+    if let Some(map) = { client_manager.world.get_instance_manager().try_get_map_for_character(&*character).await } {
         if let Some(found_character_lock) = map.try_get_object(&requested_player_guid).await.and_then(|a| a.upgrade()) {
             if let Some(found_character) = found_character_lock.read().await.as_character() {
                 send_name_query_response(&*client, &*found_character).await?;
