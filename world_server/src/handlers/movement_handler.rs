@@ -123,7 +123,6 @@ pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, 
 
     let character = character_lock.upgradable_read().await;
 
-    info!("Going to handle far tp, state = {:?}", character.teleportation_state.clone());
     if let TeleportationState::Executing(TeleportationDistance::Far(destination)) = character.teleportation_state.clone() {
         let mut character = RwLockUpgradableReadGuard::upgrade(character).await;
 
@@ -140,7 +139,6 @@ pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, 
         character.send_packets_after_add_to_map(client_manager).await?;
 
         character.teleportation_state = TeleportationState::None;
-        info!("handled far teleport");
     }
 
     Ok(())

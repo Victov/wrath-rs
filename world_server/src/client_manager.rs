@@ -41,7 +41,7 @@ impl ClientManager {
         let clients = self.clients.read().await;
         for (_, client_lock) in clients.iter() {
             let client = client_lock.read().await;
-            client.tick(delta_time).await?;
+            client.tick(delta_time, self.world.clone()).await?;
         }
 
         Ok(())

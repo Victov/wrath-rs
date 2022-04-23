@@ -7,10 +7,11 @@ use crate::handlers::movement_handler::{TeleportationDistance, TeleportationStat
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
+use crate::world::World;
 use crate::ClientManager;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
-use std::sync::Weak;
+use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
 use wrath_realm_db::RealmDatabase;
 
@@ -208,7 +209,7 @@ impl Character {
         }
     }
 
-    pub async fn tick(&mut self, delta_time: f32) -> Result<()> {
+    pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
         self.time_sync_cooldown -= delta_time;
         if self.time_sync_cooldown < 0f32 {
             self.time_sync_cooldown += 10f32;
@@ -234,21 +235,21 @@ impl Character {
             //END TEMP TESTING CODE
         }
 
-        self.handle_queued_teleport()
+        self.handle_queued_teleport(world)
             .await
             .unwrap_or_else(|e| warn!("Could not teleport player {}: Error {}", self.name, e));
 
         Ok(())
     }
 
-    async fn handle_queued_teleport(&mut self) -> Result<()> {
+    async fn handle_queued_teleport(&mut self, world: Arc<World>) -> Result<()> {
         //Handle the possibility that the player may have logged out
         //between queuing and handling the teleport
 
         let state = self.teleportation_state.clone();
         match state {
             TeleportationState::Queued(TeleportationDistance::Near(dest)) => self.execute_near_teleport(dest.clone()).await?,
-            TeleportationState::Queued(TeleportationDistance::Far(dest)) => self.execute_far_teleport(dest.clone()).await?,
+            TeleportationState::Queued(TeleportationDistance::Far(dest)) => self.execute_far_teleport(dest.clone(), world).await?,
             _ => {}
         };
 
@@ -264,10 +265,20 @@ impl Character {
         Ok(())
     }
 
-    async fn execute_far_teleport(&mut self, destination: WorldZoneLocation) -> Result<()> {
+    async fn execute_far_teleport(&mut self, destination: WorldZoneLocation, world: Arc<World>) -> Result<()> {
         handlers::send_smsg_transfer_pending(self, destination.map).await?;
+
+        let old_map = world
+            .get_instance_manager()
+            .try_get_map_for_character(self)
+            .await
+            .ok_or_else(|| anyhow!("Player is teleporting away from an invalid map"))?;
+
+        old_map.remove_object_by_guid(&self.guid).await;
+
         let wzl = destination.clone().into();
         handlers::send_smsg_new_world(self, destination.map, &wzl).await?;
+
         self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Far(destination));
         Ok(())
     }
@@ -310,6 +321,10 @@ impl MapObject for Character {
         self.in_range_objects.remove(guid);
         self.recently_removed_guids.push(guid.clone());
         Ok(())
+    }
+
+    fn clear_in_range_objects(&mut self) {
+        self.in_range_objects.clear();
     }
 
     fn get_recently_removed_range_guids(&self) -> &Vec<Guid> {

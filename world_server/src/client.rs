@@ -4,6 +4,7 @@ use super::opcodes::Opcodes;
 use super::packet::*;
 use super::wowcrypto::*;
 use crate::prelude::*;
+use crate::world::World;
 use async_std::net::TcpStream;
 use async_std::sync::{Mutex, RwLock};
 use rand::RngCore;
@@ -40,10 +41,10 @@ impl Client {
         }
     }
 
-    pub async fn tick(&self, delta_time: f32) -> Result<()> {
+    pub async fn tick(&self, delta_time: f32, world: Arc<World>) -> Result<()> {
         if let Some(character_lock) = &self.active_character {
             let mut character = character_lock.write().await;
-            character.tick(delta_time).await?;
+            character.tick(delta_time, world).await?;
         }
         Ok(())
     }

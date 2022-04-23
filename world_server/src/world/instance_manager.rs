@@ -54,12 +54,6 @@ impl InstanceManager {
             Err(anyhow!("Not a valid map"))
         };
 
-        info!(
-            "get_or_create_map: there are now {} world maps and {} instances",
-            self.world_maps.read().await.len(),
-            self.multiple_instances.read().await.len()
-        );
-
         map
     }
 
@@ -89,7 +83,7 @@ impl InstanceManager {
             let active_character = character_lock.read().await;
             let map = self.try_get_map_for_character(&*active_character).await;
             if let Some(map) = map {
-                map.remove_object_by_guid(active_character.get_guid()).await?;
+                map.remove_object_by_guid(active_character.get_guid()).await;
             }
         }
 

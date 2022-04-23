@@ -19,6 +19,7 @@ pub trait MapObject: Send + Sync {
     fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn MapObjectWithValueFields>>) -> Result<()>;
     fn get_in_range_guids(&self) -> Vec<&Guid>;
     fn remove_in_range_object(&mut self, guid: &Guid) -> Result<()>;
+    fn clear_in_range_objects(&mut self);
     fn get_recently_removed_range_guids(&self) -> &Vec<Guid>;
     fn clear_recently_removed_range_guids(&mut self) -> Result<()>;
     fn wants_updates(&self) -> bool;

@@ -31,6 +31,7 @@ pub struct MapManager {
     objects_on_map: RwLock<HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>>,
     query_tree: RwLock<RTree<RStarTreeItem>>,
     add_queue: Mutex<Vec<Weak<RwLock<dyn MapObjectWithValueFields>>>>,
+    remove_queue: Mutex<Vec<Guid>>,
 }
 
 impl MapManager {
@@ -39,6 +40,7 @@ impl MapManager {
             objects_on_map: RwLock::new(HashMap::new()),
             query_tree: RwLock::new(RTree::new()),
             add_queue: Mutex::new(Vec::new()),
+            remove_queue: Mutex::new(Vec::new()),
         }
     }
 
@@ -48,6 +50,7 @@ impl MapManager {
     }
 
     pub async fn tick(&self, _delta_time: f32) -> Result<()> {
+        let any_removed = self.process_remove_queue().await?;
         let any_added = self.process_add_queue().await?;
 
         let map_objects = self.objects_on_map.read().await;
@@ -55,7 +58,7 @@ impl MapManager {
             if let Some(valid_object_lock) = map_object.upgrade() {
                 let mut valid_object = valid_object_lock.write().await;
                 if valid_object.wants_updates() {
-                    if valid_object.get_update_mask().has_any_bit() || any_added {
+                    if valid_object.get_update_mask().has_any_bit() || any_added || any_removed {
                         let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object)?;
                         valid_object.clear_recently_removed_range_guids()?;
                         valid_object.as_update_receiver_mut().unwrap().push_update_block(&mut buf, num_blocks);
@@ -216,13 +219,30 @@ impl MapManager {
         Ok(())
     }
 
-    pub async fn remove_object_by_guid(&self, guid: &Guid) -> Result<()> {
+    pub async fn remove_object_by_guid(&self, guid: &Guid) {
+        let mut remove_queue = self.remove_queue.lock().await;
+        remove_queue.push(guid.clone());
+    }
+
+    async fn process_remove_queue(&self) -> Result<bool> {
+        let remove_queue = &mut *self.remove_queue.lock().await;
+        let any_to_remove = !remove_queue.is_empty();
+
+        for to_remove in remove_queue.iter() {
+            self.remove_object_by_guid_internal(to_remove).await?;
+        }
+        remove_queue.clear();
+
+        Ok(any_to_remove)
+    }
+
+    async fn remove_object_by_guid_internal(&self, guid: &Guid) -> Result<()> {
         if let Some(weak_removed_object) = {
             let mut objects_on_map = self.objects_on_map.write().await;
             objects_on_map.remove(guid)
         } {
             if let Some(removed_object_lock) = weak_removed_object.upgrade() {
-                let removed_object = removed_object_lock.read().await;
+                let mut removed_object = removed_object_lock.write().await;
                 let objects_on_map = self.objects_on_map.read().await;
                 for in_range_guid in removed_object.get_in_range_guids() {
                     if let Some(weak_in_range_object) = objects_on_map.get(in_range_guid) {
@@ -233,6 +253,20 @@ impl MapManager {
                             }
                             trace!("removed {} from range of {}", removed_object.get_guid(), in_range_guid);
                             in_range_object.remove_in_range_object(guid)?;
+                        }
+                    }
+                }
+                removed_object.clear_in_range_objects();
+            } else {
+                //Failed to upgrade from a weakptr. This means the object is really gone, and we
+                //can't access its in-range-list anymore. Bruteforce the removal from everything on
+                //this map.
+                let objects_on_map = self.objects_on_map.read().await;
+                for object_weak in objects_on_map.values() {
+                    if let Some(object_lock) = object_weak.upgrade() {
+                        let mut object = object_lock.write().await;
+                        if object.is_in_range(guid) {
+                            object.remove_in_range_object(guid)?;
                         }
                     }
                 }
