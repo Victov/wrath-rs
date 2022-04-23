@@ -1,15 +1,15 @@
 use crate::character::Character;
 use crate::client::Client;
 use crate::prelude::*;
-use async_std::sync::RwLock;
+use async_std::sync::{RwLock, RwLockUpgradableReadGuard};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::map_manager::MapManager;
 use super::map_object::MapObject;
 
-type InstanceID = u32;
-type MapID = u32;
+pub type InstanceID = u32;
+pub type MapID = u32;
 
 pub struct InstanceManager {
     //Multiple instances are things like raids and dungeons which can spawn many times for
@@ -27,14 +27,38 @@ impl InstanceManager {
     }
 
     pub async fn tick(&self, delta_time: f32) -> Result<()> {
-        let instances_table = self.multiple_instances.read().await;
-        for map in instances_table.values() {
+        self.tick_maps::<MapID>(&self.world_maps, delta_time).await?;
+        self.tick_maps::<InstanceID>(&self.multiple_instances, delta_time).await?;
+        self.cleanup_maps::<MapID>(&self.world_maps).await?;
+        self.cleanup_maps::<InstanceID>(&self.multiple_instances).await?;
+
+        Ok(())
+    }
+
+    async fn tick_maps<T: PartialEq + Clone>(&self, list: &RwLock<HashMap<T, Arc<MapManager>>>, delta_time: f32) -> Result<()> {
+        let maps = list.read().await;
+        for map in maps.values() {
             map.tick(delta_time).await?;
         }
+        Ok(())
+    }
 
-        let world_maps = self.world_maps.read().await;
-        for map in world_maps.values() {
-            map.tick(delta_time).await?;
+    async fn cleanup_maps<T: PartialEq + Clone>(&self, list: &RwLock<HashMap<T, Arc<MapManager>>>) -> Result<()> {
+        let mut to_cleanup = Vec::new();
+
+        let maps = list.upgradable_read().await;
+        {
+            for (id, map) in maps.iter() {
+                if map.should_shutdown().await {
+                    map.shutdown().await?;
+                    to_cleanup.push(id.clone());
+                }
+            }
+        }
+
+        if to_cleanup.len() > 0 {
+            let mut maps = RwLockUpgradableReadGuard::upgrade(maps).await;
+            maps.retain(|k, _| !to_cleanup.contains(&k));
         }
 
         Ok(())
@@ -47,9 +71,15 @@ impl InstanceManager {
 
     pub async fn get_or_create_map(&self, object: &impl MapObject, map_id: MapID) -> Result<Arc<MapManager>> {
         let map = if !self.is_instance(map_id) {
-            Ok(self.world_maps.write().await.entry(map_id).or_insert(Arc::new(MapManager::new())).clone())
+            Ok(self
+                .world_maps
+                .write()
+                .await
+                .entry(map_id)
+                .or_insert(Arc::new(MapManager::new(map_id)))
+                .clone())
         } else if let Some(character) = object.as_character() {
-            Ok(self.get_or_create_map_for_instance(character.instance_id).await)
+            Ok(self.get_or_create_map_for_instance(map_id, character.instance_id).await)
         } else {
             Err(anyhow!("Not a valid map"))
         };
@@ -58,23 +88,27 @@ impl InstanceManager {
     }
 
     pub async fn try_get_map_for_instance(&self, instance_id: InstanceID) -> Option<Arc<MapManager>> {
-        if let Some(map) = self.multiple_instances.read().await.get(&instance_id) {
-            Some(map.clone())
-        } else {
-            None
-        }
+        self.multiple_instances.read().await.get(&instance_id).and_then(|a| Some(a.clone()))
     }
 
     pub async fn try_get_map_for_character(&self, character: &Character) -> Option<Arc<MapManager>> {
-        self.get_or_create_map(character, character.map).await.ok()
+        if !self.is_instance(character.map) {
+            self.world_maps.read().await.get(&character.map).and_then(|a| Some(a.clone()))
+        } else {
+            self.multiple_instances
+                .read()
+                .await
+                .get(&character.instance_id)
+                .and_then(|a| Some(a.clone()))
+        }
     }
 
-    async fn get_or_create_map_for_instance(&self, instance_id: InstanceID) -> Arc<MapManager> {
+    async fn get_or_create_map_for_instance(&self, map_id: MapID, instance_id: InstanceID) -> Arc<MapManager> {
         self.multiple_instances
             .write()
             .await
             .entry(instance_id)
-            .or_insert(Arc::new(MapManager::new()))
+            .or_insert(Arc::new(MapManager::new(map_id)))
             .clone()
     }
 
