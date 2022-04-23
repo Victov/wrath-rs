@@ -7,6 +7,8 @@ use crate::prelude::*;
 use async_std::sync::{Mutex, RwLock};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
+const VISIBILITY_RANGE: f32 = 5000.0f32;
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 struct RStarTreeItem {
     x: f32,
@@ -50,15 +52,22 @@ impl MapManager {
     }
 
     pub async fn tick(&self, _delta_time: f32) -> Result<()> {
+        self.rebuild_object_querying_tree().await?;
+
         let any_removed = self.process_remove_queue().await?;
         let any_added = self.process_add_queue().await?;
 
         let map_objects = self.objects_on_map.read().await;
         for map_object in (*map_objects).values() {
+            self.update_in_range_set(map_object.clone()).await?;
             if let Some(valid_object_lock) = map_object.upgrade() {
                 let mut valid_object = valid_object_lock.write().await;
                 if valid_object.wants_updates() {
-                    if valid_object.get_update_mask().has_any_bit() || any_added || any_removed {
+                    if valid_object.get_update_mask().has_any_bit()
+                        || any_removed
+                        || any_added
+                        || !valid_object.get_recently_removed_range_guids().is_empty()
+                    {
                         let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object)?;
                         valid_object.clear_recently_removed_range_guids()?;
                         valid_object.as_update_receiver_mut().unwrap().push_update_block(&mut buf, num_blocks);
@@ -125,7 +134,6 @@ impl MapManager {
             }
 
             object_lock.write().await.on_pushed_to_map(self)?;
-            self.update_in_range_set(object_ref).await?;
         } else {
             bail!("Recieved a weak ref to a character that no longer exists");
         }
@@ -137,24 +145,38 @@ impl MapManager {
         let target_object_lock = object_ref.upgrade().unwrap();
 
         let tree = self.query_tree.read().await;
-        let within_range = {
+        let within_range: Vec<&Guid> = {
             let object = target_object_lock.read().await;
             let object_pos = [object.get_position().x, object.get_position().y];
-            tree.locate_within_distance(object_pos, 200.0f32)
+            tree.locate_within_distance(object_pos, VISIBILITY_RANGE).map(|a| &a.guid).collect()
         };
 
+        //Remove objects that we have in our in-range-list but that are no longer in range
+        //according to the data tree
+        {
+            let mut object = target_object_lock.write().await;
+            let in_range_list: Vec<Guid> = object.get_in_range_guids().iter().map(|a| *a.clone()).collect();
+            for guid in in_range_list.iter() {
+                if !within_range.contains(&guid) {
+                    object.remove_in_range_object(guid)?;
+                    if let Some(character) = object.as_character() {
+                        handlers::send_destroy_object(character, guid, true).await?;
+                    }
+                }
+            }
+        }
+
         let objects_on_map = self.objects_on_map.read().await;
-        for tree_item in within_range {
-            let guid = tree_item.guid;
+        for guid in within_range.iter() {
             //Only read locks required here
             {
                 let target_object = target_object_lock.read().await;
-                if &guid == target_object.get_guid() {
+                if *guid == target_object.get_guid() {
                     //skip ourselves
                     continue;
                 }
 
-                if target_object.is_in_range(&guid) {
+                if target_object.is_in_range(guid) {
                     //skip if we already know this object in our range
                     continue;
                 }

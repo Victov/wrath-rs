@@ -195,6 +195,11 @@ impl Character {
         handlers::send_initial_world_states(self).await
     }
 
+    pub fn reset_time_sync(&mut self) {
+        self.time_sync_cooldown = 0.0;
+        self.time_sync_counter = 0;
+    }
+
     pub fn process_movement(&mut self, movement_info: &MovementInfo) {
         self.movement_info = movement_info.clone();
     }
@@ -221,7 +226,7 @@ impl Character {
                 let mut dest_near = self.get_position().clone();
                 dest_near.x += 10.0;
                 self.teleport_to(TeleportationDistance::Near(dest_near));
-            } else if self.time_sync_counter == 4 {
+            } else if self.time_sync_counter == 40 {
                 let dest_far = WorldZoneLocation {
                     x: -6240.0,
                     y: 331.0,
@@ -291,6 +296,10 @@ impl MapObject for Character {
 
     fn get_position(&self) -> &PositionAndOrientation {
         &self.movement_info.position
+    }
+
+    fn get_movement_info(&self) -> &MovementInfo {
+        &self.movement_info
     }
 
     fn get_type(&self) -> updates::ObjectType {
