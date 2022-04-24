@@ -4,11 +4,17 @@ use podio::{LittleEndian, ReadPodExt};
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-pub mod chr_races;
+mod chr_races;
 pub use chr_races::*;
 
-pub mod chr_classes;
+mod chr_classes;
 pub use chr_classes::*;
+
+mod map;
+pub use map::*;
+
+pub(crate) mod helpers;
+pub(crate) use helpers::ReadSkip;
 
 //See: https://wowdev.wiki/DBC
 #[derive(Debug, Default)]
@@ -88,6 +94,7 @@ pub struct DBCStorage {
     dbc_files_path: String,
     chr_races: Option<DBCFile<DBCCharRaces>>,
     chr_classes: Option<DBCFile<DBCCharClasses>>,
+    maps: Option<DBCFile<DBCMap>>,
 }
 
 use chr_races::DBCCharRaces;
@@ -97,6 +104,7 @@ impl DBCStorage {
             dbc_files_path,
             chr_races: None,
             chr_classes: None,
+            maps: None,
         }
     }
 
@@ -113,6 +121,8 @@ impl DBCStorage {
         get_dbc_char_classes,
         load_dbc_char_classes
     );
+
+    define_dbc!(map::DBCMap, maps, get_dbc_maps, load_dbc_maps);
 
     async fn load_dbc<T: DBCTable + Debug>(&self) -> Result<DBCFile<T>> {
         use async_std::io::BufReader;
@@ -134,10 +144,12 @@ impl DBCStorage {
         header.columns_count = reader.read_u32::<LittleEndian>()?;
         header.row_size = reader.read_u32::<LittleEndian>()?;
         header.string_block_size = reader.read_u32::<LittleEndian>()?;
+        println!("header: {:?}", header);
 
         let mut rows = HashMap::<<T::RowType as DBCRowType>::PrimaryKeyType, T::RowType>::new();
         for _ in 0..header.rows_count {
             let row = <T::RowType as DBCRowType>::read_row(&mut reader)?;
+            println!("row: {:?}", row);
             rows.insert(row.get_primary_key(), row);
         }
 

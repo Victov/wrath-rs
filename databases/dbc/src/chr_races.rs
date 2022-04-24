@@ -1,3 +1,4 @@
+use super::ReadSkip;
 use anyhow::Result;
 
 #[derive(Debug)]
@@ -38,8 +39,7 @@ impl super::DBCRowType for DBCCharRacesRow {
         let male_model_id = reader.read_u32::<LittleEndian>()?;
         let female_model_id = reader.read_u32::<LittleEndian>()?;
 
-        //Have to tell the compiler to not use the default Read
-        <T as ReadPodExt>::read_exact(reader, 62 * 4)?; //skip 62 u32 fields of no interest
+        reader.skip::<u32>(62)?; //skip 62 u32 fields of no interest
         let required_expansion = reader.read_u32::<LittleEndian>()?;
 
         Ok(DBCCharRacesRow {
