@@ -3,6 +3,7 @@ use async_std::{fs::File, io::ReadExt};
 use podio::{LittleEndian, ReadPodExt};
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::io::BufRead;
 
 mod chr_races;
 pub use chr_races::*;
@@ -34,10 +35,14 @@ pub trait DBCTable {
         Self: Sized;
 }
 
+pub struct StringTable {
+    strings: HashMap<u32, String>,
+}
+
 pub trait DBCRowType: Debug {
     type PrimaryKeyType: Eq + std::hash::Hash;
 
-    fn read_row<T: std::io::Read>(reader: &mut T) -> Result<Self>
+    fn read_row<T: std::io::Read>(reader: &mut T, string_table: &StringTable) -> Result<Self>
     where
         Self: Sized;
 
@@ -144,12 +149,41 @@ impl DBCStorage {
         header.columns_count = reader.read_u32::<LittleEndian>()?;
         header.row_size = reader.read_u32::<LittleEndian>()?;
         header.string_block_size = reader.read_u32::<LittleEndian>()?;
-        println!("header: {:?}", header);
+
+        //Skip ahead to start of string table
+        reader.set_position(
+            20u64 /*header size*/ + header.row_size as u64 * header.rows_count as u64,
+        );
+
+        //TODO: improve: since the string table is only used for reach row to do lookups
+        //we may be able to keep the strings on the stack during parsing. (&str)
+        //Each row can then turn it into a String _if_ they need the string
+        //Since some rows don't even care about the strings, but we do always parse the string
+        //table
+
+        let mut strings = HashMap::default();
+        let mut buf = vec![];
+        let mut curr_offset = 0u32;
+        loop {
+            let read_bytes = reader.read_until(0, &mut buf)? as u32;
+            if read_bytes == 0 {
+                break;
+            }
+            curr_offset += read_bytes;
+            let string = String::from_utf8(buf.clone())?
+                .trim_matches(char::from(0))
+                .into();
+            strings.insert(curr_offset, string);
+            buf.clear();
+        }
+        let string_table = StringTable { strings };
+
+        //back to actual rows
+        reader.set_position(20);
 
         let mut rows = HashMap::<<T::RowType as DBCRowType>::PrimaryKeyType, T::RowType>::new();
         for _ in 0..header.rows_count {
-            let row = <T::RowType as DBCRowType>::read_row(&mut reader)?;
-            println!("row: {:?}", row);
+            let row = <T::RowType as DBCRowType>::read_row(&mut reader, &string_table)?;
             rows.insert(row.get_primary_key(), row);
         }
 

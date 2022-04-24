@@ -1,3 +1,5 @@
+use crate::StringTable;
+
 use super::ReadSkip;
 use anyhow::Result;
 
@@ -26,7 +28,7 @@ impl super::DBCTable for DBCCharRaces {
 impl super::DBCRowType for DBCCharRacesRow {
     type PrimaryKeyType = u32;
 
-    fn read_row<T: std::io::Read>(reader: &mut T) -> Result<Self>
+    fn read_row<T: std::io::Read>(reader: &mut T, _string_table: &StringTable) -> Result<Self>
     where
         Self: Sized,
     {
