@@ -11,6 +11,7 @@ use super::map_object::MapObject;
 pub type InstanceID = u32;
 pub type MapID = u32;
 
+#[derive(Default)]
 pub struct InstanceManager {
     //Multiple instances are things like raids and dungeons which can spawn many times for
     //different groups
@@ -95,10 +96,7 @@ impl InstanceManager {
         if !self.is_instance(character.map) {
             self.world_maps.read().await.get(&character.map).cloned()
         } else {
-            self.multiple_instances
-                .read()
-                .await
-                .get(&character.instance_id).cloned()
+            self.multiple_instances.read().await.get(&character.instance_id).cloned()
         }
     }
 

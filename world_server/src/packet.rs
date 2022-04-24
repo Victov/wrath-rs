@@ -57,9 +57,9 @@ pub async fn send_packet_to_all_in_range(
             let object_lock = map
                 .try_get_object(guid)
                 .await
-                .ok_or(anyhow!("GUID is in range, but not a valid object"))?
+                .ok_or_else(|| anyhow!("GUID is in range, but not a valid object"))?
                 .upgrade()
-                .ok_or(anyhow!("object was on the map, but is no longer valid to send packets to"))?;
+                .ok_or_else(|| anyhow!("object was on the map, but is no longer valid to send packets to"))?;
             let read_obj = object_lock.read().await;
             if let Some(in_range_character) = read_obj.as_character() {
                 send_packet_to_character(in_range_character, header, payload).await?;
@@ -104,8 +104,8 @@ pub async fn send_packet(client: &Client, header: &ServerPacketHeader, payload: 
 
     let final_buf = vec![0u8; payload_length + 4];
     let mut final_writer = std::io::Cursor::new(final_buf);
-    final_writer.write(&header_buffer)?;
-    final_writer.write(payload.get_ref())?;
+    final_writer.write_all(&header_buffer)?;
+    final_writer.write_all(payload.get_ref())?;
 
     {
         let mut write_socket = client.write_socket.lock().await;

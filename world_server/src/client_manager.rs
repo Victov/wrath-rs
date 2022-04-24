@@ -107,7 +107,6 @@ impl ClientManager {
 
             client_lock.read().await.send_auth_challenge(realm_seed).await.unwrap_or_else(|e| {
                 error!("Error while sending auth challenge: {:?}", e);
-                
             });
 
             task::spawn(async move {

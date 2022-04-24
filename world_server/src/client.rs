@@ -79,7 +79,7 @@ impl Client {
         writer.write_u32::<LittleEndian>(1)?;
         writer.write_u32::<LittleEndian>(realm_seed)?;
         let seed1 = rand::thread_rng().gen_biguint(32 * 8);
-        writer.write(&seed1.to_bytes_le())?;
+        writer.write_all(&seed1.to_bytes_le())?;
 
         send_packet(self, &header, &writer).await?;
         Ok(())
