@@ -209,9 +209,7 @@ impl Character {
     }
 
     pub fn teleport_to(&mut self, destination: TeleportationDistance) {
-        if self.teleportation_state == TeleportationState::None {
-            self.teleportation_state = TeleportationState::Queued(destination);
-        }
+        self.teleportation_state = TeleportationState::Queued(destination);
     }
 
     pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
@@ -271,6 +269,13 @@ impl Character {
     }
 
     async fn execute_far_teleport(&mut self, destination: WorldZoneLocation, world: Arc<World>) -> Result<()> {
+        if self.map == destination.map {
+            //This was not actually a far teleport. It should have been a near teleport since we're
+            //on the same map.
+            self.teleport_to(TeleportationDistance::Near(destination.into()));
+            return Ok(());
+        }
+
         handlers::send_smsg_transfer_pending(self, destination.map).await?;
 
         let old_map = world
