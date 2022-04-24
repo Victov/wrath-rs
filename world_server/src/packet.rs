@@ -105,7 +105,7 @@ pub async fn send_packet(client: &Client, header: &ServerPacketHeader, payload: 
     let final_buf = vec![0u8; payload_length + 4];
     let mut final_writer = std::io::Cursor::new(final_buf);
     final_writer.write(&header_buffer)?;
-    final_writer.write(&payload.get_ref())?;
+    final_writer.write(payload.get_ref())?;
 
     {
         let mut write_socket = client.write_socket.lock().await;
@@ -127,7 +127,7 @@ pub async fn read_header(bytes: &[u8], start_index: usize, client: &Client) -> R
     use podio::ReadPodExt;
     use std::io::{Seek, SeekFrom};
 
-    let mut header = bytes.iter().skip(start_index).take(6).map(|a| *a).collect::<Vec<u8>>();
+    let mut header = bytes.iter().skip(start_index).take(6).copied().collect::<Vec<u8>>();
 
     if client.crypto.read().await.is_initialized() {
         client.crypto.write().await.decrypt(&mut header)?;

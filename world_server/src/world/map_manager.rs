@@ -61,7 +61,7 @@ impl MapManager {
 
     pub async fn try_get_object(&self, guid: &Guid) -> Option<Weak<RwLock<dyn MapObjectWithValueFields>>> {
         let map_objects = self.objects_on_map.read().await;
-        map_objects.get(guid).and_then(|a| Some(a.clone()))
+        map_objects.get(guid).cloned()
     }
 
     pub async fn tick(&self, _delta_time: f32) -> Result<()> {
@@ -137,11 +137,11 @@ impl MapManager {
         if let Some(object_lock) = object_ref.upgrade() {
             {
                 let object = object_lock.read().await;
-                self.objects_on_map.write().await.insert(object.get_guid().clone(), object_ref.clone());
+                self.objects_on_map.write().await.insert(*object.get_guid(), object_ref.clone());
                 let query_item = RStarTreeItem {
                     x: object.get_position().x,
                     y: object.get_position().y,
-                    guid: object.get_guid().clone(),
+                    guid: *object.get_guid(),
                 };
                 self.query_tree.write().await.insert(query_item);
             }
@@ -195,7 +195,7 @@ impl MapManager {
                     trace!("New object in range! Guid: {}", guid);
                 }
 
-                if let Some(weak_ptr_to_lock) = objects_on_map.get(&guid) {
+                if let Some(weak_ptr_to_lock) = objects_on_map.get(guid) {
                     if let Some(upgraded_lock_from_guid) = weak_ptr_to_lock.upgrade() {
                         {
                             let mut write_obj = upgraded_lock_from_guid.write().await;
@@ -209,7 +209,7 @@ impl MapManager {
                         }
                         {
                             let mut write_target_object = target_object_lock.write().await;
-                            write_target_object.add_in_range_object(&guid, weak_ptr_to_lock.clone())?;
+                            write_target_object.add_in_range_object(guid, weak_ptr_to_lock.clone())?;
                             if write_target_object.wants_updates() {
                                 let (block_count, mut buffer) =
                                     build_create_update_block_for_player(&*write_target_object, &*upgraded_lock_from_guid.read().await)?;
@@ -256,7 +256,7 @@ impl MapManager {
 
     pub async fn remove_object_by_guid(&self, guid: &Guid) {
         let mut remove_queue = self.remove_queue.lock().await;
-        remove_queue.push(guid.clone());
+        remove_queue.push(*guid);
     }
 
     async fn process_remove_queue(&self) -> Result<bool> {

@@ -82,7 +82,7 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     }
 
     let mut sha1 = crypto::sha1::Sha1::new();
-    sha1.input(&name.as_bytes());
+    sha1.input(name.as_bytes());
     sha1.input(&[0u8; 4]);
     sha1.input(&client_seed.to_le_bytes());
     sha1.input(&client_manager.realm_seed.to_le_bytes());
@@ -245,7 +245,7 @@ pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
     writer.write_packed_time::<LittleEndian>(&chrono::Local::now().into())?;
     writer.write_f32::<LittleEndian>(0.01667)?; //Seems to be hardcoded value
     writer.write_u32::<LittleEndian>(0)?;
-    send_packet_to_character(&character, &header, &writer).await?;
+    send_packet_to_character(character, &header, &writer).await?;
 
     Ok(())
 }

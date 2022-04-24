@@ -63,20 +63,20 @@ pub async fn send_msg_move_teleport_ack(character: &Character, destination: &Pos
     writer.write_u32::<LittleEndian>(0)?; //This value is supposed to increment with every teleport?
     writer.write_movement_info(&movement_info)?;
 
-    send_packet_to_character(&character, &header, &writer).await
+    send_packet_to_character(character, &header, &writer).await
 }
 
 pub async fn send_smsg_transfer_pending(character: &Character, map_id: u32) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_TRANSFER_PENDING, 12);
     writer.write_u32::<LittleEndian>(map_id)?;
-    send_packet_to_character(&character, &header, &writer).await
+    send_packet_to_character(character, &header, &writer).await
 }
 
 pub async fn send_smsg_new_world(character: &Character, map_id: u32, position: &PositionAndOrientation) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_NEW_WORLD, 20);
     writer.write_u32::<LittleEndian>(map_id)?;
     writer.write_position_and_orientation(position)?;
-    send_packet_to_character(&character, &header, &writer).await
+    send_packet_to_character(character, &header, &writer).await
 }
 
 pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {

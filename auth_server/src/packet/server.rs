@@ -172,7 +172,7 @@ impl<'a> PacketWriter for ServerPacket<'a> {
 
                 writer.write_u8(CMD_REALM_LIST)?;
                 writer.write_u16::<LittleEndian>(cursor.get_ref().len() as u16)?;
-                writer.write(&cursor.get_ref())?;
+                writer.write(cursor.get_ref())?;
             }
         }
         Ok(())

@@ -117,6 +117,6 @@ async fn send_name_query_response(receiver: &Client, target_character: &Characte
     writer.write_u8(target_character.class)?;
     writer.write_u8(0)?; //Something about declined names.
 
-    send_packet(&receiver, &header, &writer).await?;
+    send_packet(receiver, &header, &writer).await?;
     Ok(())
 }

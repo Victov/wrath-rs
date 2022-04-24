@@ -43,14 +43,14 @@ pub fn build_create_update_block_for_player(player: &dyn MapObjectWithValueField
     }
 
     writer.write_u8(update_type)?;
-    writer.write_guid_compressed(&object.get_guid())?;
+    writer.write_guid_compressed(object.get_guid())?;
 
     writer.write_u8(object.get_type() as u8)?;
 
     build_movement_update(&mut writer, flags, object)?;
 
     let mut update_mask = UpdateMask::new(object.get_num_value_fields());
-    object.set_mask_for_create_bits(&mut &mut update_mask)?;
+    object.set_mask_for_create_bits(&mut update_mask)?;
     update_mask.set_bit(ObjectFields::HighGuid as usize, true)?; //override if it wasn't detected
 
     build_values_update(&mut writer, object, &update_mask)?;
@@ -71,7 +71,7 @@ pub fn build_values_update_block(object: &dyn MapObjectWithValueFields) -> Resul
 
 pub fn build_out_of_range_update_block_for_player(player: &dyn MapObjectWithValueFields) -> Result<(u32, Vec<u8>)> {
     let out_of_range_guids = player.get_recently_removed_range_guids();
-    if out_of_range_guids.len() == 0 {
+    if out_of_range_guids.is_empty() {
         return Ok((0, vec![]));
     }
 

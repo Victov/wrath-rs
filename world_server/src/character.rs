@@ -116,7 +116,7 @@ impl Character {
         let character_id = self.guid.get_low_part();
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
-        if character_account_data.len() == 0 {
+        if character_account_data.is_empty() {
             handlers::create_empty_character_account_data_rows(realm_database, character_id).await?;
         }
 
@@ -161,24 +161,24 @@ impl Character {
     }
 
     pub async fn send_packets_before_add_to_map(&self, _client_manager: &ClientManager) -> Result<()> {
-        handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
-        handlers::send_bind_update(&self).await?;
-        handlers::send_talents_info(&self).await?;
-        handlers::send_dungeon_difficulty(&self).await?;
-        handlers::send_initial_spells(&self).await?;
-        handlers::send_action_buttons(&self).await?;
-        handlers::send_initial_world_states(&self).await?;
-        handlers::send_login_set_time_speed(&self).await
+        handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
+        handlers::send_bind_update(self).await?;
+        handlers::send_talents_info(self).await?;
+        handlers::send_dungeon_difficulty(self).await?;
+        handlers::send_initial_spells(self).await?;
+        handlers::send_action_buttons(self).await?;
+        handlers::send_initial_world_states(self).await?;
+        handlers::send_login_set_time_speed(self).await
     }
 
     pub async fn send_packets_after_add_to_map(&self, client_manager: &ClientManager) -> Result<()> {
-        handlers::send_verify_world(&self).await?;
-        handlers::send_character_account_data_times(client_manager, &self).await?;
-        handlers::send_voice_chat_status(&self, false).await?;
-        handlers::send_tutorial_flags(&self).await?;
-        handlers::send_faction_list(&self).await?;
-        handlers::send_aura_update_all(&self).await?;
-        handlers::send_time_sync(&self).await?;
+        handlers::send_verify_world(self).await?;
+        handlers::send_character_account_data_times(client_manager, self).await?;
+        handlers::send_voice_chat_status(self, false).await?;
+        handlers::send_tutorial_flags(self).await?;
+        handlers::send_faction_list(self).await?;
+        handlers::send_aura_update_all(self).await?;
+        handlers::send_time_sync(self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
 
@@ -323,7 +323,7 @@ impl MapObject for Character {
 
     fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn MapObjectWithValueFields>>) -> Result<()> {
         assert!(!self.is_in_range(guid));
-        self.in_range_objects.insert(guid.clone(), object);
+        self.in_range_objects.insert(*guid, object);
         Ok(())
     }
 
@@ -333,7 +333,7 @@ impl MapObject for Character {
 
     fn remove_in_range_object(&mut self, guid: &Guid) -> Result<()> {
         self.in_range_objects.remove(guid);
-        self.recently_removed_guids.push(guid.clone());
+        self.recently_removed_guids.push(*guid);
         Ok(())
     }
 
@@ -380,7 +380,7 @@ impl ReceiveUpdates for Character {
     async fn process_pending_updates(&mut self) -> Result<()> {
         let (num, buf) = self.get_update_blocks();
         if num > 0 {
-            handlers::send_update_packet(self, num, &buf).await?;
+            handlers::send_update_packet(self, num, buf).await?;
             self.clear_update_blocks();
         }
         Ok(())

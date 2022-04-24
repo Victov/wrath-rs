@@ -66,7 +66,7 @@ impl AsyncPacketWriterExt for TcpStream {
         let buf = Vec::new();
         let mut cursor = Cursor::new(buf);
         packet.write_packet(&mut cursor)?;
-        self.write(&cursor.get_ref()).await?;
+        self.write(cursor.get_ref()).await?;
         self.flush().await?;
         Ok(())
     }

@@ -20,7 +20,7 @@ impl super::DBCTable for DBCCharClasses {
     where
         Self: Sized,
     {
-        &"ChrClasses.dbc"
+        "ChrClasses.dbc"
     }
 }
 

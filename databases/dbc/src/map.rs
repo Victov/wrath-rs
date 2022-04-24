@@ -42,7 +42,7 @@ impl super::DBCTable for DBCMap {
     where
         Self: Sized,
     {
-        &"Map.dbc"
+        "Map.dbc"
     }
 }
 

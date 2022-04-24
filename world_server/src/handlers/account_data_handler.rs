@@ -34,7 +34,7 @@ pub async fn handle_csmg_ready_for_account_data_times(client_manager: &Arc<Clien
     let mut db_account_data;
     loop {
         db_account_data = client_manager.auth_db.get_account_data(account_id).await?;
-        if db_account_data.len() == 0 {
+        if db_account_data.is_empty() {
             create_empty_account_data_rows(client_manager, account_id).await?;
             continue;
         }
@@ -143,14 +143,12 @@ pub async fn handle_csmg_update_account_data(client_manager: &Arc<ClientManager>
             .auth_db
             .update_account_data(account_id, time, data_type, decompressed_size, &new_data)
             .await?;
-    } else {
-        if let Some(character_lock) = &client.active_character {
-            let character_id = character_lock.read().await.guid.get_low_part();
-            client_manager
-                .realm_db
-                .update_character_account_data(character_id, time, data_type, decompressed_size, &new_data)
-                .await?;
-        }
+    } else if let Some(character_lock) = &client.active_character {
+        let character_id = character_lock.read().await.guid.get_low_part();
+        client_manager
+            .realm_db
+            .update_character_account_data(character_id, time, data_type, decompressed_size, &new_data)
+            .await?;
     }
 
     let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_ACCOUNT_DATA_COMPLETE, 8);
@@ -183,21 +181,19 @@ pub async fn handle_cmsg_request_account_data(client_manager: &Arc<ClientManager
             } else {
                 (0, vec![])
             }
-        } else {
-            if let Some(active_character_lock) = &client.active_character {
-                let character_id = active_character_lock.read().await.guid.get_low_part();
-                let db_data = client_manager
-                    .realm_db
-                    .get_character_account_data_of_type(character_id, data_type as u8)
-                    .await?;
-                if let Some(bytes) = db_data.data {
-                    (db_data.decompressed_size, bytes)
-                } else {
-                    (0, vec![])
-                }
+        } else if let Some(active_character_lock) = &client.active_character {
+            let character_id = active_character_lock.read().await.guid.get_low_part();
+            let db_data = client_manager
+                .realm_db
+                .get_character_account_data_of_type(character_id, data_type as u8)
+                .await?;
+            if let Some(bytes) = db_data.data {
+                (db_data.decompressed_size, bytes)
             } else {
-                bail!("Requested account data for active character but no character is logged in as active.");
+                (0, vec![])
             }
+        } else {
+            bail!("Requested account data for active character but no character is logged in as active.");
         }
     };
 

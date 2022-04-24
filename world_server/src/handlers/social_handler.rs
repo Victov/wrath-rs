@@ -19,6 +19,6 @@ pub async fn send_contact_list(character: &Character, relation_types: &[Relation
     writer.write_u32::<LittleEndian>(mask)?;
     writer.write_u32::<LittleEndian>(0)?; //zero friends, ignores, mutes, etc
 
-    send_packet_to_character(&character, &header, &writer).await?;
+    send_packet_to_character(character, &header, &writer).await?;
     Ok(())
 }

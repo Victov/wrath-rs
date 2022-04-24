@@ -73,9 +73,9 @@ impl<W: std::io::Write> WriteGuid for W {
 
 fn get_byte_value_at(input: u64, index: isize) -> u8 {
     let shifted = input >> (8 * index);
-    let result = (shifted & 0x00000000000000FF) as u8;
+    
 
-    result
+    (shifted & 0x00000000000000FF) as u8
 }
 
 pub trait ReadGuid {

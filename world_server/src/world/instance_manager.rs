@@ -56,9 +56,9 @@ impl InstanceManager {
             }
         }
 
-        if to_cleanup.len() > 0 {
+        if !to_cleanup.is_empty() {
             let mut maps = RwLockUpgradableReadGuard::upgrade(maps).await;
-            maps.retain(|k, _| !to_cleanup.contains(&k));
+            maps.retain(|k, _| !to_cleanup.contains(k));
         }
 
         Ok(())
@@ -66,7 +66,7 @@ impl InstanceManager {
 
     fn is_instance(&self, _map_id: MapID) -> bool {
         //TODO: implement based on DBC storage
-        return false;
+        false
     }
 
     pub async fn get_or_create_map(&self, object: &impl MapObject, map_id: MapID) -> Result<Arc<MapManager>> {
@@ -88,18 +88,17 @@ impl InstanceManager {
     }
 
     pub async fn try_get_map_for_instance(&self, instance_id: InstanceID) -> Option<Arc<MapManager>> {
-        self.multiple_instances.read().await.get(&instance_id).and_then(|a| Some(a.clone()))
+        self.multiple_instances.read().await.get(&instance_id).cloned()
     }
 
     pub async fn try_get_map_for_character(&self, character: &Character) -> Option<Arc<MapManager>> {
         if !self.is_instance(character.map) {
-            self.world_maps.read().await.get(&character.map).and_then(|a| Some(a.clone()))
+            self.world_maps.read().await.get(&character.map).cloned()
         } else {
             self.multiple_instances
                 .read()
                 .await
-                .get(&character.instance_id)
-                .and_then(|a| Some(a.clone()))
+                .get(&character.instance_id).cloned()
         }
     }
 
