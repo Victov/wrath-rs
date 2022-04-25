@@ -72,7 +72,7 @@ pub async fn handle_logon_challenge_srp<'a>(
     challenge: &LogonChallenge<'a>,
     auth_database: std::sync::Arc<AuthDatabase>,
 ) -> Result<ClientState> {
-    let account = match auth_database.get_account_by_username(&challenge.username).await? {
+    let account = match auth_database.get_account_by_username(challenge.username).await? {
         Some(acc) if acc.banned != 0 => {
             reject_logon_challenge(stream, AuthResult::FailBanned).await?;
             return Ok(ClientState::Connected);
@@ -180,7 +180,7 @@ pub async fn handle_reconnect_proof_srp<'a>(
     if result {
         Ok(ClientState::LogOnProof { username })
     } else {
-        return Ok(ClientState::Connected);
+        Ok(ClientState::Connected)
     }
 }
 

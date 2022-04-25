@@ -67,6 +67,7 @@ async fn main() -> Result<()> {
     let mut dbc_storage = data::DBCStorage::new(dbc_path);
     dbc_storage.load_dbc_char_races().await?;
     dbc_storage.load_dbc_char_classes().await?;
+    dbc_storage.load_dbc_maps().await?;
     let dbc_storage_ref = std::sync::Arc::new(dbc_storage);
     info!("Finished loading DBC files");
 

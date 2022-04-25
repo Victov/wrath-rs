@@ -35,7 +35,7 @@ where
 {
     fn into(self) -> TutorialFlags {
         TutorialFlags {
-            flag_data: self.map(|a| a.into()).into(),
+            flag_data: self.map(|a| a.into()),
         }
     }
 }

@@ -6,12 +6,14 @@ pub use super::map_cell::MapCell;
 use super::map_manager::MapManager;
 use super::update_builder::{MapObjectWithValueFields, ReceiveUpdates};
 use crate::character::Character;
+use crate::data::MovementInfo;
 use crate::prelude::*;
 use crate::{constants::updates::ObjectType, data::PositionAndOrientation};
 
 pub trait MapObject: Send + Sync {
     fn get_guid(&self) -> &Guid;
     fn get_position(&self) -> &PositionAndOrientation;
+    fn get_movement_info(&self) -> &MovementInfo;
     fn get_type(&self) -> ObjectType;
 
     fn on_pushed_to_map(&mut self, map_manager: &MapManager) -> Result<()>;
@@ -19,6 +21,7 @@ pub trait MapObject: Send + Sync {
     fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn MapObjectWithValueFields>>) -> Result<()>;
     fn get_in_range_guids(&self) -> Vec<&Guid>;
     fn remove_in_range_object(&mut self, guid: &Guid) -> Result<()>;
+    fn clear_in_range_objects(&mut self);
     fn get_recently_removed_range_guids(&self) -> &Vec<Guid>;
     fn clear_recently_removed_range_guids(&mut self) -> Result<()>;
     fn wants_updates(&self) -> bool;

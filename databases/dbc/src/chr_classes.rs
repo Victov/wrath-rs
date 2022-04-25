@@ -1,3 +1,6 @@
+use crate::StringTable;
+
+use super::ReadSkip;
 use anyhow::Result;
 
 #[derive(Debug)]
@@ -17,14 +20,14 @@ impl super::DBCTable for DBCCharClasses {
     where
         Self: Sized,
     {
-        &"ChrClasses.dbc"
+        "ChrClasses.dbc"
     }
 }
 
 impl super::DBCRowType for DBCCharClassesRow {
     type PrimaryKeyType = u32;
 
-    fn read_row<T: std::io::Read>(reader: &mut T) -> Result<Self>
+    fn read_row<T: std::io::Read>(reader: &mut T, _string_table: &StringTable) -> Result<Self>
     where
         Self: Sized,
     {
@@ -34,8 +37,7 @@ impl super::DBCRowType for DBCCharClassesRow {
         let _unk1 = reader.read_u32::<LittleEndian>()?;
         let power_type = reader.read_u32::<LittleEndian>()?;
 
-        //Have to tell the compiler to not use the default Read
-        <T as ReadPodExt>::read_exact(reader, 56 * 4)?; //skip 56 u32 fields of no interest
+        reader.skip::<u32>(56)?; //skip 56 u32 fields of no interest
         let required_expansion = reader.read_u32::<LittleEndian>()?;
 
         Ok(DBCCharClassesRow {

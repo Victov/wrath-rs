@@ -25,7 +25,7 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
     let auth_db_handle = auth_db.clone();
     async_std::task::spawn(async move {
         let mut heartbeat_interval = async_std::stream::interval(std::time::Duration::from_secs(5));
-        while let Some(_) = heartbeat_interval.next().await {
+        while (heartbeat_interval.next().await).is_some() {
             let hashtable = hbwrlock_copy.read().unwrap().clone();
             for (&realm_id, &heartbeat) in &hashtable {
                 if Instant::now().duration_since(heartbeat).as_secs() > HEARTBEAT_TIMEOUT_SECONDS {

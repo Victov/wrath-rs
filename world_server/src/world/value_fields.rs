@@ -26,7 +26,7 @@ pub trait HasValueFields: ValueFieldsRaw {
     fn set_byte(&mut self, field: usize, byte_index: usize, value: u8) -> Result<()> {
         let old_val = self.get_field_u32(field)?;
         let shifted_value = (value as u32) << (byte_index * 8);
-        let mask = !(0xFF << byte_index * 8);
+        let mask = !(0xFF << (byte_index * 8));
         let new_val = old_val & mask | shifted_value;
         self.set_field_u32(field, new_val)
     }

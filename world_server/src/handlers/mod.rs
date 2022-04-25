@@ -60,3 +60,8 @@ pub use queries_handler::handle_cmsg_world_state_ui_timer_update;
 
 pub mod movement_handler;
 pub use movement_handler::handle_movement_generic;
+pub use movement_handler::handle_msg_move_teleport_ack;
+pub use movement_handler::handle_msg_move_worldport_ack;
+pub use movement_handler::send_msg_move_teleport_ack;
+pub use movement_handler::send_smsg_new_world;
+pub use movement_handler::send_smsg_transfer_pending;

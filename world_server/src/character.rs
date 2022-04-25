@@ -3,13 +3,15 @@ use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::DBCStorage;
 use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::handlers::movement_handler::{TeleportationDistance, TeleportationState};
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
+use crate::world::World;
 use crate::ClientManager;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
-use std::sync::Weak;
+use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
 use wrath_realm_db::RealmDatabase;
 
@@ -22,7 +24,7 @@ pub struct Character {
     pub race: u8,
     pub class: u8,
     pub gender: u8,
-    pub position: PositionAndOrientation,
+    pub movement_info: MovementInfo,
 
     pub map: u32,
     pub zone: u32,
@@ -52,6 +54,9 @@ pub struct Character {
     //time sync
     pub time_sync_counter: u32,
     time_sync_cooldown: f32,
+
+    //Teleporting
+    pub teleportation_state: TeleportationState,
 }
 
 impl Character {
@@ -63,7 +68,7 @@ impl Character {
             race: 0,
             class: 0,
             gender: 0,
-            position: PositionAndOrientation::default(),
+            movement_info: MovementInfo::default(),
             map: 0,
             zone: 0,
             instance_id: 0,
@@ -81,6 +86,7 @@ impl Character {
             recently_removed_guids: vec![],
             time_sync_counter: 0,
             time_sync_cooldown: 0f32,
+            teleportation_state: TeleportationState::None,
         }
     }
 
@@ -92,19 +98,25 @@ impl Character {
             x: db_entry.bind_x,
             y: db_entry.bind_y,
             z: db_entry.bind_z,
+            o: 0.0, //store in DB?
         });
         self.map = db_entry.map as u32;
-        self.position.x = db_entry.x;
-        self.position.y = db_entry.y;
-        self.position.z = db_entry.z;
-        self.position.o = db_entry.o;
+        self.movement_info = MovementInfo {
+            position: PositionAndOrientation {
+                x: db_entry.x,
+                y: db_entry.y,
+                z: db_entry.z,
+                o: db_entry.o,
+            },
+            ..Default::default()
+        };
         self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
         let character_id = self.guid.get_low_part();
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
-        if character_account_data.len() == 0 {
+        if character_account_data.is_empty() {
             handlers::create_empty_character_account_data_rows(realm_database, character_id).await?;
         }
 
@@ -148,22 +160,25 @@ impl Character {
         Ok(())
     }
 
-    pub async fn perform_login(&self, client_manager: &ClientManager) -> Result<()> {
-        handlers::send_verify_world(&self).await?;
-        handlers::send_dungeon_difficulty(&self).await?;
-        handlers::send_character_account_data_times(client_manager, &self).await?;
-        handlers::send_voice_chat_status(&self, false).await?;
-        handlers::send_bind_update(&self).await?;
-        handlers::send_tutorial_flags(&self).await?;
-        handlers::send_login_set_time_speed(&self).await?;
-        handlers::send_action_buttons(&self).await?;
-        handlers::send_faction_list(&self).await?;
-        handlers::send_initial_spells(&self).await?;
-        handlers::send_talents_info(&self).await?;
-        handlers::send_aura_update_all(&self).await?;
-        handlers::send_contact_list(&self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
-        handlers::send_initial_world_states(&self).await?;
-        handlers::send_time_sync(&self).await?;
+    pub async fn send_packets_before_add_to_map(&self, _client_manager: &ClientManager) -> Result<()> {
+        handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
+        handlers::send_bind_update(self).await?;
+        handlers::send_talents_info(self).await?;
+        handlers::send_dungeon_difficulty(self).await?;
+        handlers::send_initial_spells(self).await?;
+        handlers::send_action_buttons(self).await?;
+        handlers::send_initial_world_states(self).await?;
+        handlers::send_login_set_time_speed(self).await
+    }
+
+    pub async fn send_packets_after_add_to_map(&self, client_manager: &ClientManager) -> Result<()> {
+        handlers::send_verify_world(self).await?;
+        handlers::send_character_account_data_times(client_manager, self).await?;
+        handlers::send_voice_chat_status(self, false).await?;
+        handlers::send_tutorial_flags(self).await?;
+        handlers::send_faction_list(self).await?;
+        handlers::send_aura_update_all(self).await?;
+        handlers::send_time_sync(self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
 
@@ -180,17 +195,101 @@ impl Character {
         handlers::send_initial_world_states(self).await
     }
 
-    pub fn process_movement(&mut self, movement_info: &MovementInfo) {
-        self.position = movement_info.position.clone();
+    pub fn reset_time_sync(&mut self) {
+        self.time_sync_cooldown = 0.0;
+        self.time_sync_counter = 0;
     }
 
-    pub async fn tick(&mut self, delta_time: f32) -> Result<()> {
+    pub fn process_movement(&mut self, movement_info: &MovementInfo) {
+        self.movement_info = movement_info.clone();
+    }
+
+    pub fn set_position(&mut self, position: &PositionAndOrientation) {
+        self.movement_info.position = position.clone();
+    }
+
+    pub fn teleport_to(&mut self, destination: TeleportationDistance) {
+        self.teleportation_state = TeleportationState::Queued(destination);
+    }
+
+    pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
         self.time_sync_cooldown -= delta_time;
         if self.time_sync_cooldown < 0f32 {
             self.time_sync_cooldown += 10f32;
             self.time_sync_counter += 1;
             handlers::send_time_sync(self).await?;
+
+            //TEMP TESTING CODE DELETE ME
+            if self.time_sync_counter == 2 {
+                let mut dest_near = self.get_position().clone();
+                dest_near.x += 10.0;
+                self.teleport_to(TeleportationDistance::Near(dest_near));
+            } else if self.time_sync_counter == 40 {
+                let dest_far = WorldZoneLocation {
+                    x: -6240.0,
+                    y: 331.0,
+                    z: 390.0,
+                    o: 6.0,
+                    zone: 0,
+                    map: 0,
+                };
+                self.teleport_to(TeleportationDistance::Far(dest_far));
+            }
+            //END TEMP TESTING CODE
         }
+
+        self.handle_queued_teleport(world)
+            .await
+            .unwrap_or_else(|e| warn!("Could not teleport player {}: Error {}", self.name, e));
+
+        Ok(())
+    }
+
+    async fn handle_queued_teleport(&mut self, world: Arc<World>) -> Result<()> {
+        //Handle the possibility that the player may have logged out
+        //between queuing and handling the teleport
+
+        let state = self.teleportation_state.clone();
+        match state {
+            TeleportationState::Queued(TeleportationDistance::Near(dest)) => self.execute_near_teleport(dest.clone()).await?,
+            TeleportationState::Queued(TeleportationDistance::Far(dest)) => self.execute_far_teleport(dest.clone(), world).await?,
+            _ => {}
+        };
+
+        Ok(())
+    }
+
+    async fn execute_near_teleport(&mut self, destination: PositionAndOrientation) -> Result<()> {
+        //The rest of the teleportation is handled when the client sends back this packet
+
+        self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Near(destination.clone()));
+
+        handlers::send_msg_move_teleport_ack(self, &destination).await?;
+        Ok(())
+    }
+
+    async fn execute_far_teleport(&mut self, destination: WorldZoneLocation, world: Arc<World>) -> Result<()> {
+        if self.map == destination.map {
+            //This was not actually a far teleport. It should have been a near teleport since we're
+            //on the same map.
+            self.teleport_to(TeleportationDistance::Near(destination.into()));
+            return Ok(());
+        }
+
+        handlers::send_smsg_transfer_pending(self, destination.map).await?;
+
+        let old_map = world
+            .get_instance_manager()
+            .try_get_map_for_character(self)
+            .await
+            .ok_or_else(|| anyhow!("Player is teleporting away from an invalid map"))?;
+
+        old_map.remove_object_by_guid(&self.guid).await;
+
+        let wzl = destination.clone().into();
+        handlers::send_smsg_new_world(self, destination.map, &wzl).await?;
+
+        self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Far(destination));
         Ok(())
     }
 }
@@ -201,7 +300,11 @@ impl MapObject for Character {
     }
 
     fn get_position(&self) -> &PositionAndOrientation {
-        &self.position
+        &self.movement_info.position
+    }
+
+    fn get_movement_info(&self) -> &MovementInfo {
+        &self.movement_info
     }
 
     fn get_type(&self) -> updates::ObjectType {
@@ -220,7 +323,7 @@ impl MapObject for Character {
 
     fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn MapObjectWithValueFields>>) -> Result<()> {
         assert!(!self.is_in_range(guid));
-        self.in_range_objects.insert(guid.clone(), object);
+        self.in_range_objects.insert(*guid, object);
         Ok(())
     }
 
@@ -230,8 +333,12 @@ impl MapObject for Character {
 
     fn remove_in_range_object(&mut self, guid: &Guid) -> Result<()> {
         self.in_range_objects.remove(guid);
-        self.recently_removed_guids.push(guid.clone());
+        self.recently_removed_guids.push(*guid);
         Ok(())
+    }
+
+    fn clear_in_range_objects(&mut self) {
+        self.in_range_objects.clear();
     }
 
     fn get_recently_removed_range_guids(&self) -> &Vec<Guid> {
@@ -273,7 +380,7 @@ impl ReceiveUpdates for Character {
     async fn process_pending_updates(&mut self) -> Result<()> {
         let (num, buf) = self.get_update_blocks();
         if num > 0 {
-            handlers::send_update_packet(self, num, &buf).await?;
+            handlers::send_update_packet(self, num, buf).await?;
             self.clear_update_blocks();
         }
         Ok(())

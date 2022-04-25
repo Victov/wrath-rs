@@ -4,6 +4,7 @@ use super::opcodes::Opcodes;
 use super::packet::*;
 use super::wowcrypto::*;
 use crate::prelude::*;
+use crate::world::World;
 use async_std::net::TcpStream;
 use async_std::sync::{Mutex, RwLock};
 use rand::RngCore;
@@ -40,10 +41,10 @@ impl Client {
         }
     }
 
-    pub async fn tick(&self, delta_time: f32) -> Result<()> {
+    pub async fn tick(&self, delta_time: f32, world: Arc<World>) -> Result<()> {
         if let Some(character_lock) = &self.active_character {
             let mut character = character_lock.write().await;
-            character.tick(delta_time).await?;
+            character.tick(delta_time, world).await?;
         }
         Ok(())
     }
@@ -78,7 +79,7 @@ impl Client {
         writer.write_u32::<LittleEndian>(1)?;
         writer.write_u32::<LittleEndian>(realm_seed)?;
         let seed1 = rand::thread_rng().gen_biguint(32 * 8);
-        writer.write(&seed1.to_bytes_le())?;
+        writer.write_all(&seed1.to_bytes_le())?;
 
         send_packet(self, &header, &writer).await?;
         Ok(())
@@ -89,7 +90,7 @@ impl Client {
     }
 
     pub async fn load_and_set_active_character(&mut self, client_manager: &ClientManager, character_guid: Guid) -> Result<()> {
-        let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?.clone());
+        let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?);
         let mut character = Character::new(weakself, character_guid);
         character
             .load_from_database(&client_manager.dbc_storage, &client_manager.realm_db)
@@ -100,23 +101,18 @@ impl Client {
 
     pub async fn login_active_character(&self, client_manager: &ClientManager) -> Result<()> {
         let character_lock = self.active_character.as_ref().unwrap();
-        let character_instance_id;
+        let character = character_lock.read().await;
+        character.send_packets_before_add_to_map(client_manager).await?;
 
-        //Operations that can happen within a read lock
-        {
-            let character = character_lock.read().await;
-            character_instance_id = character.instance_id;
-            character.perform_login(client_manager).await?;
-        }
-
-        //This one must have no locks because it needs a write lock
         client_manager
             .world
             .get_instance_manager()
-            .get_or_create_map_for_instance(character_instance_id)
-            .await
-            .push_object(Arc::downgrade(&character_lock))
-            .await?;
+            .get_or_create_map(&(*character), character.map)
+            .await?
+            .push_object(Arc::downgrade(character_lock))
+            .await;
+
+        character.send_packets_after_add_to_map(client_manager).await?;
 
         Ok(())
     }

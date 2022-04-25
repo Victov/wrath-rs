@@ -1,6 +1,7 @@
 //see https://github.com/arcemu/arcemu/blob/master/src/world/Game/Entities/Update/UpdateBuilder.cpp
 //for reference
 
+use crate::data::WriteMovementInfo;
 use crate::prelude::*;
 use podio::{LittleEndian, WritePodExt};
 use std::io::Cursor;
@@ -20,7 +21,6 @@ pub trait MapObjectWithValueFields: MapObject + HasValueFields {}
 impl<T> MapObjectWithValueFields for T where T: MapObject + HasValueFields {}
 
 pub fn build_create_update_block_for_player(player: &dyn MapObjectWithValueFields, object: &dyn MapObjectWithValueFields) -> Result<(u32, Vec<u8>)> {
-    let flags2: u32 = 0;
     let outputbuf = Vec::<u8>::new();
     let mut update_type = ObjectUpdateType::CreateObject as u8;
     let mut writer = Cursor::new(outputbuf);
@@ -43,14 +43,14 @@ pub fn build_create_update_block_for_player(player: &dyn MapObjectWithValueField
     }
 
     writer.write_u8(update_type)?;
-    writer.write_guid_compressed(&object.get_guid())?;
+    writer.write_guid_compressed(object.get_guid())?;
 
     writer.write_u8(object.get_type() as u8)?;
 
-    build_movement_update(&mut writer, flags, flags2, object)?;
+    build_movement_update(&mut writer, flags, object)?;
 
     let mut update_mask = UpdateMask::new(object.get_num_value_fields());
-    object.set_mask_for_create_bits(&mut &mut update_mask)?;
+    object.set_mask_for_create_bits(&mut update_mask)?;
     update_mask.set_bit(ObjectFields::HighGuid as usize, true)?; //override if it wasn't detected
 
     build_values_update(&mut writer, object, &update_mask)?;
@@ -71,7 +71,7 @@ pub fn build_values_update_block(object: &dyn MapObjectWithValueFields) -> Resul
 
 pub fn build_out_of_range_update_block_for_player(player: &dyn MapObjectWithValueFields) -> Result<(u32, Vec<u8>)> {
     let out_of_range_guids = player.get_recently_removed_range_guids();
-    if out_of_range_guids.len() == 0 {
+    if out_of_range_guids.is_empty() {
         return Ok((0, vec![]));
     }
 
@@ -97,26 +97,17 @@ pub fn build_movement_update_block(object: &dyn MapObjectWithValueFields) -> Res
 
     writer.write_u8(update_type)?;
     writer.write_guid_compressed(object.get_guid())?;
-    build_movement_update(&mut writer, 0x70, 0, object)?;
+    build_movement_update(&mut writer, 0x70, object)?;
     Ok((1, writer.into_inner()))
 }
 
-fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, flags2: u32, object: &dyn MapObjectWithValueFields) -> Result<()> {
+fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, object: &dyn MapObjectWithValueFields) -> Result<()> {
     writer.write_u16::<LittleEndian>(flags)?;
 
     //Only implemented for living things for now
     if flags & (ObjectUpdateFlags::Living as u16) > 0 {
-        writer.write_u32::<LittleEndian>(flags2)?;
-        writer.write_u16::<LittleEndian>(0)?; //extra move flags (vehicles stuff)
-        writer.write_u32::<LittleEndian>(0)?; //time stamp milliseconds?
-
-        let position = object.get_position();
-        writer.write_f32::<LittleEndian>(position.x)?;
-        writer.write_f32::<LittleEndian>(position.y)?;
-        writer.write_f32::<LittleEndian>(position.z)?;
-        writer.write_f32::<LittleEndian>(position.o)?;
-
-        writer.write_u32::<LittleEndian>(0)?; // fall time
+        let movement_info = object.get_movement_info();
+        writer.write_movement_info(movement_info)?;
 
         writer.write_f32::<LittleEndian>(1.0f32)?; //Walk speed
         writer.write_f32::<LittleEndian>(8.0f32)?; //Run speed

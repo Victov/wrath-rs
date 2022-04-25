@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use anyhow::Result;
 
 mod tutorial_flags;
@@ -16,20 +18,39 @@ pub mod guid;
 
 pub use dbc::*;
 
+#[derive(PartialEq, Debug, Default, Clone)]
 pub struct WorldZoneLocation {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+    pub o: f32,
     pub zone: u32,
     pub map: u32,
 }
 
-#[derive(Default, Clone)]
+#[derive(PartialEq, Debug, Default, Clone)]
 pub struct PositionAndOrientation {
     pub x: f32,
     pub y: f32,
     pub z: f32,
     pub o: f32,
+}
+
+impl Display for PositionAndOrientation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(x{}, y{}, z{}, o{})", self.x, self.y, self.z, self.o)
+    }
+}
+
+impl From<WorldZoneLocation> for PositionAndOrientation {
+    fn from(wzl: WorldZoneLocation) -> Self {
+        Self {
+            x: wzl.x,
+            y: wzl.y,
+            z: wzl.z,
+            o: wzl.o,
+        }
+    }
 }
 
 pub trait ReadPositionAndOrientation {

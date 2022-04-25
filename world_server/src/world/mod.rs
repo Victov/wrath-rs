@@ -19,6 +19,7 @@ pub mod prelude {
     pub use super::value_fields::*;
 }
 
+#[derive(Default)]
 pub struct World {
     instance_manager: Arc<InstanceManager>,
 }

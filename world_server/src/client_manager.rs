@@ -41,7 +41,7 @@ impl ClientManager {
         let clients = self.clients.read().await;
         for (_, client_lock) in clients.iter() {
             let client = client_lock.read().await;
-            client.tick(delta_time).await?;
+            client.tick(delta_time, self.world.clone()).await?;
         }
 
         Ok(())
@@ -72,12 +72,12 @@ impl ClientManager {
             }
             result
         };
-        if to_remove.len() == 0 {
+        if to_remove.is_empty() {
             return Ok(());
         }
 
         let mut write_clients = self.clients.write().await;
-        write_clients.retain(|id, _| !to_remove.contains(&id));
+        write_clients.retain(|id, _| !to_remove.contains(id));
         info!("Cleaned up {} clients, {} clients left online", to_remove.len(), write_clients.len());
 
         Ok(())
@@ -107,7 +107,6 @@ impl ClientManager {
 
             client_lock.read().await.send_auth_challenge(realm_seed).await.unwrap_or_else(|e| {
                 error!("Error while sending auth challenge: {:?}", e);
-                return;
             });
 
             task::spawn(async move {
@@ -157,7 +156,7 @@ async fn handle_incoming_packets(
             let client = client_lock.read().await;
             let header = super::packet::read_header(&buf, ptr, &client).await?;
             let payload_length = header.length as usize;
-            let shrunk_buf = buf.iter().skip(ptr + 6).take(payload_length).map(|a| *a).collect();
+            let shrunk_buf = buf.iter().skip(ptr + 6).take(payload_length).copied().collect();
             packet_channel.send(PacketToHandle {
                 client_id: client.id,
                 header,
