@@ -3,7 +3,11 @@ use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::DBCStorage;
 use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
-use crate::handlers::movement_handler::{TeleportationDistance, TeleportationState};
+use crate::handlers::login_handler::{LogoutResult, LogoutSpeed};
+use crate::handlers::{
+    login_handler::LogoutState,
+    movement_handler::{TeleportationDistance, TeleportationState},
+};
 use crate::prelude::*;
 use crate::world::character_value_fields::CharacterValueFields;
 use crate::world::prelude::updates::ObjectType;
@@ -57,6 +61,8 @@ pub struct Character {
 
     //Teleporting
     pub teleportation_state: TeleportationState,
+
+    pub logout_state: LogoutState,
 }
 
 impl Character {
@@ -87,6 +93,7 @@ impl Character {
             time_sync_counter: 0,
             time_sync_cooldown: 0f32,
             teleportation_state: TeleportationState::None,
+            logout_state: LogoutState::None,
         }
     }
 
@@ -213,30 +220,8 @@ impl Character {
     }
 
     pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
-        self.time_sync_cooldown -= delta_time;
-        if self.time_sync_cooldown < 0f32 {
-            self.time_sync_cooldown += 10f32;
-            self.time_sync_counter += 1;
-            handlers::send_time_sync(self).await?;
-
-            //TEMP TESTING CODE DELETE ME
-            if self.time_sync_counter == 2 {
-                let mut dest_near = self.get_position().clone();
-                dest_near.x += 10.0;
-                self.teleport_to(TeleportationDistance::Near(dest_near));
-            } else if self.time_sync_counter == 40 {
-                let dest_far = WorldZoneLocation {
-                    x: -6240.0,
-                    y: 331.0,
-                    z: 390.0,
-                    o: 6.0,
-                    zone: 0,
-                    map: 0,
-                };
-                self.teleport_to(TeleportationDistance::Far(dest_far));
-            }
-            //END TEMP TESTING CODE
-        }
+        self.tick_time_sync(delta_time).await?;
+        self.tick_logout_state(delta_time, world.clone()).await?;
 
         self.handle_queued_teleport(world)
             .await
@@ -257,6 +242,30 @@ impl Character {
         };
 
         Ok(())
+    }
+
+    async fn tick_time_sync(&mut self, delta_time: f32) -> Result<()> {
+        self.time_sync_cooldown -= delta_time;
+        if self.time_sync_cooldown < 0f32 {
+            self.time_sync_cooldown += 10f32;
+            self.time_sync_counter += 1;
+            handlers::send_time_sync(self).await?;
+        }
+        Ok(())
+    }
+
+    async fn tick_logout_state(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
+        match &mut self.logout_state {
+            LogoutState::Pending(duration_left) => {
+                *duration_left = duration_left.saturating_sub(std::time::Duration::from_secs_f32(delta_time));
+                if duration_left.is_zero() {
+                    self.logout_state = LogoutState::Executing;
+                }
+                Ok(())
+            }
+            LogoutState::Executing => self.execute_logout(world).await,
+            _ => Ok(()),
+        }
     }
 
     async fn execute_near_teleport(&mut self, destination: PositionAndOrientation) -> Result<()> {
@@ -291,6 +300,46 @@ impl Character {
 
         self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Far(destination));
         Ok(())
+    }
+
+    pub async fn try_logout(&mut self) -> (LogoutResult, LogoutSpeed) {
+        //TODO: add checks about being in rested area (instant logout), being in combat (refuse), etc
+
+        match self.logout_state {
+            LogoutState::None => {
+                self.logout_state = LogoutState::Pending(std::time::Duration::from_secs(20));
+                (LogoutResult::Success, LogoutSpeed::Delayed)
+            }
+            _ => (LogoutResult::Success, LogoutSpeed::Instant),
+        }
+    }
+
+    pub async fn cancel_logout(&mut self) {
+        if let LogoutState::Pending(_) = self.logout_state {
+            self.logout_state = LogoutState::None;
+        } else {
+        }
+    }
+
+    //This function will trigger every tick as long as the state is LogoutState::Executing
+    async fn execute_logout(&mut self, world: Arc<World>) -> Result<()> {
+        if self.teleportation_state != TeleportationState::None {
+            return Ok(());
+        }
+
+        world
+            .get_instance_manager()
+            .try_get_map_for_character(self)
+            .await
+            .ok_or_else(|| anyhow!("Invalid map during logout"))?
+            .remove_object_by_guid(&self.guid)
+            .await;
+
+        //TODO: client still has active character. This needs to be cleaned up
+        // And kick client state back into "character selection"!
+        // Can't call client::disconnect since that'll close sockets!
+
+        handlers::send_smsg_logout_complete(self).await
     }
 }
 

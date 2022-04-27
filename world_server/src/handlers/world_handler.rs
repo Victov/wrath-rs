@@ -16,7 +16,7 @@ pub async fn handle_cmsg_zoneupdate(client_manager: &Arc<ClientManager>, packet:
     let character_lock = client
         .active_character
         .as_ref()
-        .ok_or(anyhow!("Trying to handle zoneupdate, but no character is active for this client"))?
+        .ok_or_else(|| anyhow!("Trying to handle zoneupdate, but no character is active for this client"))?
         .clone();
 
     let zone_id = {

@@ -212,7 +212,7 @@ pub async fn handle_cmsg_realm_split(client_manager: &Arc<ClientManager>, packet
     let (header, mut writer) = create_packet(Opcodes::SMSG_REALM_SPLIT, 12);
     writer.write_u32::<LittleEndian>(realm_id)?;
     writer.write_u32::<LittleEndian>(RealmSplitState::Normal as u32)?; //Realm splitting not implemented
-    writer.write("01/01/01".as_bytes())?;
+    writer.write_all("01/01/01".as_bytes())?;
     writer.write_u8(0)?; //string terminator
 
     {
@@ -248,4 +248,75 @@ pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
     send_packet_to_character(character, &header, &writer).await?;
 
     Ok(())
+}
+
+#[derive(Debug)]
+pub enum LogoutState {
+    None,
+    Pending(std::time::Duration),
+    Executing,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum LogoutResult {
+    Success,
+    FailInCombat,
+    FailFrozenByGM,
+    FailJumpingOrFalling,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum LogoutSpeed {
+    Delayed,
+    Instant,
+}
+
+pub async fn handle_cmsg_logout_request(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    info!("received logout rquest");
+
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_lock.read().await;
+    if !client.is_authenticated() {
+        bail!("Trying to handle logout for character that isn't authenticated");
+    }
+    let character_lock = client
+        .active_character
+        .as_ref()
+        .ok_or_else(|| anyhow!("Trying to handle logout, but no character is active for this client"))?
+        .clone();
+
+    let (result, speed) = {
+        let mut character = character_lock.write().await;
+        character.try_logout().await
+    };
+
+    let (header, mut writer) = create_packet(Opcodes::SMSG_LOGOUT_RESPONSE, 5);
+    writer.write_u16::<LittleEndian>(result as u16)?;
+    writer.write_u16::<LittleEndian>(speed as u16)?;
+    send_packet(&client, &header, &writer).await
+}
+
+pub async fn handle_cmsg_logout_cancel(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_lock.read().await;
+    if !client.is_authenticated() {
+        bail!("Trying to handle logout cancel for character that isn't authenticated");
+    }
+    let character_lock = client
+        .active_character
+        .as_ref()
+        .ok_or_else(|| anyhow!("Trying to handle logout cancel, but no character is active for this client"))?
+        .clone();
+
+    let mut character = character_lock.write().await;
+    character.cancel_logout().await;
+
+    let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_CANCEL_ACK, 0);
+    send_packet(&client, &header, &writer).await
+}
+
+pub async fn send_smsg_logout_complete(character: &Character) -> Result<()> {
+    let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_COMPLETE, 0);
+    send_packet_to_character(character, &header, &writer).await
 }
