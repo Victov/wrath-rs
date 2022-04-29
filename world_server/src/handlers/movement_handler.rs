@@ -5,6 +5,8 @@ use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
+use crate::world::map_object::MapObject;
+use crate::world::prelude::stand_state::UnitStandState;
 use async_std::sync::RwLockUpgradableReadGuard;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::sync::Arc;
@@ -119,4 +121,24 @@ pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, 
     }
 
     Ok(())
+}
+
+pub async fn send_smsg_stand_state_update(character: &Character, stand_state: UnitStandState) -> Result<()> {
+    let (header, mut writer) = create_packet(Opcodes::SMSG_STANDSTATE_UPDATE, 1);
+    writer.write_u8(stand_state as u8)?;
+    send_packet_to_character(character, &header, &writer).await
+}
+
+pub async fn send_smsg_force_move_root(character: &Character) -> Result<()> {
+    let (header, mut writer) = create_packet(Opcodes::SMSG_FORCE_MOVE_ROOT, 4);
+    writer.write_guid_compressed(character.get_guid())?;
+    writer.write_u32::<LittleEndian>(0)?;
+    send_packet_to_character(character, &header, &writer).await
+}
+
+pub async fn send_smsg_force_move_unroot(character: &Character) -> Result<()> {
+    let (header, mut writer) = create_packet(Opcodes::SMSG_FORCE_MOVE_UNROOT, 4);
+    writer.write_guid_compressed(character.get_guid())?;
+    writer.write_u32::<LittleEndian>(0)?;
+    send_packet_to_character(character, &header, &writer).await
 }

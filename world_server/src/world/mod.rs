@@ -2,21 +2,26 @@ use crate::prelude::*;
 use instance_manager::InstanceManager;
 use std::sync::Arc;
 
-pub mod character_value_fields;
+pub mod character_value_helpers;
 mod instance_manager;
 pub mod map_cell;
 mod map_manager;
 pub mod map_object;
+pub mod unit_value_helpers;
 pub mod update_builder;
 pub mod value_fields;
 
 pub mod prelude {
+    pub use super::super::constants::updates::*;
     pub use super::super::constants::*;
+    pub use super::character_value_helpers::CharacterValueHelpers;
     pub use super::map_cell::*;
     pub use super::map_manager::*;
     pub use super::map_object::*;
+    pub use super::unit_value_helpers::UnitValueHelpers;
     pub use super::update_builder::*;
     pub use super::value_fields::*;
+    pub use super::World;
 }
 
 #[derive(Default)]

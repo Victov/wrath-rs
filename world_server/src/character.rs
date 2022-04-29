@@ -9,9 +9,6 @@ use crate::handlers::{
     movement_handler::{TeleportationDistance, TeleportationState},
 };
 use crate::prelude::*;
-use crate::world::character_value_fields::CharacterValueFields;
-use crate::world::prelude::updates::ObjectType;
-use crate::world::World;
 use crate::ClientManager;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
@@ -302,20 +299,23 @@ impl Character {
         Ok(())
     }
 
-    pub async fn try_logout(&mut self) -> (LogoutResult, LogoutSpeed) {
+    pub async fn try_logout(&mut self) -> Result<(LogoutResult, LogoutSpeed)> {
         //TODO: add checks about being in rested area (instant logout), being in combat (refuse), etc
 
         if self
             .movement_info
             .has_any_movement_flag(&[MovementFlags::Falling, MovementFlags::FallingFar])
         {
-            return (LogoutResult::FailJumpingOrFalling, LogoutSpeed::Delayed);
+            return Ok((LogoutResult::FailJumpingOrFalling, LogoutSpeed::Delayed));
         }
 
         let delayed = true;
-        match self.logout_state {
+        Ok(match self.logout_state {
             LogoutState::None if delayed => {
                 self.logout_state = LogoutState::Pending(std::time::Duration::from_secs(20));
+                self.set_stunned(true)?;
+                self.set_rooted(true).await?;
+                self.set_character_stand_state(stand_state::UnitStandState::Sit).await?;
                 (LogoutResult::Success, LogoutSpeed::Delayed)
             }
             LogoutState::None if !delayed => {
@@ -323,14 +323,18 @@ impl Character {
                 (LogoutResult::Success, LogoutSpeed::Instant)
             }
             _ => (LogoutResult::Success, LogoutSpeed::Instant),
-        }
+        })
     }
 
-    pub async fn cancel_logout(&mut self) {
+    pub async fn cancel_logout(&mut self) -> Result<()> {
         if let LogoutState::Pending(_) = self.logout_state {
+            self.set_stunned(false)?;
+            self.set_rooted(false).await?;
+            self.set_character_stand_state(stand_state::UnitStandState::Stand).await?;
             self.logout_state = LogoutState::None;
         } else {
         }
+        Ok(())
     }
 
     //This function will trigger every tick as long as the state is LogoutState::Executing

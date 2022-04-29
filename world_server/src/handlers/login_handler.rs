@@ -265,7 +265,7 @@ pub async fn handle_cmsg_logout_request(client_manager: &Arc<ClientManager>, pac
 
     let (result, speed) = {
         let mut character = character_lock.write().await;
-        character.try_logout().await
+        character.try_logout().await?
     };
 
     let (header, mut writer) = create_packet(Opcodes::SMSG_LOGOUT_RESPONSE, 5);
@@ -280,7 +280,7 @@ pub async fn handle_cmsg_logout_cancel(client_manager: &Arc<ClientManager>, pack
 
     {
         let mut character = character_lock.write().await;
-        character.cancel_logout().await;
+        character.cancel_logout().await?;
     }
 
     let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_CANCEL_ACK, 0);

@@ -1,7 +1,8 @@
-use super::value_fields::{HasValueFields, UnitFields};
+use super::value_fields::{HasValueFields, UnitFields, UnitFlags};
+use crate::constants::stand_state::UnitStandState;
 use crate::{character::Character, prelude::*};
 
-pub trait CharacterValueFields: HasValueFields {
+pub trait UnitValueHelpers: HasValueFields {
     fn set_race(&mut self, race: u8) -> Result<()> {
         self.set_byte(UnitFields::UnitBytes0 as usize, 0, race)
     }
@@ -17,6 +18,14 @@ pub trait CharacterValueFields: HasValueFields {
     fn set_power_type(&mut self, power_type: u8) -> Result<()> {
         self.set_byte(UnitFields::UnitBytes0 as usize, 3, power_type)
     }
+
+    fn set_stunned(&mut self, stunned: bool) -> Result<()> {
+        self.set_unit_flag(UnitFlags::Stunned, stunned)
+    }
+
+    fn set_stand_state(&mut self, state: UnitStandState) -> Result<()> {
+        self.set_byte(UnitFields::UnitBytes1 as usize, 0, state as u8)
+    }
 }
 
-impl CharacterValueFields for Character {}
+impl UnitValueHelpers for Character {}
