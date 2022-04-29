@@ -260,8 +260,6 @@ pub enum LogoutSpeed {
 }
 
 pub async fn handle_cmsg_logout_request(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    info!("received logout rquest");
-
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 

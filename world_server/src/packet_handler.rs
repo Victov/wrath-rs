@@ -93,7 +93,7 @@ impl PacketHandler {
             Opcodes::CMSG_LOGOUT_REQUEST => handle_cmsg_logout_request(client_manager, packet).await,
             Opcodes::CMSG_LOGOUT_CANCEL => handle_cmsg_logout_cancel(client_manager, packet).await,
 
-            op => Err(anyhow!("Unhandled opcode {:?}", op)),
+            _ => bail!("Unhandled opcode"),
         }
     }
 }

@@ -2,7 +2,7 @@ use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::DBCStorage;
-use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::data::{ActionBar, MovementFlags, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::handlers::login_handler::{LogoutResult, LogoutSpeed};
 use crate::handlers::{
     login_handler::LogoutState,
@@ -305,10 +305,22 @@ impl Character {
     pub async fn try_logout(&mut self) -> (LogoutResult, LogoutSpeed) {
         //TODO: add checks about being in rested area (instant logout), being in combat (refuse), etc
 
+        if self
+            .movement_info
+            .has_any_movement_flag(&[MovementFlags::Falling, MovementFlags::FallingFar])
+        {
+            return (LogoutResult::FailJumpingOrFalling, LogoutSpeed::Delayed);
+        }
+
+        let delayed = true;
         match self.logout_state {
-            LogoutState::None => {
+            LogoutState::None if delayed => {
                 self.logout_state = LogoutState::Pending(std::time::Duration::from_secs(20));
                 (LogoutResult::Success, LogoutSpeed::Delayed)
+            }
+            LogoutState::None if !delayed => {
+                self.logout_state = LogoutState::Executing;
+                (LogoutResult::Success, LogoutSpeed::Instant)
             }
             _ => (LogoutResult::Success, LogoutSpeed::Instant),
         }
