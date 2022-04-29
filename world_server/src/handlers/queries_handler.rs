@@ -10,16 +10,8 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub async fn handle_cmsg_played_time(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
-    if !client.is_authenticated() {
-        bail!("Trying to request playtime for character that isn't authenticated");
-    }
-    let character_lock = client
-        .active_character
-        .as_ref()
-        .ok_or(anyhow!("Trying to obtain played time, but no character is active for this client"))?
-        .clone();
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
 
     let (playtime_total, playtime_level) = {
         let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
@@ -45,8 +37,7 @@ pub async fn handle_cmsg_played_time(client_manager: &Arc<ClientManager>, packet
 }
 
 pub async fn handle_cmsg_query_time(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
+    let client = client_manager.get_client(packet.client_id).await?;
     let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
     let (header, mut writer) = create_packet(Opcodes::SMSG_QUERY_TIME_RESPONSE, 8);
     writer.write_u32::<LittleEndian>(unix_time)?;
@@ -56,8 +47,7 @@ pub async fn handle_cmsg_query_time(client_manager: &Arc<ClientManager>, packet:
 }
 
 pub async fn handle_cmsg_world_state_ui_timer_update(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
+    let client = client_manager.get_client(packet.client_id).await?;
     let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
     let (header, mut writer) = create_packet(Opcodes::SMSG_WORLD_STATE_UI_TIMER_UPDATE, 4);
     writer.write_u32::<LittleEndian>(unix_time)?;
@@ -66,16 +56,8 @@ pub async fn handle_cmsg_world_state_ui_timer_update(client_manager: &Arc<Client
 }
 
 pub async fn handle_cmsg_name_query(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
-    if !client.is_authenticated() {
-        bail!("Trying to handle name query for character that isn't authenticated");
-    }
-    let character_lock = client
-        .active_character
-        .as_ref()
-        .ok_or(anyhow!("Trying to handle name query, but no character is active for this client"))?
-        .clone();
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
 
     let requested_player_guid = {
         let mut reader = std::io::Cursor::new(&packet.payload);

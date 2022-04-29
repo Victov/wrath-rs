@@ -21,16 +21,8 @@ pub async fn send_tutorial_flags(character: &Character) -> Result<()> {
 }
 
 pub async fn handle_cmsg_tutorial_flag(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
-    if !client.is_authenticated() {
-        bail!("Trying to set tutorial flag for character that isn't authenticated");
-    }
-    let character_lock = client
-        .active_character
-        .as_ref()
-        .ok_or(anyhow!("Trying to set tutorial flag, but no character is active for this client"))?
-        .clone();
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
 
     let tut_flag_index: usize = {
         let mut reader = std::io::Cursor::new(&packet.payload);

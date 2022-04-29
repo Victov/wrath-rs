@@ -36,21 +36,13 @@ pub async fn send_aura_update_all(character: &Character) -> Result<()> {
 }
 
 pub async fn handle_cmsg_set_actionbar_toggles(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
-    if !client.is_authenticated() {
-        bail!("Trying to set actionbar toggles for character that isn't authenticated");
-    }
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let actionbar = {
         let mut reader = std::io::Cursor::new(&packet.payload);
         reader.read_u8()?
     };
 
-    let character_lock = client
-        .active_character
-        .as_ref()
-        .ok_or(anyhow!("Trying to set action bar toggles, but no character is active for this client"))?
-        .clone();
+    let character_lock = client.get_active_character().await?;
 
     let mut character = character_lock.write().await;
     (*character).set_byte(PlayerFields::Bytes as usize, 2, actionbar)?;

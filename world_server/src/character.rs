@@ -23,7 +23,7 @@ const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 
 pub struct Character {
     pub guid: Guid,
-    pub client: Weak<RwLock<Client>>,
+    pub client: Weak<Client>,
     pub name: String,
     pub race: u8,
     pub class: u8,
@@ -66,7 +66,7 @@ pub struct Character {
 }
 
 impl Character {
-    pub fn new(client: Weak<RwLock<Client>>, guid: Guid) -> Self {
+    pub fn new(client: Weak<Client>, guid: Guid) -> Self {
         Self {
             guid,
             client,
@@ -335,11 +335,11 @@ impl Character {
             .remove_object_by_guid(&self.guid)
             .await;
 
-        //TODO: client still has active character. This needs to be cleaned up
-        // And kick client state back into "character selection"!
-        // Can't call client::disconnect since that'll close sockets!
+        handlers::send_smsg_logout_complete(self).await?;
 
-        handlers::send_smsg_logout_complete(self).await
+        self.logout_state = LogoutState::ReturnToCharSelect;
+
+        Ok(())
     }
 }
 

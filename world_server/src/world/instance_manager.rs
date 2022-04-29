@@ -110,7 +110,7 @@ impl InstanceManager {
     }
 
     pub async fn handle_client_disconnected(&self, client: &Client) -> Result<()> {
-        if let Some(character_lock) = &client.active_character {
+        if let Some(character_lock) = &client.data.read().await.active_character {
             let active_character = character_lock.read().await;
             let map = self.try_get_map_for_character(&*active_character).await;
             if let Some(map) = map {

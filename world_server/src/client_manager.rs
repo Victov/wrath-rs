@@ -6,9 +6,9 @@ use crate::world::World;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::prelude::*;
 use async_std::stream::StreamExt;
-use async_std::sync::{Mutex, RwLock, RwLockUpgradableReadGuard};
+use async_std::sync::{Mutex, RwLock};
 use async_std::task;
-use rand::RngCore;
+use rand::{thread_rng, RngCore};
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -20,7 +20,7 @@ pub struct ClientManager {
     pub realm_db: Arc<RealmDatabase>,
     pub dbc_storage: Arc<DBCStorage>,
     pub realm_seed: u32,
-    clients: RwLock<HashMap<u64, Arc<RwLock<Client>>>>,
+    clients: RwLock<HashMap<u64, Arc<Client>>>,
     pub world: Arc<World>,
 }
 
@@ -39,8 +39,7 @@ impl ClientManager {
     pub async fn tick(&self, delta_time: f32) -> Result<()> {
         self.cleanup_disconnected_clients().await?;
         let clients = self.clients.read().await;
-        for (_, client_lock) in clients.iter() {
-            let client = client_lock.read().await;
+        for (_, client) in clients.iter() {
             client.tick(delta_time, self.world.clone()).await?;
         }
 
@@ -51,20 +50,18 @@ impl ClientManager {
         let to_remove = {
             let mut result = vec![];
             let clients = self.clients.read().await;
-            for (id, client_lock) in clients.iter() {
-                //We can put a time limit on this, to prevent Tick going over the tick budget when a client disconnects.
-                //Failing to meet the time limit probably means the client is busy with a disconnect action. (closing sockets)
-                //We'll pick up the cleaning some frames later. That's no problem
-                let client_lock_timeout_duration = std::time::Duration::from_millis(2);
-                let client = async_std::future::timeout(client_lock_timeout_duration, client_lock.upgradable_read()).await?;
+            for (id, client) in clients.iter() {
                 //Cleanup is two-staged. Sockets are already closed here, but we take this frame to
                 //be able to remove them from the world and all that cleanup
-                if client.client_state == ClientState::DisconnectPendingCleanup {
-                    self.world.get_instance_manager().handle_client_disconnected(&client).await?;
+                let client_state = {
+                    let data = client.data.read().await;
+                    data.client_state.clone()
+                };
+                if client_state == ClientState::DisconnectPendingCleanup {
+                    self.world.get_instance_manager().handle_client_disconnected(client).await?;
                     //insert more cleanup actions here
-                    let mut client = RwLockUpgradableReadGuard::upgrade(client).await;
                     client.disconnected_post_cleanup().await?;
-                } else if client.client_state == ClientState::Disconnected {
+                } else if client_state == ClientState::Disconnected {
                     //Here the client is disconnected and cleanup is done.
                     //insert id so we can clean that hashmap later
                     result.push(*id);
@@ -94,31 +91,30 @@ impl ClientManager {
             let write_stream = read_stream.clone();
             let read_socket_wrapped = Arc::new(RwLock::new(read_stream));
             let write_socket_wrapped = Arc::new(Mutex::new(write_stream));
-            let client_lock = Arc::new(RwLock::new(Client::new(read_socket_wrapped.clone(), write_socket_wrapped)));
-            let client_id = client_lock.read().await.id;
+            let client_id = thread_rng().next_u64();
+            let client = Arc::new(Client::new(client_id, read_socket_wrapped.clone(), write_socket_wrapped));
 
             {
                 let mut hashmap = self.clients.write().await;
-                hashmap.insert(client_id, client_lock.clone());
+                hashmap.insert(client_id, client.clone());
             }
 
             let realm_seed = self.realm_seed;
-            let packet_channel_for_client = packet_handle_sender.clone();
 
-            client_lock.read().await.send_auth_challenge(realm_seed).await.unwrap_or_else(|e| {
+            client.send_auth_challenge(realm_seed).await.unwrap_or_else(|e| {
                 error!("Error while sending auth challenge: {:?}", e);
             });
 
+            let packet_channel_for_client = packet_handle_sender.clone();
             task::spawn(async move {
-                handle_incoming_packets(client_lock.clone(), read_socket_wrapped, packet_channel_for_client)
+                handle_incoming_packets(client.clone(), read_socket_wrapped, packet_channel_for_client)
                     .await
                     .unwrap_or_else(|e| {
                         warn!("Error while handling packet {:?}", e);
                     });
+
                 //Client stopped handling packets. Probably disconnected. Remove from client list?
-                client_lock
-                    .write()
-                    .await
+                client
                     .disconnect()
                     .await
                     .unwrap_or_else(|e| warn!("Something went wrong while disconnecting client: {:?}", e));
@@ -128,18 +124,22 @@ impl ClientManager {
         Ok(())
     }
 
-    pub async fn get_client(&self, id: u64) -> Result<Arc<RwLock<Client>>> {
+    pub async fn get_authenticated_client(&self, id: u64) -> Result<Arc<Client>> {
+        let client = self.get_client(id).await?;
+        if !client.is_authenticated().await {
+            bail!("Character isn't authenticated");
+        }
+        Ok(client)
+    }
+
+    pub async fn get_client(&self, id: u64) -> Result<Arc<Client>> {
         let hashmap = self.clients.read().await;
         let clientlock = hashmap.get(&id).ok_or_else(|| anyhow!("Failed to get client for client id: {}", id))?;
         Ok(clientlock.clone())
     }
 }
 
-async fn handle_incoming_packets(
-    client_lock: Arc<RwLock<Client>>,
-    socket: Arc<RwLock<TcpStream>>,
-    packet_channel: Sender<PacketToHandle>,
-) -> Result<()> {
+async fn handle_incoming_packets(client: Arc<Client>, socket: Arc<RwLock<TcpStream>>, packet_channel: Sender<PacketToHandle>) -> Result<()> {
     let mut buf = vec![0u8; 4096];
     let mut read_length;
     loop {
@@ -153,7 +153,6 @@ async fn handle_incoming_packets(
         }
         let mut ptr = 0;
         while ptr < read_length {
-            let client = client_lock.read().await;
             let header = super::packet::read_header(&buf, ptr, &client).await?;
             let payload_length = header.length as usize;
             let shrunk_buf = buf.iter().skip(ptr + 6).take(payload_length).copied().collect();
