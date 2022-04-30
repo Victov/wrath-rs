@@ -92,6 +92,8 @@ impl PacketHandler {
             Opcodes::MSG_MOVE_WORLDPORT_ACK => handle_msg_move_worldport_ack(client_manager, packet).await,
             Opcodes::CMSG_LOGOUT_REQUEST => handle_cmsg_logout_request(client_manager, packet).await,
             Opcodes::CMSG_LOGOUT_CANCEL => handle_cmsg_logout_cancel(client_manager, packet).await,
+            Opcodes::CMSG_FORCE_MOVE_ROOT_ACK => Ok(()),   //Don't do anything, disable warning spam
+            Opcodes::CMSG_FORCE_MOVE_UNROOT_ACK => Ok(()), //Don't do anything, disable warning spam
 
             _ => bail!("Unhandled opcode"),
         }
