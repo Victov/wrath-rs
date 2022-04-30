@@ -1,17 +1,9 @@
-
-
-
-use crate::data::{MovementFlags};
+use crate::data::MovementFlags;
 use crate::handlers::login_handler::{LogoutResult, LogoutSpeed};
 use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::prelude::*;
 use crate::world::prelude::*;
-
-
-
-use std::sync::{Arc};
-
-
+use std::sync::Arc;
 
 impl super::Character {
     pub(super) async fn tick_logout_state(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {

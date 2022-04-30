@@ -3,7 +3,6 @@ use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::DBCStorage;
 use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
-
 use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::prelude::*;
 use crate::ClientManager;
