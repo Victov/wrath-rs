@@ -19,6 +19,23 @@ pub trait HasValueFields: ValueFieldsRaw {
         self.set_field_u32(field as usize, value)
     }
 
+    fn set_unit_flag(&mut self, flag: UnitFlags, value: bool) -> Result<()> {
+        let curr_val = self.get_unit_field_u32(UnitFields::UnitFlags)?;
+        let new_val = {
+            if value {
+                curr_val | (flag as u32)
+            } else {
+                curr_val & !(flag as u32)
+            }
+        };
+        self.set_unit_field_u32(UnitFields::UnitFlags, new_val)
+    }
+
+    fn has_unit_flag(&self, flag: UnitFlags) -> Result<bool> {
+        let val = self.get_unit_field_u32(UnitFields::UnitFlags)?;
+        Ok((val & (flag as u32)) > 0)
+    }
+
     fn get_unit_field_u32(&self, field: UnitFields) -> Result<u32> {
         self.get_field_u32(field as usize)
     }

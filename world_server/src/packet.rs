@@ -76,11 +76,10 @@ pub async fn send_packet_to_all_in_range(
 }
 
 pub async fn send_packet_to_character(character: &Character, header: &ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()> {
-    let client_lock = character
+    let client = character
         .client
         .upgrade()
         .ok_or_else(|| anyhow!("failed to get associated client from character"))?;
-    let client = client_lock.read().await;
 
     send_packet(&client, header, payload).await
 }

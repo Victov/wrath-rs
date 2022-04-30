@@ -27,8 +27,9 @@ impl PacketHandler {
 
     pub async fn handle_queue(&self, client_manager: &Arc<ClientManager>) -> Result<()> {
         for packet in self.receive_channel.try_iter() {
+            let op = packet.header.get_cmd()?;
             self.handle_packet(client_manager, &packet).await.unwrap_or_else(|e| {
-                warn!("Error while handling packet: {}", e);
+                warn!("Error while handling packet {:?}: {}", op, e);
             });
         }
 
@@ -40,11 +41,10 @@ impl PacketHandler {
             info!("Incoming: {:?}", packet.header.get_cmd());
         }
         {
-            let client_lock = client_manager.get_client(packet.client_id).await?;
-            let client = client_lock.read().await;
+            let client = client_manager.get_client(packet.client_id).await?;
             //Most likely this won't even be reached since the client manager can't find that
             //client
-            if client.client_state == ClientState::Disconnected {
+            if client.data.read().await.client_state == ClientState::Disconnected {
                 bail!("PacketHandler received a packet for a client that's already disconnected. Ignoring");
             }
         }
@@ -90,8 +90,12 @@ impl PacketHandler {
             Opcodes::CMSG_TIME_SYNC_RESP => handle_cmsg_time_sync_resp(client_manager, packet).await,
             Opcodes::MSG_MOVE_TELEPORT_ACK => handle_msg_move_teleport_ack(client_manager, packet).await,
             Opcodes::MSG_MOVE_WORLDPORT_ACK => handle_msg_move_worldport_ack(client_manager, packet).await,
+            Opcodes::CMSG_LOGOUT_REQUEST => handle_cmsg_logout_request(client_manager, packet).await,
+            Opcodes::CMSG_LOGOUT_CANCEL => handle_cmsg_logout_cancel(client_manager, packet).await,
+            Opcodes::CMSG_FORCE_MOVE_ROOT_ACK => Ok(()),   //Don't do anything, disable warning spam
+            Opcodes::CMSG_FORCE_MOVE_UNROOT_ACK => Ok(()), //Don't do anything, disable warning spam
 
-            op => Err(anyhow!("Unhandled opcode {:?}", op)),
+            _ => bail!("Unhandled opcode"),
         }
     }
 }

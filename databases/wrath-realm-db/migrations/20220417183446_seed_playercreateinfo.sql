@@ -1,4 +1,4 @@
-//Source: https://github.com/mangostwo/database/blob/master/World/Setup/FullDB/playercreateinfo.sql 
+/*Source: https://github.com/mangostwo/database/blob/master/World/Setup/FullDB/playercreateinfo.sql */
 
 LOCK TABLES `playercreateinfo` WRITE;
 INSERT INTO `playercreateinfo` (`race`, `class`, `map`, `zone`, `position_x`, `position_y`, `position_z`, `orientation`) VALUES 

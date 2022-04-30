@@ -13,17 +13,13 @@ use std::sync::Arc;
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
 pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-
-    if !client_lock.read().await.is_authenticated() {
-        return Err(anyhow!("Not authenticated while retrieving character list"));
-    }
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_ENUM, 40);
 
     let characters = client_manager
         .realm_db
-        .get_characters_for_account(client_lock.read().await.account_id.unwrap())
+        .get_characters_for_account(client.data.read().await.account_id.unwrap())
         .await?;
 
     writer.write_u8(characters.len() as u8)?;
@@ -65,7 +61,6 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
         }
     }
 
-    let client = client_lock.read().await;
     send_packet(&client, &header, &writer).await?;
     Ok(())
 }
@@ -102,14 +97,9 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
     use std::io::BufRead;
 
     let mut reader = std::io::Cursor::new(&packet.payload);
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
-    if !client.is_authenticated() {
-        return Err(anyhow!("Unauthenticated client tried to create character"));
-    }
-
-    let account_id = client.account_id.unwrap();
+    let account_id = client.data.read().await.account_id.unwrap();
 
     let create_params = {
         let mut name = Vec::<u8>::new();
@@ -185,21 +175,14 @@ async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -
 }
 
 pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    if !client_lock.read().await.is_authenticated() {
-        return Err(anyhow!("Trying to login character on client that isn't authenticated"));
-    }
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let guid = {
         let mut reader = std::io::Cursor::new(&packet.payload);
         reader.read_guid::<LittleEndian>()?
     };
 
-    {
-        let mut client = client_lock.write().await;
-        client.load_and_set_active_character(client_manager, guid).await?;
-    }
-    let client = client_lock.read().await;
+    client.load_and_set_active_character(client_manager, guid).await?;
     client.login_active_character(client_manager).await?;
 
     Ok(())
@@ -233,7 +216,7 @@ pub async fn send_bind_update(character: &Character) -> Result<()> {
 pub async fn send_action_buttons(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_ACTION_BUTTONS, character.action_bar.data.len());
     writer.write_u8(0)?; //Talent specialization
-    writer.write(&character.action_bar.data)?;
+    writer.write_all(&character.action_bar.data)?;
 
     send_packet_to_character(character, &header, &writer).await?;
     Ok(())

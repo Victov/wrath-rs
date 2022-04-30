@@ -1,8 +1,11 @@
-mod login_handler;
+pub mod login_handler;
 pub use login_handler::handle_cmsg_auth_session;
+pub use login_handler::handle_cmsg_logout_cancel;
+pub use login_handler::handle_cmsg_logout_request;
 pub use login_handler::handle_cmsg_ping;
 pub use login_handler::handle_cmsg_realm_split;
 pub use login_handler::send_login_set_time_speed;
+pub use login_handler::send_smsg_logout_complete;
 
 mod account_data_handler;
 pub use account_data_handler::create_empty_character_account_data_rows;
@@ -63,5 +66,8 @@ pub use movement_handler::handle_movement_generic;
 pub use movement_handler::handle_msg_move_teleport_ack;
 pub use movement_handler::handle_msg_move_worldport_ack;
 pub use movement_handler::send_msg_move_teleport_ack;
+pub use movement_handler::send_smsg_force_move_root;
+pub use movement_handler::send_smsg_force_move_unroot;
 pub use movement_handler::send_smsg_new_world;
+pub use movement_handler::send_smsg_stand_state_update;
 pub use movement_handler::send_smsg_transfer_pending;

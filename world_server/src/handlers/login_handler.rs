@@ -41,13 +41,11 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     use num_bigint::BigUint;
     use std::io::{BufRead, Seek, SeekFrom};
 
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    {
-        let client = client_lock.read().await;
-        if client.is_authenticated() {
-            return Err(anyhow!("Client sent auth session but was already logged in"));
-            //Disconnect hacker?
-        }
+    let client = client_manager.get_client(packet.client_id).await?;
+    if client.is_authenticated().await {
+        client.disconnect().await?;
+        warn!("duplicate login rejected!");
+        bail!("Client sent auth session but was already logged in");
     }
 
     let mut reader = std::io::Cursor::new(&packet.payload);
@@ -77,7 +75,6 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     let sesskey_bytes = hex::decode(&db_account.sessionkey)?;
     assert_eq!(sesskey_bytes.len(), 40);
     {
-        let client = client_lock.read().await;
         client.crypto.write().await.initialize(&sesskey_bytes)?;
     }
 
@@ -94,17 +91,13 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     let b = BigUint::from_bytes_le(&out_buf);
 
     if a != b {
-        let client = client_lock.read().await;
         send_auth_response(AuthResponse::Reject, &client).await?;
         async_std::task::sleep(std::time::Duration::from_secs(2)).await;
         return Err(anyhow!("Failed auth attempt, rejecting"));
     }
     //Handle full world queuing here
 
-    {
-        let client = client_lock.read().await;
-        send_auth_response(AuthResponse::AuthOk, &client).await?;
-    }
+    send_auth_response(AuthResponse::AuthOk, &client).await?;
 
     let mut decompressed_addon_data = Vec::<u8>::new();
     {
@@ -144,17 +137,14 @@ pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packe
     }
     addon_packet_writer.write_u8(0)?; //num banned addons
 
-    {
-        let client = client_lock.read().await;
-        send_packet(&client, &addon_packet_header, &addon_packet_writer).await?;
-        send_clientcache_version(0, &client).await?;
-        send_tutorial_flags(&client).await?;
-    }
+    send_packet(&client, &addon_packet_header, &addon_packet_writer).await?;
+    send_clientcache_version(0, &client).await?;
+    send_tutorial_flags(&client).await?;
 
     {
-        let mut client = client_lock.write().await;
-        client.client_state = ClientState::CharacterSelection;
-        client.account_id = Some(db_account.id);
+        let mut client_data = client.data.write().await;
+        client_data.client_state = ClientState::CharacterSelection;
+        client_data.account_id = Some(db_account.id);
     }
 
     Ok(())
@@ -212,14 +202,11 @@ pub async fn handle_cmsg_realm_split(client_manager: &Arc<ClientManager>, packet
     let (header, mut writer) = create_packet(Opcodes::SMSG_REALM_SPLIT, 12);
     writer.write_u32::<LittleEndian>(realm_id)?;
     writer.write_u32::<LittleEndian>(RealmSplitState::Normal as u32)?; //Realm splitting not implemented
-    writer.write("01/01/01".as_bytes())?;
+    writer.write_all("01/01/01".as_bytes())?;
     writer.write_u8(0)?; //string terminator
 
-    {
-        let client_lock = client_manager.get_client(packet.client_id).await?;
-        let client = client_lock.read().await;
-        send_packet(&client, &header, &writer).await?;
-    }
+    let client = client_manager.get_client(packet.client_id).await?;
+    send_packet(&client, &header, &writer).await?;
     Ok(())
 }
 
@@ -231,8 +218,7 @@ pub async fn handle_cmsg_ping(client_manager: &Arc<ClientManager>, packet: &Pack
     let (header, mut writer) = create_packet(Opcodes::SMSG_PONG, 4);
     writer.write_u32::<LittleEndian>(sequence)?;
 
-    let lock = client_manager.get_client(packet.client_id).await?;
-    let client = lock.read().await;
+    let client = client_manager.get_client(packet.client_id).await?;
     send_packet(&client, &header, &writer).await?;
 
     Ok(())
@@ -248,4 +234,60 @@ pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
     send_packet_to_character(character, &header, &writer).await?;
 
     Ok(())
+}
+
+#[derive(PartialEq, Debug)]
+pub enum LogoutState {
+    None,
+    Pending(std::time::Duration),
+    Executing,
+    ReturnToCharSelect,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum LogoutResult {
+    Success,
+    FailInCombat,
+    FailFrozenByGM,
+    FailJumpingOrFalling,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum LogoutSpeed {
+    Delayed,
+    Instant,
+}
+
+pub async fn handle_cmsg_logout_request(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
+
+    let (result, speed) = {
+        let mut character = character_lock.write().await;
+        character.try_logout().await?
+    };
+
+    let (header, mut writer) = create_packet(Opcodes::SMSG_LOGOUT_RESPONSE, 5);
+    writer.write_u16::<LittleEndian>(result as u16)?;
+    writer.write_u16::<LittleEndian>(speed as u16)?;
+    send_packet(&client, &header, &writer).await
+}
+
+pub async fn handle_cmsg_logout_cancel(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
+
+    {
+        let mut character = character_lock.write().await;
+        character.cancel_logout().await?;
+    }
+
+    let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_CANCEL_ACK, 0);
+    send_packet(&client, &header, &writer).await
+}
+
+pub async fn send_smsg_logout_complete(character: &Character) -> Result<()> {
+    let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_COMPLETE, 0);
+    send_packet_to_character(character, &header, &writer).await
 }

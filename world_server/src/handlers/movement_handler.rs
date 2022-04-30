@@ -5,21 +5,15 @@ use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
+use crate::world::map_object::MapObject;
+use crate::world::prelude::stand_state::UnitStandState;
 use async_std::sync::RwLockUpgradableReadGuard;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::sync::Arc;
 
 pub async fn handle_movement_generic(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
-    if !client.is_authenticated() {
-        bail!("Trying to request playtime for character that isn't authenticated");
-    }
-    let character_lock = client
-        .active_character
-        .as_ref()
-        .ok_or(anyhow!("Trying to obtain played time, but no character is active for this client"))?
-        .clone();
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
 
     let mut reader = std::io::Cursor::new(&packet.payload);
     let guid = reader.read_guid_compressed()?;
@@ -80,16 +74,8 @@ pub async fn send_smsg_new_world(character: &Character, map_id: u32, position: &
 }
 
 pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
-    if !client.is_authenticated() {
-        bail!("Character isn't authenticated");
-    }
-    let character_lock = client
-        .active_character
-        .as_ref()
-        .ok_or(anyhow!("Trying to obtain character, but no character is active for this client"))?
-        .clone();
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
 
     let character = character_lock.upgradable_read().await;
 
@@ -110,16 +96,8 @@ pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, p
 }
 
 pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    let client = client_lock.read().await;
-    if !client.is_authenticated() {
-        bail!("Character isn't authenticated");
-    }
-    let character_lock = client
-        .active_character
-        .as_ref()
-        .ok_or(anyhow!("Trying to obtain character, but no character is active for this client"))?
-        .clone();
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
 
     let character = character_lock.upgradable_read().await;
 
@@ -143,4 +121,24 @@ pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, 
     }
 
     Ok(())
+}
+
+pub async fn send_smsg_stand_state_update(character: &Character, stand_state: UnitStandState) -> Result<()> {
+    let (header, mut writer) = create_packet(Opcodes::SMSG_STANDSTATE_UPDATE, 1);
+    writer.write_u8(stand_state as u8)?;
+    send_packet_to_character(character, &header, &writer).await
+}
+
+pub async fn send_smsg_force_move_root(character: &Character) -> Result<()> {
+    let (header, mut writer) = create_packet(Opcodes::SMSG_FORCE_MOVE_ROOT, 4);
+    writer.write_guid_compressed(character.get_guid())?;
+    writer.write_u32::<LittleEndian>(0)?;
+    send_packet_to_character(character, &header, &writer).await
+}
+
+pub async fn send_smsg_force_move_unroot(character: &Character) -> Result<()> {
+    let (header, mut writer) = create_packet(Opcodes::SMSG_FORCE_MOVE_UNROOT, 4);
+    writer.write_guid_compressed(character.get_guid())?;
+    writer.write_u32::<LittleEndian>(0)?;
+    send_packet_to_character(character, &header, &writer).await
 }

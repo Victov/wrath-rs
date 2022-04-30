@@ -18,15 +18,13 @@ enum CacheMask {
 }
 
 pub async fn handle_csmg_ready_for_account_data_times(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let account_id = {
-        let client = client_lock.read().await;
-        if !client.is_authenticated() {
-            return Err(anyhow!("Client was not authenticated"));
-        }
-
         client
+            .data
+            .read()
+            .await
             .account_id
             .ok_or_else(|| anyhow!("Failed to get account_id but client was authenticated. This should never happen"))?
     };
@@ -42,10 +40,7 @@ pub async fn handle_csmg_ready_for_account_data_times(client_manager: &Arc<Clien
     }
 
     let db_account_data = db_account_data;
-    {
-        let client = client_lock.read().await;
-        send_account_data_times(&client, &db_account_data).await?;
-    }
+    send_account_data_times(&client, &db_account_data).await?;
 
     Ok(())
 }
@@ -93,7 +88,7 @@ async fn send_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> 
 pub async fn send_character_account_data_times(client_manager: &ClientManager, character: &Character) -> Result<()> {
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    let client_lock = character
+    let client = character
         .client
         .upgrade()
         .ok_or_else(|| anyhow!("couldn't upgrade client from character"))?;
@@ -112,19 +107,13 @@ pub async fn send_character_account_data_times(client_manager: &ClientManager, c
         }
     }
 
-    {
-        let client = client_lock.read().await;
-        send_packet(&client, &header, &writer).await?;
-    }
+    send_packet(&client, &header, &writer).await?;
 
     Ok(())
 }
 
 pub async fn handle_csmg_update_account_data(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-    if !client_lock.read().await.is_authenticated() {
-        return Err(anyhow!("Client trying to set account data but not authenticated"));
-    }
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let mut reader = std::io::Cursor::new(&packet.payload);
 
@@ -134,16 +123,18 @@ pub async fn handle_csmg_update_account_data(client_manager: &Arc<ClientManager>
     let new_data = reader.read_exact(packet.payload.len() - 12)?;
     assert_eq!(new_data.len() + 12, packet.header.length as usize);
 
-    let client = client_lock.read().await;
     if 1 << data_type & CacheMask::GlobalCache as u8 > 0 {
         let account_id = client
+            .data
+            .read()
+            .await
             .account_id
             .ok_or_else(|| anyhow!("Failed to get account_id from client even though authenticated"))?;
         client_manager
             .auth_db
             .update_account_data(account_id, time, data_type, decompressed_size, &new_data)
             .await?;
-    } else if let Some(character_lock) = &client.active_character {
+    } else if let Some(character_lock) = &client.data.read().await.active_character {
         let character_id = character_lock.read().await.guid.get_low_part();
         client_manager
             .realm_db
@@ -160,20 +151,18 @@ pub async fn handle_csmg_update_account_data(client_manager: &Arc<ClientManager>
 }
 
 pub async fn handle_cmsg_request_account_data(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
-    let client_lock = client_manager.get_client(packet.client_id).await?;
-
-    let client = client_lock.read().await;
-    if !client.is_authenticated() {
-        bail!("Client is trying to get account data but is not authenticated");
-    }
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let mut reader = std::io::Cursor::new(&packet.payload);
     let data_type = reader.read_u32::<LittleEndian>()?;
     let (decompressed_size, account_data_bytes) = {
         if 1 << data_type & CacheMask::GlobalCache as u8 > 0 {
             let account_id = client
+                .data
+                .read()
+                .await
                 .account_id
-                .ok_or_else(|| anyhow!("Account had no account_id even though it was is authenticated"))?;
+                .ok_or_else(|| anyhow!("Account had no account_id even though it is authenticated"))?;
 
             let db_data = client_manager.auth_db.get_account_data_of_type(account_id, data_type as u8).await?;
             if let Some(bytes) = db_data.data {
@@ -181,7 +170,7 @@ pub async fn handle_cmsg_request_account_data(client_manager: &Arc<ClientManager
             } else {
                 (0, vec![])
             }
-        } else if let Some(active_character_lock) = &client.active_character {
+        } else if let Some(active_character_lock) = &client.data.read().await.active_character {
             let character_id = active_character_lock.read().await.guid.get_low_part();
             let db_data = client_manager
                 .realm_db
@@ -200,6 +189,6 @@ pub async fn handle_cmsg_request_account_data(client_manager: &Arc<ClientManager
     let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_ACCOUNT_DATA, account_data_bytes.len() + 8);
     writer.write_u32::<LittleEndian>(data_type)?;
     writer.write_u32::<LittleEndian>(decompressed_size)?;
-    writer.write(&account_data_bytes)?;
+    writer.write_all(&account_data_bytes)?;
     send_packet(&client, &header, &writer).await
 }
