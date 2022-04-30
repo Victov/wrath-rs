@@ -2,12 +2,9 @@ use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::DBCStorage;
-use crate::data::{ActionBar, MovementFlags, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
-use crate::handlers::login_handler::{LogoutResult, LogoutSpeed};
-use crate::handlers::{
-    login_handler::LogoutState,
-    movement_handler::{TeleportationDistance, TeleportationState},
-};
+use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+
+use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::prelude::*;
 use crate::ClientManager;
 use async_std::sync::RwLock;
@@ -17,6 +14,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use wrath_realm_db::RealmDatabase;
 
 const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
+
+mod character_logout;
+mod character_movement;
 
 pub struct Character {
     pub guid: Guid,
@@ -203,19 +203,6 @@ impl Character {
         self.time_sync_cooldown = 0.0;
         self.time_sync_counter = 0;
     }
-
-    pub fn process_movement(&mut self, movement_info: &MovementInfo) {
-        self.movement_info = movement_info.clone();
-    }
-
-    pub fn set_position(&mut self, position: &PositionAndOrientation) {
-        self.movement_info.position = position.clone();
-    }
-
-    pub fn teleport_to(&mut self, destination: TeleportationDistance) {
-        self.teleportation_state = TeleportationState::Queued(destination);
-    }
-
     pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
         self.tick_time_sync(delta_time).await?;
         self.tick_logout_state(delta_time, world.clone()).await?;
@@ -226,21 +213,6 @@ impl Character {
 
         Ok(())
     }
-
-    async fn handle_queued_teleport(&mut self, world: Arc<World>) -> Result<()> {
-        //Handle the possibility that the player may have logged out
-        //between queuing and handling the teleport
-
-        let state = self.teleportation_state.clone();
-        match state {
-            TeleportationState::Queued(TeleportationDistance::Near(dest)) => self.execute_near_teleport(dest.clone()).await?,
-            TeleportationState::Queued(TeleportationDistance::Far(dest)) => self.execute_far_teleport(dest.clone(), world).await?,
-            _ => {}
-        };
-
-        Ok(())
-    }
-
     async fn tick_time_sync(&mut self, delta_time: f32) -> Result<()> {
         self.time_sync_cooldown -= delta_time;
         if self.time_sync_cooldown < 0f32 {
@@ -248,113 +220,6 @@ impl Character {
             self.time_sync_counter += 1;
             handlers::send_time_sync(self).await?;
         }
-        Ok(())
-    }
-
-    async fn tick_logout_state(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
-        match &mut self.logout_state {
-            LogoutState::Pending(duration_left) => {
-                *duration_left = duration_left.saturating_sub(std::time::Duration::from_secs_f32(delta_time));
-                if duration_left.is_zero() {
-                    self.logout_state = LogoutState::Executing;
-                }
-                Ok(())
-            }
-            LogoutState::Executing => self.execute_logout(world).await,
-            _ => Ok(()),
-        }
-    }
-
-    async fn execute_near_teleport(&mut self, destination: PositionAndOrientation) -> Result<()> {
-        //The rest of the teleportation is handled when the client sends back this packet
-
-        self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Near(destination.clone()));
-
-        handlers::send_msg_move_teleport_ack(self, &destination).await?;
-        Ok(())
-    }
-
-    async fn execute_far_teleport(&mut self, destination: WorldZoneLocation, world: Arc<World>) -> Result<()> {
-        if self.map == destination.map {
-            //This was not actually a far teleport. It should have been a near teleport since we're
-            //on the same map.
-            self.teleport_to(TeleportationDistance::Near(destination.into()));
-            return Ok(());
-        }
-
-        handlers::send_smsg_transfer_pending(self, destination.map).await?;
-
-        let old_map = world
-            .get_instance_manager()
-            .try_get_map_for_character(self)
-            .await
-            .ok_or_else(|| anyhow!("Player is teleporting away from an invalid map"))?;
-
-        old_map.remove_object_by_guid(&self.guid).await;
-
-        let wzl = destination.clone().into();
-        handlers::send_smsg_new_world(self, destination.map, &wzl).await?;
-
-        self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Far(destination));
-        Ok(())
-    }
-
-    pub async fn try_logout(&mut self) -> Result<(LogoutResult, LogoutSpeed)> {
-        //TODO: add checks about being in rested area (instant logout), being in combat (refuse), etc
-
-        if self
-            .movement_info
-            .has_any_movement_flag(&[MovementFlags::Falling, MovementFlags::FallingFar])
-        {
-            return Ok((LogoutResult::FailJumpingOrFalling, LogoutSpeed::Delayed));
-        }
-
-        let delayed = true;
-        Ok(match self.logout_state {
-            LogoutState::None if delayed => {
-                self.logout_state = LogoutState::Pending(std::time::Duration::from_secs(20));
-                self.set_stunned(true)?;
-                self.set_rooted(true).await?;
-                self.set_character_stand_state(stand_state::UnitStandState::Sit).await?;
-                (LogoutResult::Success, LogoutSpeed::Delayed)
-            }
-            LogoutState::None if !delayed => {
-                self.logout_state = LogoutState::Executing;
-                (LogoutResult::Success, LogoutSpeed::Instant)
-            }
-            _ => (LogoutResult::Success, LogoutSpeed::Instant),
-        })
-    }
-
-    pub async fn cancel_logout(&mut self) -> Result<()> {
-        if let LogoutState::Pending(_) = self.logout_state {
-            self.set_stunned(false)?;
-            self.set_rooted(false).await?;
-            self.set_character_stand_state(stand_state::UnitStandState::Stand).await?;
-            self.logout_state = LogoutState::None;
-        } else {
-        }
-        Ok(())
-    }
-
-    //This function will trigger every tick as long as the state is LogoutState::Executing
-    async fn execute_logout(&mut self, world: Arc<World>) -> Result<()> {
-        if self.teleportation_state != TeleportationState::None {
-            return Ok(());
-        }
-
-        world
-            .get_instance_manager()
-            .try_get_map_for_character(self)
-            .await
-            .ok_or_else(|| anyhow!("Invalid map during logout"))?
-            .remove_object_by_guid(&self.guid)
-            .await;
-
-        handlers::send_smsg_logout_complete(self).await?;
-
-        self.logout_state = LogoutState::ReturnToCharSelect;
-
         Ok(())
     }
 }
