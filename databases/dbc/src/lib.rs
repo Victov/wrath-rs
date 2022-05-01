@@ -14,17 +14,20 @@ pub use chr_classes::*;
 mod map;
 pub use map::*;
 
+mod area_trigger;
+pub use area_trigger::*;
+
 pub(crate) mod helpers;
 pub(crate) use helpers::ReadSkip;
 
 //See: https://wowdev.wiki/DBC
 #[derive(Debug, Default)]
 pub struct DBCHeader {
-    magic: u32,
-    rows_count: u32,
-    columns_count: u32,
-    row_size: u32,
-    string_block_size: u32,
+    pub magic: u32,
+    pub rows_count: u32,
+    pub columns_count: u32,
+    pub row_size: u32,
+    pub string_block_size: u32,
 }
 
 pub trait DBCTable {
@@ -100,9 +103,9 @@ pub struct DBCStorage {
     chr_races: Option<DBCFile<DBCCharRaces>>,
     chr_classes: Option<DBCFile<DBCCharClasses>>,
     maps: Option<DBCFile<DBCMap>>,
+    area_triggers: Option<DBCFile<DBCAreaTrigger>>,
 }
 
-use chr_races::DBCCharRaces;
 impl DBCStorage {
     pub fn new(dbc_files_path: String) -> Self {
         DBCStorage {
@@ -110,6 +113,7 @@ impl DBCStorage {
             chr_races: None,
             chr_classes: None,
             maps: None,
+            area_triggers: None,
         }
     }
 
@@ -125,6 +129,13 @@ impl DBCStorage {
         chr_classes,
         get_dbc_char_classes,
         load_dbc_char_classes
+    );
+
+    define_dbc!(
+        area_trigger::DBCAreaTrigger,
+        area_triggers,
+        get_dbc_area_triggers,
+        load_dbc_area_triggers
     );
 
     define_dbc!(map::DBCMap, maps, get_dbc_maps, load_dbc_maps);
@@ -143,12 +154,13 @@ impl DBCStorage {
         }
 
         let mut reader = std::io::Cursor::new(buffer);
-        let mut header = DBCHeader::default();
-        header.magic = reader.read_u32::<LittleEndian>()?;
-        header.rows_count = reader.read_u32::<LittleEndian>()?;
-        header.columns_count = reader.read_u32::<LittleEndian>()?;
-        header.row_size = reader.read_u32::<LittleEndian>()?;
-        header.string_block_size = reader.read_u32::<LittleEndian>()?;
+        let header = DBCHeader {
+            magic: reader.read_u32::<LittleEndian>()?,
+            rows_count: reader.read_u32::<LittleEndian>()?,
+            columns_count: reader.read_u32::<LittleEndian>()?,
+            row_size: reader.read_u32::<LittleEndian>()?,
+            string_block_size: reader.read_u32::<LittleEndian>()?,
+        };
 
         //Skip ahead to start of string table
         reader.set_position(

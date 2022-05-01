@@ -16,7 +16,8 @@ pub use movement_info::*;
 
 pub mod guid;
 
-pub use dbc::*;
+mod data_storage;
+pub use data_storage::DataStorage;
 
 #[derive(PartialEq, Debug, Default, Clone)]
 pub struct WorldZoneLocation {

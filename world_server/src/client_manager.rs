@@ -1,6 +1,6 @@
 use super::client::*;
 use super::packet_handler::PacketToHandle;
-use crate::data::DBCStorage;
+use crate::data::DataStorage;
 use crate::prelude::*;
 use crate::world::World;
 use async_std::net::{TcpListener, TcpStream};
@@ -18,18 +18,18 @@ use wrath_realm_db::RealmDatabase;
 pub struct ClientManager {
     pub auth_db: Arc<AuthDatabase>,
     pub realm_db: Arc<RealmDatabase>,
-    pub dbc_storage: Arc<DBCStorage>,
+    pub data_storage: Arc<DataStorage>,
     pub realm_seed: u32,
     clients: RwLock<HashMap<u64, Arc<Client>>>,
     pub world: Arc<World>,
 }
 
 impl ClientManager {
-    pub fn new(auth_db: Arc<AuthDatabase>, realm_db: Arc<RealmDatabase>, dbc_storage: Arc<DBCStorage>, world: Arc<World>) -> Self {
+    pub fn new(auth_db: Arc<AuthDatabase>, realm_db: Arc<RealmDatabase>, data_storage: Arc<DataStorage>, world: Arc<World>) -> Self {
         Self {
             auth_db,
             realm_db,
-            dbc_storage,
+            data_storage,
             realm_seed: rand::thread_rng().next_u32(),
             clients: RwLock::new(HashMap::new()),
             world,

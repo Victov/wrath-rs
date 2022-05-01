@@ -1,8 +1,7 @@
 use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
-use crate::data::DBCStorage;
-use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::data::{ActionBar, DataStorage, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::prelude::*;
 use crate::ClientManager;
@@ -93,7 +92,7 @@ impl Character {
         }
     }
 
-    pub async fn load_from_database(&mut self, dbc_storage: &DBCStorage, realm_database: &RealmDatabase) -> Result<()> {
+    pub async fn load_from_database(&mut self, data_storage: &DataStorage, realm_database: &RealmDatabase) -> Result<()> {
         let db_entry = realm_database.get_character(self.guid.get_low_part()).await?;
         self.bind_location = Some(WorldZoneLocation {
             zone: db_entry.bind_zone as u32,
@@ -131,7 +130,7 @@ impl Character {
 
         self.gender = db_entry.gender;
         self.race = db_entry.race;
-        if let Some(race_info) = dbc_storage.get_dbc_char_races()?.get_entry(self.race as u32) {
+        if let Some(race_info) = data_storage.get_char_races().get_entry(self.race as u32) {
             let display_id = match self.gender {
                 0 => race_info.male_model_id,
                 _ => race_info.female_model_id,
@@ -141,7 +140,7 @@ impl Character {
         }
 
         self.class = db_entry.class;
-        if let Some(class_info) = dbc_storage.get_dbc_char_classes()?.get_entry(self.class as u32) {
+        if let Some(class_info) = data_storage.get_char_classes().get_entry(self.class as u32) {
             self.set_power_type(class_info.power_type as u8)?;
         }
 

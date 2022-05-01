@@ -121,7 +121,7 @@ impl Client {
         let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?);
         let mut character = Character::new(weakself, character_guid);
         character
-            .load_from_database(&client_manager.dbc_storage, &client_manager.realm_db)
+            .load_from_database(&client_manager.data_storage, &client_manager.realm_db)
             .await?;
         let mut data = self.data.write().await;
         data.active_character = Some(Arc::new(RwLock::new(character)));
