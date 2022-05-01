@@ -64,6 +64,16 @@ impl<T: DBCTable> DBCFile<T> {
     ) -> Option<&T::RowType> {
         self.rows.get(&key)
     }
+
+    pub fn iter(
+        &self,
+    ) -> std::collections::hash_map::Values<
+        '_,
+        <<T as DBCTable>::RowType as DBCRowType>::PrimaryKeyType,
+        <T as DBCTable>::RowType,
+    > {
+        self.rows.values()
+    }
 }
 
 macro_rules! define_dbc_getter {
@@ -131,14 +141,17 @@ impl DBCStorage {
         load_dbc_char_classes
     );
 
+    define_dbc!(map::DBCMap, maps, get_dbc_maps, load_dbc_maps);
+
     define_dbc!(
         area_trigger::DBCAreaTrigger,
         area_triggers,
         get_dbc_area_triggers,
         load_dbc_area_triggers
     );
-
-    define_dbc!(map::DBCMap, maps, get_dbc_maps, load_dbc_maps);
+    pub fn unload_dbc_area_triggers(&mut self) {
+        self.area_triggers = None;
+    }
 
     async fn load_dbc<T: DBCTable + Debug>(&self) -> Result<DBCFile<T>> {
         use async_std::io::BufReader;

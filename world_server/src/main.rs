@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
     let realm_database_ref = std::sync::Arc::new(realm_database);
 
     let mut data_storage = data::DataStorage::default();
-    data_storage.load().await?;
+    data_storage.load(realm_database_ref.clone()).await?;
     let data_storage = std::sync::Arc::new(data_storage);
 
     task::spawn(auth::auth_server_heartbeats());

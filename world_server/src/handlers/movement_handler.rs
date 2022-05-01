@@ -1,6 +1,8 @@
 use crate::character::Character;
 use crate::client_manager::ClientManager;
-use crate::data::{guid::*, PositionAndOrientation, ReadMovementInfo, WorldZoneLocation, WriteMovementInfo, WritePositionAndOrientation};
+use crate::data::{
+    guid::*, AreaTriggerPurpose, PositionAndOrientation, ReadMovementInfo, WorldZoneLocation, WriteMovementInfo, WritePositionAndOrientation,
+};
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
@@ -141,4 +143,33 @@ pub async fn send_smsg_force_move_unroot(character: &Character) -> Result<()> {
     writer.write_guid_compressed(character.get_guid())?;
     writer.write_u32::<LittleEndian>(0)?;
     send_packet_to_character(character, &header, &writer).await
+}
+
+pub async fn handle_cmsg_areatrigger(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
+
+    let area_trigger_id = {
+        let mut reader = std::io::Cursor::new(&packet.payload);
+        reader.read_u32::<LittleEndian>()?
+    };
+
+    let trigger_data = client_manager
+        .data_storage
+        .get_area_trigger(area_trigger_id)
+        .ok_or_else(|| anyhow!("Character entered area trigger that isn't known to the server"))?;
+
+    if let AreaTriggerPurpose::Teleport(teleport_data) = &trigger_data.purpose {
+        let mut character = character_lock.write().await;
+        let destination = WorldZoneLocation {
+            x: teleport_data.target_position_x,
+            y: teleport_data.target_position_y,
+            z: teleport_data.target_position_z,
+            o: teleport_data.target_orientation,
+            map: teleport_data.target_map as u32,
+            zone: 0, //todo?
+        };
+        character.teleport_to(TeleportationDistance::Far(destination))
+    }
+    Ok(())
 }

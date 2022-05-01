@@ -94,6 +94,7 @@ impl PacketHandler {
             Opcodes::CMSG_LOGOUT_CANCEL => handle_cmsg_logout_cancel(client_manager, packet).await,
             Opcodes::CMSG_FORCE_MOVE_ROOT_ACK => Ok(()),   //Don't do anything, disable warning spam
             Opcodes::CMSG_FORCE_MOVE_UNROOT_ACK => Ok(()), //Don't do anything, disable warning spam
+            Opcodes::CMSG_AREATRIGGER => handle_cmsg_areatrigger(client_manager, packet).await,
 
             _ => bail!("Unhandled opcode"),
         }

@@ -4,7 +4,7 @@ use anyhow::Result;
 #[derive(Debug)]
 pub struct DBCAreaTrigger;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct AreaTriggerBox {
     pub size_x: f32,
     pub size_y: f32,
@@ -12,7 +12,7 @@ pub struct AreaTriggerBox {
     pub orientation: f32,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum AreaTriggerShape {
     Sphere(f32),
     Box(AreaTriggerBox),
