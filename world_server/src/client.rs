@@ -117,11 +117,11 @@ impl Client {
         data.account_id.is_some() && data.client_state != ClientState::PreLogin
     }
 
-    pub async fn load_and_set_active_character(&self, client_manager: &ClientManager, character_guid: Guid) -> Result<()> {
+    pub async fn load_and_set_active_character(&self, client_manager: &ClientManager, world: &World, character_guid: Guid) -> Result<()> {
         let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?);
         let mut character = Character::new(weakself, character_guid);
         character
-            .load_from_database(&client_manager.data_storage, &client_manager.world.get_realm_database())
+            .load_from_database(&client_manager.data_storage, &world.get_realm_database())
             .await?;
         let mut data = self.data.write().await;
         data.active_character = Some(Arc::new(RwLock::new(character)));

@@ -19,31 +19,29 @@ pub struct ClientManager {
     pub data_storage: Arc<DataStorage>,
     pub realm_seed: u32,
     clients: RwLock<HashMap<u64, Arc<Client>>>,
-    pub world: Arc<World>,
 }
 
 impl ClientManager {
-    pub fn new(auth_db: Arc<AuthDatabase>, data_storage: Arc<DataStorage>, world: Arc<World>) -> Self {
+    pub fn new(auth_db: Arc<AuthDatabase>, data_storage: Arc<DataStorage>) -> Self {
         Self {
             auth_db,
             data_storage,
             realm_seed: rand::thread_rng().next_u32(),
             clients: RwLock::new(HashMap::new()),
-            world,
         }
     }
 
-    pub async fn tick(&self, delta_time: f32) -> Result<()> {
-        self.cleanup_disconnected_clients().await?;
+    pub async fn tick(&self, delta_time: f32, world: Arc<World>) -> Result<()> {
+        self.cleanup_disconnected_clients(world.clone()).await?;
         let clients = self.clients.read().await;
         for (_, client) in clients.iter() {
-            client.tick(delta_time, self.world.clone()).await?;
+            client.tick(delta_time, world.clone()).await?;
         }
 
         Ok(())
     }
 
-    async fn cleanup_disconnected_clients(&self) -> Result<()> {
+    async fn cleanup_disconnected_clients(&self, world: Arc<World>) -> Result<()> {
         let to_remove = {
             let mut result = vec![];
             let clients = self.clients.read().await;
@@ -55,7 +53,7 @@ impl ClientManager {
                     data.client_state.clone()
                 };
                 if client_state == ClientState::DisconnectPendingCleanup {
-                    self.world.get_instance_manager().handle_client_disconnected(client).await?;
+                    world.get_instance_manager().handle_client_disconnected(client).await?;
                     //insert more cleanup actions here
                     client.disconnected_post_cleanup().await?;
                 } else if client_state == ClientState::Disconnected {

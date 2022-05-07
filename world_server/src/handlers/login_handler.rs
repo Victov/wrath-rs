@@ -6,7 +6,6 @@ use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
-use std::sync::Arc;
 
 #[allow(dead_code)]
 #[derive(PartialEq)]
@@ -36,7 +35,7 @@ enum AuthResponse {
     LockedEnforced = 0x22,
 }
 
-pub async fn handle_cmsg_auth_session(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_auth_session(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     use crypto::digest::Digest;
     use num_bigint::BigUint;
     use std::io::{BufRead, Seek, SeekFrom};
@@ -191,7 +190,7 @@ enum RealmSplitState {
     SplitPending = 2,
 }
 
-pub async fn handle_cmsg_realm_split(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_realm_split(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     use std::io::Write;
 
     let realm_id = {
@@ -210,7 +209,7 @@ pub async fn handle_cmsg_realm_split(client_manager: &Arc<ClientManager>, packet
     Ok(())
 }
 
-pub async fn handle_cmsg_ping(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_ping(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let mut reader = std::io::Cursor::new(&packet.payload);
     let sequence = reader.read_u32::<LittleEndian>()?;
     let _latency = reader.read_u32::<LittleEndian>()?;
@@ -259,7 +258,7 @@ pub enum LogoutSpeed {
     Instant,
 }
 
-pub async fn handle_cmsg_logout_request(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -274,7 +273,7 @@ pub async fn handle_cmsg_logout_request(client_manager: &Arc<ClientManager>, pac
     send_packet(&client, &header, &writer).await
 }
 
-pub async fn handle_cmsg_logout_cancel(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 

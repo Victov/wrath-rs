@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver, world.clone());
 
-    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), data_storage, world.clone()));
+    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), data_storage));
     let client_manager_for_acceptloop = client_manager.clone();
 
     task::spawn(async move {
@@ -89,10 +89,10 @@ async fn main() -> Result<()> {
     let mut previous_loop_total: f32 = desired_timestep_sec;
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let before = std::time::Instant::now();
-        client_manager.tick(previous_loop_total).await.unwrap_or_else(|e| {
+        client_manager.tick(previous_loop_total, world.clone()).await.unwrap_or_else(|e| {
             error!("Error while ticking clients: {}", e);
         });
-        realm_packet_handler.handle_queue(&client_manager).await?;
+        realm_packet_handler.handle_queue(client_manager.clone(), world.clone()).await?;
         world.tick(previous_loop_total).await?;
         let after = std::time::Instant::now();
         let update_duration = after.duration_since(before);

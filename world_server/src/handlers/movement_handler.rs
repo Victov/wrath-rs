@@ -9,11 +9,12 @@ use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::map_object::MapObject;
 use crate::world::prelude::stand_state::UnitStandState;
+use crate::world::World;
 use async_std::sync::RwLockUpgradableReadGuard;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::sync::Arc;
 
-pub async fn handle_movement_generic(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_movement_generic(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
     {
@@ -38,7 +39,7 @@ pub async fn handle_movement_generic(client_manager: &Arc<ClientManager>, packet
     writer.write_movement_info(&movement_info)?;
 
     let character = character_lock.read().await;
-    send_packet_to_all_in_range(&character, false, &client_manager.world, &header, &writer).await?;
+    send_packet_to_all_in_range(&character, false, world, &header, &writer).await?;
 
     Ok(())
 }
@@ -82,7 +83,7 @@ pub async fn send_smsg_new_world(character: &Character, map_id: u32, position: &
     send_packet_to_character(character, &header, &writer).await
 }
 
-pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_msg_move_teleport_ack(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -104,7 +105,7 @@ pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, p
     Ok(())
 }
 
-pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_msg_move_worldport_ack(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -113,18 +114,14 @@ pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, 
     if let TeleportationState::Executing(TeleportationDistance::Far(destination)) = character.teleportation_state.clone() {
         let mut character = RwLockUpgradableReadGuard::upgrade(character).await;
 
-        let map = client_manager
-            .world
-            .get_instance_manager()
-            .get_or_create_map(&(*character), destination.map)
-            .await?;
+        let map = world.get_instance_manager().get_or_create_map(&(*character), destination.map).await?;
 
         character.map = destination.map;
         character.set_position(&destination.into());
         character.reset_time_sync();
         character.send_packets_before_add_to_map().await?;
         map.push_object(Arc::downgrade(&character_lock)).await;
-        character.send_packets_after_add_to_map(client_manager.world.get_realm_database()).await?;
+        character.send_packets_after_add_to_map(world.get_realm_database()).await?;
 
         character.teleportation_state = TeleportationState::None;
     }
@@ -152,7 +149,7 @@ pub async fn send_smsg_force_move_unroot(character: &Character) -> Result<()> {
     send_packet_to_character(character, &header, &writer).await
 }
 
-pub async fn handle_cmsg_areatrigger(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 

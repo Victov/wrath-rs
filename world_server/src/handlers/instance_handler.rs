@@ -9,7 +9,6 @@ use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::io::Write;
-use std::sync::Arc;
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
 pub async fn send_dungeon_difficulty(character: &Character) -> Result<()> {

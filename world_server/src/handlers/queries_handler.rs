@@ -5,11 +5,11 @@ use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
+use crate::world::World;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
-use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub async fn handle_cmsg_played_time(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_played_time(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -36,7 +36,7 @@ pub async fn handle_cmsg_played_time(client_manager: &Arc<ClientManager>, packet
     Ok(())
 }
 
-pub async fn handle_cmsg_query_time(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_query_time(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_client(packet.client_id).await?;
     let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
     let (header, mut writer) = create_packet(Opcodes::SMSG_QUERY_TIME_RESPONSE, 8);
@@ -46,7 +46,7 @@ pub async fn handle_cmsg_query_time(client_manager: &Arc<ClientManager>, packet:
     Ok(())
 }
 
-pub async fn handle_cmsg_world_state_ui_timer_update(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_world_state_ui_timer_update(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_client(packet.client_id).await?;
     let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
     let (header, mut writer) = create_packet(Opcodes::SMSG_WORLD_STATE_UI_TIMER_UPDATE, 4);
@@ -55,7 +55,7 @@ pub async fn handle_cmsg_world_state_ui_timer_update(client_manager: &Arc<Client
     Ok(())
 }
 
-pub async fn handle_cmsg_name_query(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_name_query(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -71,7 +71,7 @@ pub async fn handle_cmsg_name_query(client_manager: &Arc<ClientManager>, packet:
     }
 
     //We are requesting somebody else. Search the map
-    if let Some(map) = { client_manager.world.get_instance_manager().try_get_map_for_character(&*character).await } {
+    if let Some(map) = { world.get_instance_manager().try_get_map_for_character(&*character).await } {
         if let Some(found_character_lock) = map.try_get_object(&requested_player_guid).await.and_then(|a| a.upgrade()) {
             if let Some(found_character) = found_character_lock.read().await.as_character() {
                 send_name_query_response(&*client, &*found_character).await?;
