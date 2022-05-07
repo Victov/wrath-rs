@@ -4,7 +4,6 @@ use crate::constants::social::RelationType;
 use crate::data::{ActionBar, DataStorage, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::prelude::*;
-use crate::ClientManager;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
@@ -162,7 +161,7 @@ impl Character {
         Ok(())
     }
 
-    pub async fn send_packets_before_add_to_map(&self, _client_manager: &ClientManager) -> Result<()> {
+    pub async fn send_packets_before_add_to_map(&self) -> Result<()> {
         handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
         handlers::send_bind_update(self).await?;
         handlers::send_talents_info(self).await?;
@@ -173,9 +172,9 @@ impl Character {
         handlers::send_login_set_time_speed(self).await
     }
 
-    pub async fn send_packets_after_add_to_map(&self, client_manager: &ClientManager) -> Result<()> {
+    pub async fn send_packets_after_add_to_map(&self, realm_database: Arc<RealmDatabase>) -> Result<()> {
         handlers::send_verify_world(self).await?;
-        handlers::send_character_account_data_times(client_manager, self).await?;
+        handlers::send_character_account_data_times(&realm_database, self).await?;
         handlers::send_voice_chat_status(self, false).await?;
         handlers::send_tutorial_flags(self).await?;
         handlers::send_faction_list(self).await?;

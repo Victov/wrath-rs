@@ -68,17 +68,12 @@ async fn main() -> Result<()> {
 
     task::spawn(auth::auth_server_heartbeats());
 
-    let world = std::sync::Arc::new(world::World::new());
+    let world = std::sync::Arc::new(world::World::new(realm_database_ref));
 
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver, world.clone());
 
-    let client_manager = std::sync::Arc::new(ClientManager::new(
-        auth_database_ref.clone(),
-        realm_database_ref.clone(),
-        data_storage,
-        world.clone(),
-    ));
+    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), data_storage, world.clone()));
     let client_manager_for_acceptloop = client_manager.clone();
 
     task::spawn(async move {

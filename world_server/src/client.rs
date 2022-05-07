@@ -121,28 +121,27 @@ impl Client {
         let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?);
         let mut character = Character::new(weakself, character_guid);
         character
-            .load_from_database(&client_manager.data_storage, &client_manager.realm_db)
+            .load_from_database(&client_manager.data_storage, &client_manager.world.get_realm_database())
             .await?;
         let mut data = self.data.write().await;
         data.active_character = Some(Arc::new(RwLock::new(character)));
         Ok(())
     }
 
-    pub async fn login_active_character(&self, client_manager: &ClientManager) -> Result<()> {
+    pub async fn login_active_character(&self, world: &World) -> Result<()> {
         let data = self.data.read().await;
         let character_lock = data.active_character.as_ref().unwrap();
         let character = character_lock.read().await;
-        character.send_packets_before_add_to_map(client_manager).await?;
+        character.send_packets_before_add_to_map().await?;
 
-        client_manager
-            .world
+        world
             .get_instance_manager()
             .get_or_create_map(&(*character), character.map)
             .await?
             .push_object(Arc::downgrade(character_lock))
             .await;
 
-        character.send_packets_after_add_to_map(client_manager).await?;
+        character.send_packets_after_add_to_map(world.get_realm_database()).await?;
 
         Ok(())
     }

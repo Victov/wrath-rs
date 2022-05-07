@@ -18,7 +18,8 @@ pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: 
     let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_ENUM, 40);
 
     let characters = client_manager
-        .realm_db
+        .world
+        .get_realm_database()
         .get_characters_for_account(client.data.read().await.account_id.unwrap())
         .await?;
 
@@ -115,7 +116,7 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
         let facial_style = reader.read_u8()?;
         let outfit = reader.read_u8()?;
 
-        let realm_db = &client_manager.realm_db;
+        let realm_db = &client_manager.world.get_realm_database();
         let player_create_info = realm_db.get_player_create_info(race, class).await?;
 
         let x = player_create_info.position_x;
@@ -144,7 +145,7 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
         }
     };
 
-    let realm_db = &client_manager.realm_db;
+    let realm_db = &client_manager.world.get_realm_database();
     if !realm_db.is_character_name_available(&create_params.name).await? {
         send_char_create_reply(&client, CharacterCreateReponse::NameInUse).await?;
         return Ok(()); //this is a perfectly valid handling, not Err
@@ -183,7 +184,7 @@ pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packe
     };
 
     client.load_and_set_active_character(client_manager, guid).await?;
-    client.login_active_character(client_manager).await?;
+    client.login_active_character(&client_manager.world).await?;
 
     Ok(())
 }

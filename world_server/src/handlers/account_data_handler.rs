@@ -85,7 +85,7 @@ async fn send_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> 
     Ok(())
 }
 
-pub async fn send_character_account_data_times(client_manager: &ClientManager, character: &Character) -> Result<()> {
+pub async fn send_character_account_data_times(realm_database: &RealmDatabase, character: &Character) -> Result<()> {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     let client = character
@@ -93,7 +93,7 @@ pub async fn send_character_account_data_times(client_manager: &ClientManager, c
         .upgrade()
         .ok_or_else(|| anyhow!("couldn't upgrade client from character"))?;
 
-    let data = client_manager.realm_db.get_character_account_data(character.guid.get_low_part()).await?;
+    let data = realm_database.get_character_account_data(character.guid.get_low_part()).await?;
 
     let mask = CacheMask::PerCharacterCache as u32;
     let (header, mut writer) = create_packet(Opcodes::SMSG_ACCOUNT_DATA_TIMES, 41);
@@ -137,7 +137,8 @@ pub async fn handle_csmg_update_account_data(client_manager: &Arc<ClientManager>
     } else if let Some(character_lock) = &client.data.read().await.active_character {
         let character_id = character_lock.read().await.guid.get_low_part();
         client_manager
-            .realm_db
+            .world
+            .get_realm_database()
             .update_character_account_data(character_id, time, data_type, decompressed_size, &new_data)
             .await?;
     }
@@ -173,7 +174,8 @@ pub async fn handle_cmsg_request_account_data(client_manager: &Arc<ClientManager
         } else if let Some(active_character_lock) = &client.data.read().await.active_character {
             let character_id = active_character_lock.read().await.guid.get_low_part();
             let db_data = client_manager
-                .realm_db
+                .world
+                .get_realm_database()
                 .get_character_account_data_of_type(character_id, data_type as u8)
                 .await?;
             if let Some(bytes) = db_data.data {

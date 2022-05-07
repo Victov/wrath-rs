@@ -13,11 +13,9 @@ use std::collections::HashMap;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use wrath_auth_db::AuthDatabase;
-use wrath_realm_db::RealmDatabase;
 
 pub struct ClientManager {
     pub auth_db: Arc<AuthDatabase>,
-    pub realm_db: Arc<RealmDatabase>,
     pub data_storage: Arc<DataStorage>,
     pub realm_seed: u32,
     clients: RwLock<HashMap<u64, Arc<Client>>>,
@@ -25,10 +23,9 @@ pub struct ClientManager {
 }
 
 impl ClientManager {
-    pub fn new(auth_db: Arc<AuthDatabase>, realm_db: Arc<RealmDatabase>, data_storage: Arc<DataStorage>, world: Arc<World>) -> Self {
+    pub fn new(auth_db: Arc<AuthDatabase>, data_storage: Arc<DataStorage>, world: Arc<World>) -> Self {
         Self {
             auth_db,
-            realm_db,
             data_storage,
             realm_seed: rand::thread_rng().next_u32(),
             clients: RwLock::new(HashMap::new()),

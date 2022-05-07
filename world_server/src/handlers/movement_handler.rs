@@ -122,9 +122,9 @@ pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, 
         character.map = destination.map;
         character.set_position(&destination.into());
         character.reset_time_sync();
-        character.send_packets_before_add_to_map(client_manager).await?;
+        character.send_packets_before_add_to_map().await?;
         map.push_object(Arc::downgrade(&character_lock)).await;
-        character.send_packets_after_add_to_map(client_manager).await?;
+        character.send_packets_after_add_to_map(client_manager.world.get_realm_database()).await?;
 
         character.teleportation_state = TeleportationState::None;
     }
