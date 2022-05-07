@@ -16,6 +16,13 @@ use std::sync::Arc;
 pub async fn handle_movement_generic(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
+    {
+        let character = character_lock.read().await;
+        if character.teleportation_state != TeleportationState::None {
+            //Not an error, but we do simply want to ignore these packet
+            return Ok(());
+        }
+    }
 
     let mut reader = std::io::Cursor::new(&packet.payload);
     let guid = reader.read_guid_compressed()?;
