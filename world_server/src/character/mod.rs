@@ -1,11 +1,9 @@
 use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
-use crate::data::DBCStorage;
-use crate::data::{ActionBar, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::data::{ActionBar, DataStorage, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::prelude::*;
-use crate::ClientManager;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
@@ -16,6 +14,7 @@ const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 
 mod character_logout;
 mod character_movement;
+mod character_rested;
 
 pub struct Character {
     pub guid: Guid,
@@ -59,6 +58,7 @@ pub struct Character {
     pub teleportation_state: TeleportationState,
 
     pub logout_state: LogoutState,
+    rested_state: character_rested::RestedState,
 }
 
 impl Character {
@@ -90,10 +90,11 @@ impl Character {
             time_sync_cooldown: 0f32,
             teleportation_state: TeleportationState::None,
             logout_state: LogoutState::None,
+            rested_state: character_rested::RestedState::NotRested,
         }
     }
 
-    pub async fn load_from_database(&mut self, dbc_storage: &DBCStorage, realm_database: &RealmDatabase) -> Result<()> {
+    pub async fn load_from_database(&mut self, data_storage: &DataStorage, realm_database: &RealmDatabase) -> Result<()> {
         let db_entry = realm_database.get_character(self.guid.get_low_part()).await?;
         self.bind_location = Some(WorldZoneLocation {
             zone: db_entry.bind_zone as u32,
@@ -131,7 +132,7 @@ impl Character {
 
         self.gender = db_entry.gender;
         self.race = db_entry.race;
-        if let Some(race_info) = dbc_storage.get_dbc_char_races()?.get_entry(self.race as u32) {
+        if let Some(race_info) = data_storage.get_char_races().get_entry(self.race as u32) {
             let display_id = match self.gender {
                 0 => race_info.male_model_id,
                 _ => race_info.female_model_id,
@@ -141,7 +142,7 @@ impl Character {
         }
 
         self.class = db_entry.class;
-        if let Some(class_info) = dbc_storage.get_dbc_char_classes()?.get_entry(self.class as u32) {
+        if let Some(class_info) = data_storage.get_char_classes().get_entry(self.class as u32) {
             self.set_power_type(class_info.power_type as u8)?;
         }
 
@@ -163,7 +164,7 @@ impl Character {
         Ok(())
     }
 
-    pub async fn send_packets_before_add_to_map(&self, _client_manager: &ClientManager) -> Result<()> {
+    pub async fn send_packets_before_add_to_map(&self) -> Result<()> {
         handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
         handlers::send_bind_update(self).await?;
         handlers::send_talents_info(self).await?;
@@ -174,9 +175,9 @@ impl Character {
         handlers::send_login_set_time_speed(self).await
     }
 
-    pub async fn send_packets_after_add_to_map(&self, client_manager: &ClientManager) -> Result<()> {
+    pub async fn send_packets_after_add_to_map(&self, realm_database: Arc<RealmDatabase>) -> Result<()> {
         handlers::send_verify_world(self).await?;
-        handlers::send_character_account_data_times(client_manager, self).await?;
+        handlers::send_character_account_data_times(&realm_database, self).await?;
         handlers::send_voice_chat_status(self, false).await?;
         handlers::send_tutorial_flags(self).await?;
         handlers::send_faction_list(self).await?;

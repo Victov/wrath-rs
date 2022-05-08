@@ -62,28 +62,18 @@ async fn main() -> Result<()> {
     let realm_database = RealmDatabase::new(&std::env::var("REALM_DATABASE_URL")?, db_connect_timeout).await?;
     let realm_database_ref = std::sync::Arc::new(realm_database);
 
-    let dbc_path = std::env::var("DBC_FOLDER_PATH")?;
-    info!("Loading DBC files from folder: {}", dbc_path);
-    let mut dbc_storage = data::DBCStorage::new(dbc_path);
-    dbc_storage.load_dbc_char_races().await?;
-    dbc_storage.load_dbc_char_classes().await?;
-    dbc_storage.load_dbc_maps().await?;
-    let dbc_storage_ref = std::sync::Arc::new(dbc_storage);
-    info!("Finished loading DBC files");
+    let mut data_storage = data::DataStorage::default();
+    data_storage.load(realm_database_ref.clone()).await?;
+    let data_storage = std::sync::Arc::new(data_storage);
 
     task::spawn(auth::auth_server_heartbeats());
 
-    let world = std::sync::Arc::new(world::World::new());
+    let world = std::sync::Arc::new(world::World::new(realm_database_ref));
 
     let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
     let realm_packet_handler = PacketHandler::new(receiver, world.clone());
 
-    let client_manager = std::sync::Arc::new(ClientManager::new(
-        auth_database_ref.clone(),
-        realm_database_ref.clone(),
-        dbc_storage_ref.clone(),
-        world.clone(),
-    ));
+    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), data_storage));
     let client_manager_for_acceptloop = client_manager.clone();
 
     task::spawn(async move {
@@ -99,10 +89,10 @@ async fn main() -> Result<()> {
     let mut previous_loop_total: f32 = desired_timestep_sec;
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let before = std::time::Instant::now();
-        client_manager.tick(previous_loop_total).await.unwrap_or_else(|e| {
+        client_manager.tick(previous_loop_total, world.clone()).await.unwrap_or_else(|e| {
             error!("Error while ticking clients: {}", e);
         });
-        realm_packet_handler.handle_queue(&client_manager).await?;
+        realm_packet_handler.handle_queue(client_manager.clone(), world.clone()).await?;
         world.tick(previous_loop_total).await?;
         let after = std::time::Instant::now();
         let update_duration = after.duration_since(before);

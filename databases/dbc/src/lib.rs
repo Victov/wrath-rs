@@ -14,17 +14,20 @@ pub use chr_classes::*;
 mod map;
 pub use map::*;
 
+mod area_trigger;
+pub use area_trigger::*;
+
 pub(crate) mod helpers;
 pub(crate) use helpers::ReadSkip;
 
 //See: https://wowdev.wiki/DBC
 #[derive(Debug, Default)]
 pub struct DBCHeader {
-    magic: u32,
-    rows_count: u32,
-    columns_count: u32,
-    row_size: u32,
-    string_block_size: u32,
+    pub magic: u32,
+    pub rows_count: u32,
+    pub columns_count: u32,
+    pub row_size: u32,
+    pub string_block_size: u32,
 }
 
 pub trait DBCTable {
@@ -60,6 +63,16 @@ impl<T: DBCTable> DBCFile<T> {
         key: <T::RowType as DBCRowType>::PrimaryKeyType,
     ) -> Option<&T::RowType> {
         self.rows.get(&key)
+    }
+
+    pub fn iter(
+        &self,
+    ) -> std::collections::hash_map::Values<
+        '_,
+        <<T as DBCTable>::RowType as DBCRowType>::PrimaryKeyType,
+        <T as DBCTable>::RowType,
+    > {
+        self.rows.values()
     }
 }
 
@@ -100,9 +113,9 @@ pub struct DBCStorage {
     chr_races: Option<DBCFile<DBCCharRaces>>,
     chr_classes: Option<DBCFile<DBCCharClasses>>,
     maps: Option<DBCFile<DBCMap>>,
+    area_triggers: Option<DBCFile<DBCAreaTrigger>>,
 }
 
-use chr_races::DBCCharRaces;
 impl DBCStorage {
     pub fn new(dbc_files_path: String) -> Self {
         DBCStorage {
@@ -110,6 +123,7 @@ impl DBCStorage {
             chr_races: None,
             chr_classes: None,
             maps: None,
+            area_triggers: None,
         }
     }
 
@@ -129,6 +143,16 @@ impl DBCStorage {
 
     define_dbc!(map::DBCMap, maps, get_dbc_maps, load_dbc_maps);
 
+    define_dbc!(
+        area_trigger::DBCAreaTrigger,
+        area_triggers,
+        get_dbc_area_triggers,
+        load_dbc_area_triggers
+    );
+    pub fn unload_dbc_area_triggers(&mut self) {
+        self.area_triggers = None;
+    }
+
     async fn load_dbc<T: DBCTable + Debug>(&self) -> Result<DBCFile<T>> {
         use async_std::io::BufReader;
         use async_std::path::PathBuf;
@@ -143,12 +167,13 @@ impl DBCStorage {
         }
 
         let mut reader = std::io::Cursor::new(buffer);
-        let mut header = DBCHeader::default();
-        header.magic = reader.read_u32::<LittleEndian>()?;
-        header.rows_count = reader.read_u32::<LittleEndian>()?;
-        header.columns_count = reader.read_u32::<LittleEndian>()?;
-        header.row_size = reader.read_u32::<LittleEndian>()?;
-        header.string_block_size = reader.read_u32::<LittleEndian>()?;
+        let header = DBCHeader {
+            magic: reader.read_u32::<LittleEndian>()?,
+            rows_count: reader.read_u32::<LittleEndian>()?,
+            columns_count: reader.read_u32::<LittleEndian>()?,
+            row_size: reader.read_u32::<LittleEndian>()?,
+            string_block_size: reader.read_u32::<LittleEndian>()?,
+        };
 
         //Skip ahead to start of string table
         reader.set_position(

@@ -13,6 +13,11 @@ impl super::Character {
         self.movement_info.position = position.clone();
     }
 
+    fn reset_move_flags(&mut self) {
+        self.movement_info.movement_flags = 0;
+        self.movement_info.movement_flags2 = 0;
+    }
+
     pub fn teleport_to(&mut self, destination: TeleportationDistance) {
         self.teleportation_state = TeleportationState::Queued(destination);
     }
@@ -49,6 +54,7 @@ impl super::Character {
         }
 
         handlers::send_smsg_transfer_pending(self, destination.map).await?;
+        self.reset_move_flags();
 
         let old_map = world
             .get_instance_manager()

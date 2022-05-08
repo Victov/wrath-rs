@@ -7,18 +7,18 @@ use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::map_object::MapObject;
+use crate::world::World;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::io::Write;
-use std::sync::Arc;
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
-pub async fn handle_cmsg_char_enum(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_ENUM, 40);
 
-    let characters = client_manager
-        .realm_db
+    let characters = world
+        .get_realm_database()
         .get_characters_for_account(client.data.read().await.account_id.unwrap())
         .await?;
 
@@ -93,13 +93,15 @@ enum CharacterCreateReponse {
     ForceLogin = 0x45,
 }
 
-pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_char_create(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     use std::io::BufRead;
 
     let mut reader = std::io::Cursor::new(&packet.payload);
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let account_id = client.data.read().await.account_id.unwrap();
+
+    let realm_db = world.get_realm_database();
 
     let create_params = {
         let mut name = Vec::<u8>::new();
@@ -115,7 +117,6 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
         let facial_style = reader.read_u8()?;
         let outfit = reader.read_u8()?;
 
-        let realm_db = &client_manager.realm_db;
         let player_create_info = realm_db.get_player_create_info(race, class).await?;
 
         let x = player_create_info.position_x;
@@ -144,7 +145,6 @@ pub async fn handle_cmsg_char_create(client_manager: &Arc<ClientManager>, packet
         }
     };
 
-    let realm_db = &client_manager.realm_db;
     if !realm_db.is_character_name_available(&create_params.name).await? {
         send_char_create_reply(&client, CharacterCreateReponse::NameInUse).await?;
         return Ok(()); //this is a perfectly valid handling, not Err
@@ -174,7 +174,7 @@ async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -
     send_packet(client, &header, &writer).await
 }
 
-pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let guid = {
@@ -182,8 +182,8 @@ pub async fn handle_cmsg_player_login(client_manager: &Arc<ClientManager>, packe
         reader.read_guid::<LittleEndian>()?
     };
 
-    client.load_and_set_active_character(client_manager, guid).await?;
-    client.login_active_character(client_manager).await?;
+    client.load_and_set_active_character(client_manager, world, guid).await?;
+    client.login_active_character(world).await?;
 
     Ok(())
 }

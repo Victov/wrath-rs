@@ -7,7 +7,6 @@ use crate::prelude::*;
 use bit_field::BitArray;
 use podio::{LittleEndian, ReadPodExt};
 use std::convert::TryInto;
-use std::sync::Arc;
 
 pub async fn send_tutorial_flags(character: &Character) -> Result<()> {
     use std::io::Write;
@@ -20,7 +19,7 @@ pub async fn send_tutorial_flags(character: &Character) -> Result<()> {
     Ok(())
 }
 
-pub async fn handle_cmsg_tutorial_flag(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_tutorial_flag(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 

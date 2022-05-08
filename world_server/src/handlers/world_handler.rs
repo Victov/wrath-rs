@@ -5,9 +5,8 @@ use crate::packet::*;
 use crate::prelude::*;
 use crate::PacketToHandle;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
-use std::sync::Arc;
 
-pub async fn handle_cmsg_zoneupdate(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_zoneupdate(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -72,7 +71,7 @@ pub async fn send_time_sync(character: &Character) -> Result<()> {
     send_packet_to_character(character, &header, &writer).await
 }
 
-pub async fn handle_cmsg_time_sync_resp(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_time_sync_resp(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 

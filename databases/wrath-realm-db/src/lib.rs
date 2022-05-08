@@ -1,6 +1,8 @@
 use anyhow::Result;
 use std::time::Duration;
 
+pub mod areatrigger_teleport;
+pub mod areatrigger_restedzone;
 pub mod character;
 pub mod character_account_data;
 pub mod player_create_info;
@@ -10,11 +12,11 @@ pub struct RealmDatabase {
 }
 
 impl RealmDatabase {
-    pub async fn new(conn_string: &String, timeout: Duration) -> Result<Self> {
+    pub async fn new(conn_string: &str, timeout: Duration) -> Result<Self> {
         let pool = sqlx::mysql::MySqlPoolOptions::new()
             .max_connections(5)
             .connect_timeout(timeout)
-            .connect(conn_string.as_str())
+            .connect(conn_string)
             .await?;
 
         Ok(Self { connection_pool: pool })

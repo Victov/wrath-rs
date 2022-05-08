@@ -1,19 +1,29 @@
 use crate::character::Character;
 use crate::client_manager::ClientManager;
-use crate::data::{guid::*, PositionAndOrientation, ReadMovementInfo, WorldZoneLocation, WriteMovementInfo, WritePositionAndOrientation};
+use crate::data::{
+    guid::*, AreaTriggerPurpose, PositionAndOrientation, ReadMovementInfo, WorldZoneLocation, WriteMovementInfo, WritePositionAndOrientation,
+};
 use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::map_object::MapObject;
 use crate::world::prelude::stand_state::UnitStandState;
+use crate::world::World;
 use async_std::sync::RwLockUpgradableReadGuard;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::sync::Arc;
 
-pub async fn handle_movement_generic(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_movement_generic(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
+    {
+        let character = character_lock.read().await;
+        if character.teleportation_state != TeleportationState::None {
+            //Not an error, but we do simply want to ignore these packet
+            return Ok(());
+        }
+    }
 
     let mut reader = std::io::Cursor::new(&packet.payload);
     let guid = reader.read_guid_compressed()?;
@@ -29,7 +39,7 @@ pub async fn handle_movement_generic(client_manager: &Arc<ClientManager>, packet
     writer.write_movement_info(&movement_info)?;
 
     let character = character_lock.read().await;
-    send_packet_to_all_in_range(&character, false, &client_manager.world, &header, &writer).await?;
+    send_packet_to_all_in_range(&character, false, world, &header, &writer).await?;
 
     Ok(())
 }
@@ -73,7 +83,7 @@ pub async fn send_smsg_new_world(character: &Character, map_id: u32, position: &
     send_packet_to_character(character, &header, &writer).await
 }
 
-pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_msg_move_teleport_ack(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -95,7 +105,7 @@ pub async fn handle_msg_move_teleport_ack(client_manager: &Arc<ClientManager>, p
     Ok(())
 }
 
-pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_msg_move_worldport_ack(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -104,18 +114,14 @@ pub async fn handle_msg_move_worldport_ack(client_manager: &Arc<ClientManager>, 
     if let TeleportationState::Executing(TeleportationDistance::Far(destination)) = character.teleportation_state.clone() {
         let mut character = RwLockUpgradableReadGuard::upgrade(character).await;
 
-        let map = client_manager
-            .world
-            .get_instance_manager()
-            .get_or_create_map(&(*character), destination.map)
-            .await?;
+        let map = world.get_instance_manager().get_or_create_map(&(*character), destination.map).await?;
 
         character.map = destination.map;
         character.set_position(&destination.into());
         character.reset_time_sync();
-        character.send_packets_before_add_to_map(client_manager).await?;
+        character.send_packets_before_add_to_map().await?;
         map.push_object(Arc::downgrade(&character_lock)).await;
-        character.send_packets_after_add_to_map(client_manager).await?;
+        character.send_packets_after_add_to_map(world.get_realm_database()).await?;
 
         character.teleportation_state = TeleportationState::None;
     }
@@ -141,4 +147,36 @@ pub async fn send_smsg_force_move_unroot(character: &Character) -> Result<()> {
     writer.write_guid_compressed(character.get_guid())?;
     writer.write_u32::<LittleEndian>(0)?;
     send_packet_to_character(character, &header, &writer).await
+}
+
+pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
+    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let character_lock = client.get_active_character().await?;
+
+    let area_trigger_id = {
+        let mut reader = std::io::Cursor::new(&packet.payload);
+        reader.read_u32::<LittleEndian>()?
+    };
+
+    let trigger_data = client_manager
+        .data_storage
+        .get_area_trigger(area_trigger_id)
+        .ok_or_else(|| anyhow!("Character entered area trigger that isn't known to the server"))?;
+
+    if let AreaTriggerPurpose::Teleport(teleport_data) = &trigger_data.purpose {
+        let mut character = character_lock.write().await;
+        let destination = WorldZoneLocation {
+            x: teleport_data.target_position_x,
+            y: teleport_data.target_position_y,
+            z: teleport_data.target_position_z,
+            o: teleport_data.target_orientation,
+            map: teleport_data.target_map as u32,
+            zone: 0, //todo?
+        };
+        character.teleport_to(TeleportationDistance::Far(destination))
+    } else if let AreaTriggerPurpose::RestedArea = &trigger_data.purpose {
+        let mut character = character_lock.write().await;
+        character.handle_enter_inn()?;
+    }
+    Ok(())
 }

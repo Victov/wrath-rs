@@ -54,3 +54,29 @@ CREATE TABLE `playercreateinfo` (
 	`orientation` float NOT NULL DEFAULT '0' COMMENT 'The orientation for the characters initial position.',
 	PRIMARY KEY (`race`,`class`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+CREATE TABLE `areatrigger_teleport` (
+  `id` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'The ID of the trigger (See AreaTrigger.dbc).',
+  `name` text DEFAULT NULL COMMENT 'The name of the teleport areatrigger.',
+  `required_level` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT 'The player needs to be at least this level.',
+  `required_item` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Requested an item (See item_template.entry).',
+  `required_item2` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Requested an item (See item_template.entry).',
+  `heroic_key` int(11) unsigned NOT NULL DEFAULT '0',
+  `heroic_key2` int(11) unsigned NOT NULL DEFAULT '0',
+  `required_quest_done` int(11) unsigned NOT NULL DEFAULT '0' COMMENT 'Requires quest (See quest_template.entry).',
+  `required_quest_done_heroic` int(11) unsigned NOT NULL DEFAULT '0',
+  `target_map` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'The destination map id. (See map.dbc)',
+  `target_position_x` float NOT NULL DEFAULT '0' COMMENT 'The x location of the player at the destination.',
+  `target_position_y` float NOT NULL DEFAULT '0' COMMENT 'The y location of the player at the destination.',
+  `target_position_z` float NOT NULL DEFAULT '0' COMMENT 'The z location of the player at the destination.',
+  `target_orientation` float NOT NULL DEFAULT '0' COMMENT 'The orientation of the player at the destination.',
+  PRIMARY KEY (`id`),
+  FULLTEXT KEY `name` (`name`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Trigger System';
+
+CREATE TABLE `areatrigger_restedzones` (
+  `id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'The ID of the trigger (See AreaTrigger.dbc).',
+  `name` text DEFAULT NULL COMMENT 'Name of town or tavern.',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Trigger System';
+

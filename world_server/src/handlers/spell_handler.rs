@@ -7,7 +7,6 @@ use crate::prelude::*;
 use crate::world::value_fields::HasValueFields;
 use crate::world::value_fields::PlayerFields;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
-use std::sync::Arc;
 
 pub async fn send_initial_spells(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_INITIAL_SPELLS, 500);
@@ -35,7 +34,7 @@ pub async fn send_aura_update_all(character: &Character) -> Result<()> {
     Ok(())
 }
 
-pub async fn handle_cmsg_set_actionbar_toggles(client_manager: &Arc<ClientManager>, packet: &PacketToHandle) -> Result<()> {
+pub async fn handle_cmsg_set_actionbar_toggles(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let actionbar = {
         let mut reader = std::io::Cursor::new(&packet.payload);
