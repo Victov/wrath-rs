@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::time::Duration;
 
 pub mod areatrigger_teleport;
+pub mod areatrigger_restedzone;
 pub mod character;
 pub mod character_account_data;
 pub mod player_create_info;

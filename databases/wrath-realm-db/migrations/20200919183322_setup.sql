@@ -73,3 +73,10 @@ CREATE TABLE `areatrigger_teleport` (
   PRIMARY KEY (`id`),
   FULLTEXT KEY `name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Trigger System';
+
+CREATE TABLE `areatrigger_restedzones` (
+  `id` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'The ID of the trigger (See AreaTrigger.dbc).',
+  `name` text DEFAULT NULL COMMENT 'Name of town or tavern.',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Trigger System';
+

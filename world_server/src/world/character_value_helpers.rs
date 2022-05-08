@@ -1,4 +1,5 @@
 use super::prelude::{stand_state::UnitStandState, UnitValueHelpers};
+use super::value_fields::PlayerFields;
 use crate::prelude::*;
 use crate::{character::Character, handlers};
 
@@ -19,6 +20,14 @@ pub trait CharacterValueHelpers: UnitValueHelpers {
         } else {
             handlers::send_smsg_force_move_unroot(as_character).await
         }
+    }
+
+    fn set_rested_bytes(&mut self, rested: bool) -> Result<()> {
+        let value = match rested {
+            true => 1,
+            false => 2,
+        };
+        self.set_byte(PlayerFields::Bytes2 as usize, 3, value)
     }
 }
 

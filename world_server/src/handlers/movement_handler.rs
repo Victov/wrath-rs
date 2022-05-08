@@ -174,6 +174,9 @@ pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &Pa
             zone: 0, //todo?
         };
         character.teleport_to(TeleportationDistance::Far(destination))
+    } else if let AreaTriggerPurpose::RestedArea = &trigger_data.purpose {
+        let mut character = character_lock.write().await;
+        character.handle_enter_inn()?;
     }
     Ok(())
 }

@@ -14,6 +14,7 @@ const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 
 mod character_logout;
 mod character_movement;
+mod character_rested;
 
 pub struct Character {
     pub guid: Guid,
@@ -57,6 +58,7 @@ pub struct Character {
     pub teleportation_state: TeleportationState,
 
     pub logout_state: LogoutState,
+    rested_state: character_rested::RestedState,
 }
 
 impl Character {
@@ -88,6 +90,7 @@ impl Character {
             time_sync_cooldown: 0f32,
             teleportation_state: TeleportationState::None,
             logout_state: LogoutState::None,
+            rested_state: character_rested::RestedState::NotRested,
         }
     }
 

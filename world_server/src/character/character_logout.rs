@@ -21,7 +21,7 @@ impl super::Character {
     }
 
     pub async fn try_logout(&mut self) -> Result<(LogoutResult, LogoutSpeed)> {
-        //TODO: add checks about being in rested area (instant logout), being in combat (refuse), etc
+        //TODO: add checks about being in combat (refuse), etc
 
         if self
             .movement_info
@@ -30,7 +30,7 @@ impl super::Character {
             return Ok((LogoutResult::FailJumpingOrFalling, LogoutSpeed::Delayed));
         }
 
-        let delayed = true;
+        let delayed = !self.is_in_rested_area();
         Ok(match self.logout_state {
             LogoutState::None if delayed => {
                 self.logout_state = LogoutState::Pending(std::time::Duration::from_secs(20));

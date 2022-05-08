@@ -8,6 +8,7 @@ use crate::prelude::*;
 #[derive(Debug)]
 pub enum AreaTriggerPurpose {
     Teleport(DBAreaTriggerTeleport),
+    RestedArea,
     Unknown,
 }
 
@@ -40,6 +41,8 @@ impl super::DataStorage {
 
             if let Ok(teleport_data) = realm_db.get_areatrigger_teleport(areatrigger.id).await {
                 areatrigger_final.purpose = AreaTriggerPurpose::Teleport(teleport_data);
+            } else if let Ok(_rested_area_data) = realm_db.get_areatrigger_rested_zone(areatrigger.id).await {
+                areatrigger_final.purpose = AreaTriggerPurpose::RestedArea;
             }
 
             self.area_triggers.insert(areatrigger_final.id, areatrigger_final);
