@@ -9,7 +9,7 @@ use crate::prelude::*;
 use crate::world::map_object::MapObject;
 use crate::world::World;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
-use std::io::Write;
+use std::{collections::HashMap, io::Write};
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
 pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
@@ -30,7 +30,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
         let is_first_login = 0u8;
 
         writer.write_guid::<LittleEndian>(&guid)?;
-        writer.write(character.name.as_bytes())?; //Investigate: Don't need to manually write string terminator here?
+        writer.write_all(character.name.as_bytes())?; //Investigate: Don't need to manually write string terminator here?
         writer.write_u8(character.race)?;
         writer.write_u8(character.class)?;
         writer.write_u8(character.gender)?;
@@ -52,12 +52,31 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
         writer.write_u32::<LittleEndian>(0)?; //pet display id
         writer.write_u32::<LittleEndian>(0)?; //pet level
         writer.write_u32::<LittleEndian>(0)?; //pet family
-        for _ in 0..23u8
+
+        let equipment: HashMap<u8, wrath_realm_db::character_equipment::DBCharacterEquipmentDisplayInfo> = {
+            let equipped_items = world.get_realm_database().get_all_character_equipment_display_info(character.id).await?;
+            let mut hashmap = HashMap::default();
+            for item in equipped_items {
+                hashmap.insert(item.slot_id, item);
+            }
+            hashmap
+        };
+
+        for slot in 0..23u8
         //inventory slot count
         {
-            writer.write_u32::<LittleEndian>(0)?; //equipped item display id
-            writer.write_u8(0)?; //inventory type
-            writer.write_u32::<LittleEndian>(0)?; //enchant aura id
+            if let Some(equipped) = equipment.get(&slot) {
+                //TODO: slot seems incorrect? figure out what's going wrong here
+                trace!("character {} has something equipped!: {:?}", character.name, equipped);
+                writer.write_u32::<LittleEndian>(equipped.displayid.unwrap_or(0))?; //equipped item display id
+                writer.write_u8(equipped.slot_id)?; //inventory type
+                let enchant = equipped.enchant.unwrap_or(0);
+                writer.write_u32::<LittleEndian>(enchant)?; //enchant aura id
+            } else {
+                writer.write_u32::<LittleEndian>(0)?; //equipped item display id
+                writer.write_u8(0)?; //inventory type
+                writer.write_u32::<LittleEndian>(0)?; //enchant aura id
+            }
         }
     }
 
