@@ -96,9 +96,10 @@ impl MapManager {
                         let (num_blocks, buf) =
                             build_values_update_block(valid_object.as_map_object().get_guid(), &*valid_object.as_has_value_fields().unwrap())?;
 
-                        if let Some(valid_object) = valid_object.as_update_receiver_mut() {
-                            valid_object.push_update_block(&mut buf.clone(), num_blocks);
-                        }
+                        valid_object
+                            .as_update_receiver_mut()
+                            .unwrap()
+                            .push_update_block(&mut buf.clone(), num_blocks);
 
                         let in_range_guids = valid_object.as_world_object().unwrap().get_in_range_guids();
                         for in_range_guid in in_range_guids {
@@ -237,7 +238,7 @@ impl MapManager {
                                 .read()
                                 .await
                                 .as_world_object()
-                                .and_then(|a| Some(a.wants_updates()))
+                                .map(|a| a.wants_updates())
                                 .unwrap_or(false)
                         };
                         {

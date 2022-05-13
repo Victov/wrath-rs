@@ -110,7 +110,7 @@ fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, object: &dyn 
             writer.write_f32::<LittleEndian>(1.00f32)?; //back Swim speed
             writer.write_f32::<LittleEndian>(0.0f32)?; //Fly Speed, fly disabled for now so set to 0
             writer.write_f32::<LittleEndian>(0.0f32)?; //Backwards fly Speed, fly disabled for now
-            writer.write_f32::<LittleEndian>(3.14f32)?; //turn speed
+            writer.write_f32::<LittleEndian>(std::f32::consts::PI)?; //turn speed
             writer.write_f32::<LittleEndian>(7.0)?; //pitch speed
         }
     }
@@ -120,12 +120,12 @@ fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, object: &dyn 
         writer.write_u32::<LittleEndian>(object.as_map_object().get_guid().get_low_part())?;
     }
     if flags & (ObjectUpdateFlags::HighGuid as u16) > 0 {
-        //writer.write_u32::<LittleEndian>(object.as_map_object().get_guid().get_high_part())?;
-        if flags & (ObjectUpdateFlags::UpdateSelf as u16) > 0 {
+        writer.write_u32::<LittleEndian>(object.as_map_object().get_guid().get_high_part())?;
+        /*if flags & (ObjectUpdateFlags::UpdateSelf as u16) > 0 {
             writer.write_u32::<LittleEndian>(0x2F)?;
         } else {
             writer.write_u32::<LittleEndian>(0x08)?;
-        }
+        }*/
     }
 
     //todo: flag has target

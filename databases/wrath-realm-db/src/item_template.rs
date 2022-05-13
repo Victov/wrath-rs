@@ -168,7 +168,7 @@ impl super::RealmDatabase {
                 val => Some(val.try_into().unwrap_or(u32::max_value())),
             },
             allowed_classes_mask: match res.AllowableClass {
-                0 => None,
+                -1 => None,
                 val => Some(val.try_into().unwrap_or(u32::max_value())),
             },
             item_level: res.ItemLevel,

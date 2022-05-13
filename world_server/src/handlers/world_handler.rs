@@ -52,7 +52,7 @@ pub async fn send_update_packet(character: &Character, num_blocks: u32, data: &[
     writer.write_u32::<LittleEndian>(num_blocks)?;
     {
         use std::io::Write;
-        writer.write(data)?;
+        writer.write_all(data)?;
     }
 
     send_packet_to_character(character, &header, &writer).await

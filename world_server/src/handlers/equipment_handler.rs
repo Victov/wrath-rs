@@ -22,7 +22,8 @@ pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, packe
     writer.write_u32::<LittleEndian>(item_template.class as u32)?;
     writer.write_u32::<LittleEndian>(item_template.subclass as u32)?;
     writer.write_i32::<LittleEndian>(-1)?;
-    writer.write_all(item_template.name.as_bytes())?; //TODO: may need null terminator here?
+    writer.write_all(item_template.name.as_bytes())?;
+    writer.write_u8(0)?; //nullterminator
     writer.write_u8(0)?; //name2 nullterminator
     writer.write_u8(0)?; //name3
     writer.write_u8(0)?; //name4
@@ -37,23 +38,24 @@ pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, packe
     writer.write_u32::<LittleEndian>(item_template.allowed_races_mask.unwrap_or(u32::max_value()))?;
     writer.write_u32::<LittleEndian>(item_template.item_level as u32)?;
     writer.write_u32::<LittleEndian>(item_template.required_level.unwrap_or_default() as u32)?;
+
     let required_skill = item_template.required_skill.unwrap_or_default();
     writer.write_u32::<LittleEndian>(required_skill.skill_id as u32)?;
     writer.write_u32::<LittleEndian>(required_skill.required_rank as u32)?;
     writer.write_u32::<LittleEndian>(item_template.required_spell_id.unwrap_or_default())?;
     writer.write_u32::<LittleEndian>(item_template.required_honor_rank.unwrap_or_default())?;
     writer.write_u32::<LittleEndian>(0)?; //Required cityrank. deprecated
+
     let required_faction = item_template.required_faction.unwrap_or_default();
     writer.write_u32::<LittleEndian>(required_faction.faction_id as u32)?;
     writer.write_u32::<LittleEndian>(required_faction.required_rank as u32)?;
-    writer.write_u32::<LittleEndian>(item_template.max_count as u32)?;
-    writer.write_u32::<LittleEndian>(item_template.stackable as u32)?;
+    writer.write_i32::<LittleEndian>(item_template.max_count as i32)?;
+    writer.write_i32::<LittleEndian>(item_template.stackable as i32)?;
     writer.write_u32::<LittleEndian>(item_template.container_slots as u32)?;
     writer.write_u32::<LittleEndian>(item_template.granted_stats.len() as u32)?;
     //for each granted stat...u32+u32
     writer.write_u32::<LittleEndian>(item_template.scaling_stat_distribution as u32)?;
     writer.write_u32::<LittleEndian>(item_template.scaling_stat_value)?;
-    writer.write_u32::<LittleEndian>(item_template.granted_armor.unwrap_or_default() as u32)?;
     for i in 0..2 {
         let dmg = item_template.damage.get(i).cloned().unwrap_or_default();
         writer.write_f32::<LittleEndian>(dmg.min)?;
@@ -75,13 +77,21 @@ pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, packe
         let spell_proc = item_template.spell_procs.get(i).cloned().unwrap_or_default();
         writer.write_u32::<LittleEndian>(spell_proc.spell_id)?;
         writer.write_u32::<LittleEndian>(spell_proc.trigger_type as u32)?;
-        writer.write_u32::<LittleEndian>(spell_proc.charges as u32)?;
+        writer.write_u32::<LittleEndian>(u32::max_value())?; //spell_proc.charges as u32)?;
         writer.write_u32::<LittleEndian>(spell_proc.cooldown)?;
         writer.write_u32::<LittleEndian>(spell_proc.category as u32)?;
         writer.write_u32::<LittleEndian>(spell_proc.category_cooldown)?;
+
+        /*writer.write_u32::<LittleEndian>(0)?;
+        writer.write_u32::<LittleEndian>(0)?;
+        writer.write_u32::<LittleEndian>(0)?;
+        writer.write_u32::<LittleEndian>(u32::MAX)?;
+        writer.write_u32::<LittleEndian>(0)?;
+        writer.write_u32::<LittleEndian>(u32::MAX)?;*/
     }
     writer.write_u32::<LittleEndian>(item_template.bonding as u32)?;
     writer.write_all(item_template.description.as_bytes())?;
+    writer.write_u8(0)?; //description string terminator
     let page_text = item_template.readable_info.unwrap_or_default();
     writer.write_u32::<LittleEndian>(page_text.text_id)?;
     writer.write_u32::<LittleEndian>(page_text.language_id as u32)?;
@@ -106,7 +116,7 @@ pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, packe
     }
     writer.write_u32::<LittleEndian>(item_template.socket_bonus.unwrap_or_default())?;
     writer.write_u32::<LittleEndian>(item_template.gem_properties)?;
-    writer.write_u32::<LittleEndian>(item_template.required_disenchant_skill.unwrap_or_default() as u32)?;
+    writer.write_i32::<LittleEndian>(item_template.required_disenchant_skill.unwrap_or_default() as i32)?;
     writer.write_f32::<LittleEndian>(item_template.armor_damage_modifier)?;
     writer.write_u32::<LittleEndian>(item_template.duration)?;
     writer.write_u32::<LittleEndian>(item_template.item_limit_category as u32)?;

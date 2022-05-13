@@ -10,6 +10,7 @@ use std::sync::Arc;
 const NUM_ITEM_FIELDS: usize = ItemFields::End as usize;
 
 pub struct Item {
+    pub id: u32,
     guid: Guid,
     owner: Arc<RwLock<Character>>,
     item_value_fields: [u32; NUM_ITEM_FIELDS],
@@ -19,10 +20,13 @@ pub struct Item {
 impl Item {
     pub async fn new(id: u32, owner: &Character, world: &World) -> Result<Self> {
         let item_template = world.get_realm_database().get_item_template(id).await?;
-        //todo generate fresh id
-        let guid = Guid::new(123, HighGuid::ItemOrContainer);
+        use rand::RngCore;
+        let low_guid: u32 = rand::thread_rng().next_u32();
+
+        let guid = Guid::new(low_guid, HighGuid::ItemOrContainer);
 
         let mut result = Self {
+            id,
             owner: owner.try_get_self_arc().await?,
             guid,
             item_value_fields: [0; NUM_ITEM_FIELDS],
