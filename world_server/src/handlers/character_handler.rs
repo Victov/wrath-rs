@@ -1,6 +1,7 @@
 use crate::character::*;
 use crate::client::Client;
 use crate::client_manager::ClientManager;
+use crate::constants::inventory::*;
 use crate::data::WritePositionAndOrientation;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
@@ -62,21 +63,22 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
             hashmap
         };
 
-        for slot in 0..23u8
-        //inventory slot count
-        {
-            if let Some(equipped) = equipment.get(&slot) {
-                //TODO: slot seems incorrect? figure out what's going wrong here
-                trace!("character {} has something equipped!: {:?}", character.name, equipped);
-                writer.write_u32::<LittleEndian>(equipped.displayid.unwrap_or(0))?; //equipped item display id
-                writer.write_u8(equipped.slot_id)?; //inventory type
-                let enchant = equipped.enchant.unwrap_or(0);
-                writer.write_u32::<LittleEndian>(enchant)?; //enchant aura id
+        for equip_slot in EQUIPMENT_SLOTS_START..EQUIPMENT_SLOTS_END + 1 {
+            if let Some(equipped) = equipment.get(&equip_slot) {
+                writer.write_u32::<LittleEndian>(equipped.displayid.unwrap_or(0))?;
+                writer.write_u8(equipped.inventory_type.unwrap_or(0))?;
+                writer.write_u32::<LittleEndian>(equipped.enchant.unwrap_or(0))?;
             } else {
                 writer.write_u32::<LittleEndian>(0)?; //equipped item display id
                 writer.write_u8(0)?; //inventory type
                 writer.write_u32::<LittleEndian>(0)?; //enchant aura id
             }
+        }
+
+        for _bag_slot in BAG_SLOTS_START..BAG_SLOTS_END + 1 {
+            writer.write_u32::<LittleEndian>(0)?; //equipped item display id
+            writer.write_u8(0)?; //inventory type
+            writer.write_u32::<LittleEndian>(0)?; //enchant aura id
         }
     }
 
