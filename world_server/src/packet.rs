@@ -1,10 +1,6 @@
 use super::client::Client;
 use super::opcodes::Opcodes;
-use crate::{
-    character::*,
-    prelude::*,
-    world::{map_object::MapObject, World},
-};
+use crate::{character::*, prelude::*, world::prelude::*};
 use async_std::prelude::*;
 use podio::{BigEndian, LittleEndian, WritePodExt};
 use std::convert::TryFrom;
@@ -52,7 +48,7 @@ pub async fn send_packet_to_all_in_range(
     payload: &Cursor<Vec<u8>>,
 ) -> Result<()> {
     if let Some(map) = world.get_instance_manager().try_get_map_for_character(character).await {
-        let in_range_guids = character.get_in_range_guids();
+        let in_range_guids = character.as_world_object().unwrap().get_in_range_guids();
         for guid in in_range_guids {
             let object_lock = map
                 .try_get_object(guid)

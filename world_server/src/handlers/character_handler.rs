@@ -7,7 +7,7 @@ use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
-use crate::world::map_object::MapObject;
+use crate::world::map_object::{MapObject, WorldObject};
 use crate::world::World;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::{collections::HashMap, io::Write};

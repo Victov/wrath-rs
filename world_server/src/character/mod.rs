@@ -3,6 +3,7 @@ use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::{ActionBar, DataStorage, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
+use crate::item::Item;
 use crate::prelude::*;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
@@ -12,6 +13,7 @@ use wrath_realm_db::RealmDatabase;
 
 const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 
+mod character_equipment;
 mod character_logout;
 mod character_movement;
 mod character_rested;
@@ -47,7 +49,7 @@ pub struct Character {
     changed_update_mask: UpdateMask,
 
     //things required to keep MapObject working
-    in_range_objects: HashMap<Guid, Weak<RwLock<dyn MapObjectWithValueFields>>>,
+    in_range_objects: HashMap<Guid, Weak<RwLock<dyn GameObject>>>,
     recently_removed_guids: Vec<Guid>,
 
     //time sync
@@ -59,6 +61,8 @@ pub struct Character {
 
     pub logout_state: LogoutState,
     rested_state: character_rested::RestedState,
+
+    equipped_items: Vec<Arc<RwLock<Item>>>,
 }
 
 impl Character {
@@ -91,10 +95,12 @@ impl Character {
             teleportation_state: TeleportationState::None,
             logout_state: LogoutState::None,
             rested_state: character_rested::RestedState::NotRested,
+            equipped_items: vec![],
         }
     }
 
-    pub async fn load_from_database(&mut self, data_storage: &DataStorage, realm_database: &RealmDatabase) -> Result<()> {
+    pub async fn load_from_database(&mut self, world: &World, data_storage: &DataStorage) -> Result<()> {
+        let realm_database = world.get_realm_database();
         let db_entry = realm_database.get_character(self.guid.get_low_part()).await?;
         self.bind_location = Some(WorldZoneLocation {
             zone: db_entry.bind_zone as u32,
@@ -121,7 +127,7 @@ impl Character {
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
         if character_account_data.is_empty() {
-            handlers::create_empty_character_account_data_rows(realm_database, character_id).await?;
+            handlers::create_empty_character_account_data_rows(&realm_database, character_id).await?;
         }
 
         let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
@@ -160,6 +166,8 @@ impl Character {
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
         self.set_unit_field_u32(UnitFields::Factiontemplate, 1)?;
+
+        self.load_equipment_from_database(world).await?;
 
         Ok(())
     }
@@ -222,13 +230,72 @@ impl Character {
         }
         Ok(())
     }
+
+    pub async fn try_get_self_arc(&self) -> Result<Arc<RwLock<Self>>> {
+        let client = self
+            .client
+            .upgrade()
+            .ok_or_else(|| anyhow!("Could not get an Arc to the character because the owning client does not exist"))?;
+        client.get_active_character().await
+    }
 }
 
+#[async_trait::async_trait]
 impl MapObject for Character {
     fn get_guid(&self) -> &Guid {
         &self.guid
     }
+    fn get_type(&self) -> updates::ObjectType {
+        ObjectType::Player
+    }
 
+    async fn on_pushed_to_map(&mut self, map_manager: &MapManager) -> Result<()> {
+        let (block_count, mut update_data) = build_create_update_block_for_player(self, self)?;
+        self.push_update_block(&mut update_data, block_count);
+        self.equipment_on_added_to_map(map_manager).await
+    }
+}
+
+//Implement features for gameobject. For character, almost all features (traits) are enabled (Some)
+impl GameObject for Character {
+    fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates> {
+        Some(self)
+    }
+
+    fn as_update_receiver(&self) -> Option<&dyn ReceiveUpdates> {
+        Some(self)
+    }
+
+    fn as_world_object_mut(&mut self) -> Option<&mut dyn WorldObject> {
+        Some(self)
+    }
+
+    fn as_world_object(&self) -> Option<&dyn WorldObject> {
+        Some(self)
+    }
+
+    fn as_map_object_mut(&mut self) -> &mut dyn MapObject {
+        self
+    }
+
+    fn as_map_object(&self) -> &dyn MapObject {
+        self
+    }
+
+    fn as_character(&self) -> Option<&Character> {
+        Some(self)
+    }
+
+    fn as_has_value_fields(&self) -> Option<&dyn HasValueFields> {
+        Some(self)
+    }
+
+    fn as_has_value_fields_mut(&mut self) -> Option<&mut dyn HasValueFields> {
+        Some(self)
+    }
+}
+
+impl WorldObject for Character {
     fn get_position(&self) -> &PositionAndOrientation {
         &self.movement_info.position
     }
@@ -237,21 +304,11 @@ impl MapObject for Character {
         &self.movement_info
     }
 
-    fn get_type(&self) -> updates::ObjectType {
-        ObjectType::Player
-    }
-
-    fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
-        let (block_count, mut update_data) = build_create_update_block_for_player(self, self)?;
-        self.push_update_block(&mut update_data, block_count);
-        Ok(())
-    }
-
     fn is_in_range(&self, guid: &Guid) -> bool {
         self.in_range_objects.contains_key(guid)
     }
 
-    fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn MapObjectWithValueFields>>) -> Result<()> {
+    fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn GameObject>>) -> Result<()> {
         assert!(!self.is_in_range(guid));
         self.in_range_objects.insert(*guid, object);
         Ok(())
@@ -282,14 +339,6 @@ impl MapObject for Character {
 
     fn wants_updates(&self) -> bool {
         true
-    }
-
-    fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates> {
-        Some(self)
-    }
-
-    fn as_character(&self) -> Option<&Character> {
-        Some(self)
     }
 }
 

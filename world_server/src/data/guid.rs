@@ -35,6 +35,10 @@ impl Guid {
     pub fn get_high_part(&self) -> u32 {
         ((self.0 & 0xFFFFFFFF00000000) >> 32) as u32
     }
+
+    pub fn get_full(&self) -> u64 {
+        self.0
+    }
 }
 
 pub trait WriteGuid {
@@ -73,7 +77,6 @@ impl<W: std::io::Write> WriteGuid for W {
 
 fn get_byte_value_at(input: u64, index: isize) -> u8 {
     let shifted = input >> (8 * index);
-    
 
     (shifted & 0x00000000000000FF) as u8
 }

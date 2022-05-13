@@ -20,6 +20,7 @@ mod console_input;
 mod constants;
 mod data;
 pub mod handlers;
+pub mod item;
 mod opcodes;
 mod packet;
 mod packet_handler;

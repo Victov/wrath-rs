@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::map_manager::MapManager;
-use super::map_object::MapObject;
+use super::map_object::{GameObject, MapObject, WorldObject};
 
 pub type InstanceID = u32;
 pub type MapID = u32;
@@ -70,14 +70,14 @@ impl InstanceManager {
         false
     }
 
-    pub async fn get_or_create_map(&self, object: &impl MapObject, map_id: MapID) -> Result<Arc<MapManager>> {
+    pub async fn get_or_create_map(&self, object: &impl GameObject, map_id: MapID) -> Result<Arc<MapManager>> {
         let map = if !self.is_instance(map_id) {
             Ok(self
                 .world_maps
                 .write()
                 .await
                 .entry(map_id)
-                .or_insert(Arc::new(MapManager::new(map_id)))
+                .or_insert_with(|| Arc::new(MapManager::new(map_id)))
                 .clone())
         } else if let Some(character) = object.as_character() {
             Ok(self.get_or_create_map_for_instance(map_id, character.instance_id).await)

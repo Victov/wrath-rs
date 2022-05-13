@@ -5,6 +5,7 @@ use wrath_realm_db::RealmDatabase;
 
 pub mod character_value_helpers;
 mod instance_manager;
+pub mod item_value_helpers;
 pub mod map_cell;
 mod map_manager;
 pub mod map_object;

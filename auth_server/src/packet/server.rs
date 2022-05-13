@@ -107,13 +107,13 @@ impl<'a> PacketWriter for ServerPacket<'a> {
                 writer.write_u8(0)?; // protocol version
                 writer.write_u8(*result)?;
                 if let Some(body) = body {
-                    writer.write(body.public_key)?;
+                    writer.write_all(body.public_key)?;
                     writer.write_u8(body.generator.len() as u8)?;
-                    writer.write(body.generator)?;
+                    writer.write_all(body.generator)?;
                     writer.write_u8(body.large_safe_prime.len() as u8)?;
-                    writer.write(body.large_safe_prime)?;
-                    writer.write(body.salt)?;
-                    writer.write(body.checksum_salt)?;
+                    writer.write_all(body.large_safe_prime)?;
+                    writer.write_all(body.salt)?;
+                    writer.write_all(body.checksum_salt)?;
                     writer.write_u8(body.security_flags)?;
                 }
             }
@@ -121,8 +121,8 @@ impl<'a> PacketWriter for ServerPacket<'a> {
                 writer.write_u8(CMD_AUTH_RECONNECT_CHALLENGE)?;
                 writer.write_u8(*result)?;
                 if let Some(body) = body {
-                    writer.write(body.challenge_data)?;
-                    writer.write(body.checksum_salt)?;
+                    writer.write_all(body.challenge_data)?;
+                    writer.write_all(body.checksum_salt)?;
                 }
             }
             ServerPacket::LogonProof {

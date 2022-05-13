@@ -119,12 +119,19 @@ impl Client {
 
     pub async fn load_and_set_active_character(&self, client_manager: &ClientManager, world: &World, character_guid: Guid) -> Result<()> {
         let weakself = Arc::downgrade(&client_manager.get_client(self.id).await?);
-        let mut character = Character::new(weakself, character_guid);
-        character
-            .load_from_database(&client_manager.data_storage, &world.get_realm_database())
+        let character = Character::new(weakself, character_guid);
+        let character_arc = Arc::new(RwLock::new(character));
+
+        {
+            let mut data = self.data.write().await;
+            data.active_character = Some(character_arc.clone());
+        }
+
+        character_arc
+            .write()
+            .await
+            .load_from_database(world, &client_manager.data_storage)
             .await?;
-        let mut data = self.data.write().await;
-        data.active_character = Some(Arc::new(RwLock::new(character)));
         Ok(())
     }
 
