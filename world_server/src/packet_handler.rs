@@ -95,6 +95,7 @@ impl PacketHandler {
             Opcodes::CMSG_FORCE_MOVE_ROOT_ACK => Ok(()),   //Don't do anything, disable warning spam
             Opcodes::CMSG_FORCE_MOVE_UNROOT_ACK => Ok(()), //Don't do anything, disable warning spam
             Opcodes::CMSG_AREATRIGGER => handle_cmsg_areatrigger(client_manager, packet).await,
+            Opcodes::CMSG_ITEM_QUERY_SINGLE => handle_cmsg_item_query_single(client_manager, packet, world).await,
 
             _ => bail!("Unhandled opcode"),
         }

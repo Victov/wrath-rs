@@ -72,3 +72,6 @@ pub use movement_handler::send_smsg_force_move_unroot;
 pub use movement_handler::send_smsg_new_world;
 pub use movement_handler::send_smsg_stand_state_update;
 pub use movement_handler::send_smsg_transfer_pending;
+
+pub mod equipment_handler;
+pub use equipment_handler::handle_cmsg_item_query_single;
