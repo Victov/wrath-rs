@@ -10,7 +10,7 @@ pub struct Guid(u64);
 #[allow(dead_code)]
 pub enum HighGuid {
     Player = 0x0000,          // blizz 0000
-    ItemOrContainer = 0x4000, // blizz 4000
+    ItemOrContainer = 0x4700, // blizz 4000
     GameObject = 0xF110,      // blizz F110
     Transport = 0xF120,       // blizz F120 (for GAMEOBJECT_TYPE_TRANSPORT)
     Unit = 0xF130,            // blizz F130

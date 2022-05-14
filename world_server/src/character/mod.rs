@@ -250,9 +250,10 @@ impl MapObject for Character {
     }
 
     async fn on_pushed_to_map(&mut self, map_manager: &MapManager) -> Result<()> {
+        self.push_create_blocks_for_items(map_manager).await?;
         let (block_count, mut update_data) = build_create_update_block_for_player(self, self)?;
         self.push_update_block(&mut update_data, block_count);
-        self.equipment_on_added_to_map(map_manager).await
+        Ok(())
     }
 }
 
@@ -359,6 +360,7 @@ impl ReceiveUpdates for Character {
     async fn process_pending_updates(&mut self) -> Result<()> {
         let (num, buf) = self.get_update_blocks();
         if num > 0 {
+            info!("sent {} pending updates to {}", num, self.name);
             handlers::send_update_packet(self, num, buf).await?;
             self.clear_update_blocks();
         }

@@ -252,9 +252,7 @@ impl MapManager {
                             if wants_updates {
                                 let (block_count, mut buffer) = build_create_update_block_for_player(&*write_obj, &*target_object_lock.read().await)?;
 
-                                if let Some(wants_updates) = write_obj.as_update_receiver_mut() {
-                                    wants_updates.push_update_block(&mut buffer, block_count);
-                                }
+                                write_obj.as_update_receiver_mut().unwrap().push_update_block(&mut buffer, block_count);
                             }
                         }
                         {

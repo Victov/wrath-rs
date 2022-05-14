@@ -24,7 +24,7 @@ pub enum ObjectUpdateFlags {
 }
 
 #[allow(dead_code)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ObjectType {
     Object = 0,
     Item = 1,

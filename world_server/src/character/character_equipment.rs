@@ -17,7 +17,7 @@ impl super::Character {
         Ok(())
     }
 
-    pub(super) async fn equipment_on_added_to_map(&mut self, map: &MapManager) -> Result<()> {
+    pub(super) async fn push_create_blocks_for_items(&mut self, map: &MapManager) -> Result<()> {
         for item in self.equipped_items.clone() {
             let (num, mut buf) = {
                 let item = item.read().await;
@@ -30,7 +30,7 @@ impl super::Character {
     }
 
     pub(super) async fn set_equipped_item_visual_flags(&mut self, slot: u8, item: &mut Item) -> Result<()> {
-        self.set_field_guid(PlayerFields::InvSlotHead as usize + (slot as usize * 2), item.get_guid())?;
+        //self.set_field_guid(PlayerFields::InvSlotHead as usize + (slot as usize * 2), item.get_guid())?;
         item.set_field_guid(ItemFields::Contained as usize, self.get_guid())?;
         item.set_field_guid(ItemFields::Owner as usize, self.get_guid())?;
 

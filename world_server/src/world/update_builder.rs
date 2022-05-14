@@ -120,12 +120,13 @@ fn build_movement_update(writer: &mut Cursor<Vec<u8>>, flags: u16, object: &dyn 
         writer.write_u32::<LittleEndian>(object.as_map_object().get_guid().get_low_part())?;
     }
     if flags & (ObjectUpdateFlags::HighGuid as u16) > 0 {
-        writer.write_u32::<LittleEndian>(object.as_map_object().get_guid().get_high_part())?;
-        /*if flags & (ObjectUpdateFlags::UpdateSelf as u16) > 0 {
+        if object.as_map_object().get_type() != ObjectType::Player {
+            writer.write_u32::<LittleEndian>(object.as_map_object().get_guid().get_high_part())?;
+        } else if flags & (ObjectUpdateFlags::UpdateSelf as u16) > 0 {
             writer.write_u32::<LittleEndian>(0x2F)?;
         } else {
             writer.write_u32::<LittleEndian>(0x08)?;
-        }*/
+        }
     }
 
     //todo: flag has target

@@ -33,6 +33,10 @@ impl Item {
             changed_update_mask: UpdateMask::new(NUM_ITEM_FIELDS),
         };
 
+        result.set_field_guid(ObjectFields::LowGuid as usize, &guid)?;
+        result.set_object_field_u32(ObjectFields::Type, ObjectType::Item as u32)?;
+        result.set_object_field_f32(ObjectFields::Scale, 1.0f32)?;
+
         result.set_owner(owner.get_guid())?;
         result.set_contained(&guid)?;
         result.set_stack_count(1)?;
