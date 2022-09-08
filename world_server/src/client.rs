@@ -3,12 +3,25 @@ use super::client_manager::ClientManager;
 use super::opcodes::Opcodes;
 use super::packet::*;
 use super::wowcrypto::*;
-use crate::handlers::login_handler::LogoutState;
+use crate::handlers::handle_cmsg_auth_session;
+//use crate::handlers::login_handler::LogoutState;
+use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::World;
 use async_std::net::TcpStream;
 use async_std::sync::{Mutex, RwLock};
+use async_std::task;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use tracing::instrument::WithSubscriber;
+use wow_srp::wrath_header::ProofSeed;
+use wow_srp::wrath_header::ServerCrypto;
+use wow_world_messages::wrath::astd_expect_client_message;
+use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
+use wow_world_messages::wrath::ServerMessage;
+use wow_world_messages::wrath::CMSG_AUTH_SESSION;
+use wow_world_messages::wrath::SMSG_AUTH_CHALLENGE;
+use wrath_auth_db::AuthDatabase;
 
 #[derive(Clone, PartialEq)]
 pub enum ClientState {
@@ -28,7 +41,7 @@ pub struct Client {
     pub id: u64,
     pub read_socket: Arc<RwLock<TcpStream>>,
     pub write_socket: Arc<Mutex<TcpStream>>,
-    pub crypto: RwLock<ClientCrypto>,
+    pub encryption: Mutex<Option<ServerCrypto>>,
     pub data: RwLock<ClientData>,
 }
 
@@ -38,7 +51,7 @@ impl Client {
             id,
             read_socket,
             write_socket,
-            crypto: RwLock::new(ClientCrypto::new()),
+            encryption: Mutex::new(None),
             data: RwLock::new(ClientData {
                 client_state: ClientState::PreLogin,
                 account_id: None,
@@ -48,8 +61,8 @@ impl Client {
     }
 
     pub async fn tick(&self, delta_time: f32, world: Arc<World>) -> Result<()> {
+        /*
         let mut should_return_to_character_select: bool = false;
-
         if let Some(character_lock) = &self.data.read().await.active_character {
             let mut character = character_lock.write().await;
             character.tick(delta_time, world).await?;
@@ -61,6 +74,65 @@ impl Client {
             let data = &mut self.data.write().await;
             data.active_character = None;
             data.client_state = ClientState::CharacterSelection;
+        }
+        */
+        Ok(())
+    }
+
+    pub async fn authenticate_and_start_receiving_data(&self, packet_handle_sender: Sender<PacketToHandle>, auth_db: Arc<AuthDatabase>) {
+        let proof_seed = ProofSeed::new();
+        self.send_auth_challenge(&proof_seed).await.unwrap_or_else(|e| {
+            error!("Error while sending auth challenge: {:?}", e);
+        });
+
+        let auth_session_packet = {
+            let mut read_socket = self.read_socket.write().await;
+            astd_expect_client_message::<CMSG_AUTH_SESSION, _>(&mut *read_socket).await
+        };
+
+        if let Ok(auth_session_packet) = auth_session_packet {
+            handle_cmsg_auth_session(self, proof_seed, &auth_session_packet, auth_db)
+                .await
+                .unwrap_or_else(|e| {
+                    warn!("Error while authenticating {:?}", e);
+                });
+
+            self.handle_incoming_packets(packet_handle_sender).await.unwrap_or_else(|e| {
+                warn!("Error while handling packet {:?}", e);
+            });
+        }
+
+        //Client stopped handling packets. Probably disconnected. Remove from client list?
+        self.disconnect()
+            .await
+            .unwrap_or_else(|e| warn!("Something went wrong while disconnecting client: {:?}", e));
+    }
+
+    async fn handle_incoming_packets(&self, packet_channel: Sender<PacketToHandle>) -> Result<()> {
+        loop {
+            info!("incoming packet!");
+            assert!(self.is_authenticated().await);
+            let opcode = {
+                let encryption_option: &mut Option<ServerCrypto> = &mut *self.encryption.lock().await;
+                info!("got enc");
+                if let Some(encryption) = encryption_option.as_mut() {
+                    let mut read_socket = self.read_socket.write().await;
+                    info!("got sock");
+                    ClientOpcodeMessage::astd_read_encrypted(&mut *read_socket, encryption.decrypter()).await
+                } else {
+                    bail!("Encryption didn't exist");
+                }
+            };
+            info!("got opc");
+            if opcode.is_err() {
+                break;
+            }
+            info!("opc not err");
+            packet_channel.send(PacketToHandle {
+                client_id: self.id,
+                payload: Box::new(opcode.unwrap()),
+            })?;
+            info!("sent in channel");
         }
         Ok(())
     }
@@ -97,18 +169,17 @@ impl Client {
         Ok(())
     }
 
-    pub async fn send_auth_challenge(&self, realm_seed: u32) -> Result<()> {
-        use num_bigint::RandBigInt;
-        use podio::{LittleEndian, WritePodExt};
-        use std::io::Write;
+    pub async fn send_auth_challenge(&self, proof_seed: &ProofSeed) -> Result<()> {
+        let mut stream = self.write_socket.lock().await;
+        SMSG_AUTH_CHALLENGE {
+            unknown1: 1,
+            server_seed: proof_seed.seed(),
+            seed: [0_u8; 32],
+        }
+        .astd_write_unencrypted_server(&mut *stream)
+        .await
+        .unwrap();
 
-        let (header, mut writer) = create_packet(Opcodes::SMSG_AUTH_CHALLENGE, 44);
-        writer.write_u32::<LittleEndian>(1)?;
-        writer.write_u32::<LittleEndian>(realm_seed)?;
-        let seed1 = rand::thread_rng().gen_biguint(32 * 8);
-        writer.write_all(&seed1.to_bytes_le())?;
-
-        send_packet(self, &header, &writer).await?;
         Ok(())
     }
 

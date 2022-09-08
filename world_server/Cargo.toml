@@ -30,3 +30,5 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 rstar = { version = "0.9" }
 hex = { version = "0.4" }
 cmdparse = { version = "0.1" }
+wow_world_messages = { path = "../../wow_messages/wow_world_messages", features=["wrath", "async-std"] }
+wow_srp = { version = "0.5" }

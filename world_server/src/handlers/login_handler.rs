@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::character::Character;
 use crate::client::{Client, ClientState};
 use crate::client_manager::ClientManager;
@@ -6,6 +8,11 @@ use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
+use wow_srp::normalized_string::NormalizedString;
+use wow_srp::wrath_header::ProofSeed;
+use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
+use wow_world_messages::wrath::CMSG_AUTH_SESSION;
+use wrath_auth_db::AuthDatabase;
 
 #[allow(dead_code)]
 #[derive(PartialEq)]
@@ -35,77 +42,55 @@ enum AuthResponse {
     LockedEnforced = 0x22,
 }
 
-pub async fn handle_cmsg_auth_session(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    use crypto::digest::Digest;
-    use num_bigint::BigUint;
-    use std::io::{BufRead, Seek, SeekFrom};
-
-    let client = client_manager.get_client(packet.client_id).await?;
+pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, packet: &CMSG_AUTH_SESSION, auth_db: Arc<AuthDatabase>) -> Result<()> {
     if client.is_authenticated().await {
         client.disconnect().await?;
         warn!("duplicate login rejected!");
         bail!("Client sent auth session but was already logged in");
     }
 
-    let mut reader = std::io::Cursor::new(&packet.payload);
-    let build_number = reader.read_u32::<LittleEndian>()?;
-    let _unknown1 = reader.read_u32::<LittleEndian>()?;
-    let mut name = Vec::new();
-    reader.read_until(0, &mut name)?;
-    name.truncate(name.len() - 1);
-    let name = String::from_utf8(name)?;
+    info!("User {} connecting with buildnumber {}", packet.username, packet.client_build);
 
-    info!("User {} connecting with buildnumber {}", name, build_number);
-
-    let _unknown2 = reader.read_u32::<LittleEndian>()?;
-    let client_seed = reader.read_u32::<LittleEndian>()?;
-
-    reader.seek(SeekFrom::Current(20))?; //Skip unknown data
-
-    let client_digest = reader.read_exact(20)?;
-    let decompressed_addon_data_length = reader.read_u32::<LittleEndian>()?;
-    let compressed_addon_data = reader.read_exact(packet.header.length as usize - reader.position() as usize)?;
-    let db_account = match client_manager.auth_db.get_account_by_username(&name).await? {
+    let db_account = match auth_db.get_account_by_username(&packet.username).await? {
         Some(c) => c,
         None => return Err(anyhow!("Account doesnt exist!")),
     };
-    //Handle db_account failed to fetch with reponse
 
-    let sesskey_bytes = hex::decode(&db_account.sessionkey)?;
-    assert_eq!(sesskey_bytes.len(), 40);
-    {
-        client.crypto.write().await.initialize(&sesskey_bytes)?;
-    }
+    let mut sess_key: [u8; 40] = [0u8; 40];
+    let db_session_key = hex::decode(db_account.sessionkey)?;
+    assert_eq!(db_session_key.len(), 40);
+    sess_key.copy_from_slice(db_session_key.as_slice());
 
-    let mut sha1 = crypto::sha1::Sha1::new();
-    sha1.input(name.as_bytes());
-    sha1.input(&[0u8; 4]);
-    sha1.input(&client_seed.to_le_bytes());
-    sha1.input(&client_manager.realm_seed.to_le_bytes());
-    sha1.input(&sesskey_bytes);
-    let mut out_buf = [0u8; 20];
-    sha1.result(&mut out_buf);
+    let client_encryption = proof_seed.into_header_crypto(
+        &NormalizedString::new(&packet.username).unwrap(),
+        sess_key,
+        packet.client_proof,
+        packet.client_seed,
+    );
 
-    let a = BigUint::from_bytes_le(&client_digest);
-    let b = BigUint::from_bytes_le(&out_buf);
-
-    if a != b {
-        send_auth_response(AuthResponse::Reject, &client).await?;
+    if client_encryption.is_err() {
+        send_auth_response(AuthResponse::Reject, client).await?;
         async_std::task::sleep(std::time::Duration::from_secs(2)).await;
-        return Err(anyhow!("Failed auth attempt, rejecting"));
+        bail!("Failed auth attempt, rejecting");
     }
-    //Handle full world queuing here
 
-    send_auth_response(AuthResponse::AuthOk, &client).await?;
+    //Set the crypto of the client for use from now on
+    {
+        let mut encryption = client.encryption.lock().await;
+        *encryption = Some(client_encryption.unwrap());
+    }
+
+    //Handle full world queuing here
+    send_auth_response(AuthResponse::AuthOk, client).await?;
 
     let mut decompressed_addon_data = Vec::<u8>::new();
     {
         use flate2::read::ZlibDecoder;
         use std::io::Read;
 
-        let mut addon_data_decoder = ZlibDecoder::new(compressed_addon_data.as_slice());
+        let mut addon_data_decoder = ZlibDecoder::new(packet.compressed_addon_info.as_slice());
         addon_data_decoder.read_to_end(&mut decompressed_addon_data)?;
-        if decompressed_addon_data.len() != decompressed_addon_data_length as usize {
+        if decompressed_addon_data.len() != packet.decompressed_addon_info_size as usize {
             return Err(anyhow!("decompressed addon data length didn't match expectation"));
         }
     }
@@ -115,6 +100,8 @@ pub async fn handle_cmsg_auth_session(client_manager: &ClientManager, packet: &P
 
     let (addon_packet_header, mut addon_packet_writer) = create_packet(Opcodes::SMSG_ADDON_INFO, 1024);
     for _ in 0..num_addons {
+        use std::io::BufRead;
+
         let mut addon_name_buf = Vec::new();
         addon_reader.read_until(0, &mut addon_name_buf)?;
         addon_name_buf.truncate(addon_name_buf.len() - 1);
@@ -136,9 +123,9 @@ pub async fn handle_cmsg_auth_session(client_manager: &ClientManager, packet: &P
     }
     addon_packet_writer.write_u8(0)?; //num banned addons
 
-    send_packet(&client, &addon_packet_header, &addon_packet_writer).await?;
-    send_clientcache_version(0, &client).await?;
-    send_tutorial_flags(&client).await?;
+    send_packet(client, &addon_packet_header, &addon_packet_writer).await?;
+    send_clientcache_version(0, client).await?;
+    send_tutorial_flags(client).await?;
 
     {
         let mut client_data = client.data.write().await;
@@ -190,6 +177,7 @@ enum RealmSplitState {
     SplitPending = 2,
 }
 
+/*
 pub async fn handle_cmsg_realm_split(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     use std::io::Write;
 
@@ -289,4 +277,4 @@ pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, packet: &
 pub async fn send_smsg_logout_complete(character: &Character) -> Result<()> {
     let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_COMPLETE, 0);
     send_packet_to_character(character, &header, &writer).await
-}
+} */

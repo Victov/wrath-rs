@@ -10,16 +10,18 @@ pub trait CharacterValueHelpers: UnitValueHelpers {
     async fn set_character_stand_state(&mut self, state: UnitStandState) -> Result<()> {
         self.set_stand_state(state)?;
         let as_character = self.as_character();
-        handlers::send_smsg_stand_state_update(as_character, state).await
+        //handlers::send_smsg_stand_state_update(as_character, state).await
+        Ok(())
     }
 
     async fn set_rooted(&self, rooted: bool) -> Result<()> {
         let as_character = self.as_character();
         if rooted {
-            handlers::send_smsg_force_move_root(as_character).await
+            //handlers::send_smsg_force_move_root(as_character).await
         } else {
-            handlers::send_smsg_force_move_unroot(as_character).await
+            //handlers::send_smsg_force_move_unroot(as_character).await
         }
+        Ok(())
     }
 
     fn set_rested_bytes(&mut self, rested: bool) -> Result<()> {

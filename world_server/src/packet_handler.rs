@@ -1,17 +1,17 @@
+use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
+
 use super::client_manager::ClientManager;
 use crate::client::ClientState;
 use crate::handlers::*;
 use crate::opcodes::Opcodes;
-use crate::packet::ClientPacketHeader;
 use crate::prelude::*;
 use crate::world::World;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 
 pub struct PacketToHandle {
-    pub header: ClientPacketHeader,
     pub client_id: u64,
-    pub payload: Vec<u8>,
+    pub payload: Box<ClientOpcodeMessage>,
 }
 
 pub struct PacketHandler {
@@ -27,9 +27,8 @@ impl PacketHandler {
 
     pub async fn handle_queue(&self, client_manager: Arc<ClientManager>, world: Arc<World>) -> Result<()> {
         for packet in self.receive_channel.try_iter() {
-            let op = packet.header.get_cmd()?;
             self.handle_packet(&client_manager, &world, &packet).await.unwrap_or_else(|e| {
-                warn!("Error while handling packet {:?}: {}", op, e);
+                warn!("Error while handling packet {:?}: {}", packet.payload, e);
             });
         }
 
@@ -38,7 +37,7 @@ impl PacketHandler {
 
     async fn handle_packet(&self, client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
         if std::env::var("PRINT_INCOMING_PACKETS")?.parse::<usize>()? == 1usize {
-            info!("Incoming: {:?}", packet.header.get_cmd());
+            info!("Incoming: {:?}", packet.payload);
         }
         {
             let client = client_manager.get_client(packet.client_id).await?;
@@ -49,7 +48,13 @@ impl PacketHandler {
             }
         }
 
-        match packet.header.get_cmd()? {
+        match &*packet.payload {
+            _ => bail!("Unhandled opcode"),
+        }
+    }
+}
+
+/*
             Opcodes::CMSG_AUTH_SESSION => handle_cmsg_auth_session(client_manager, packet).await,
             Opcodes::CMSG_READY_FOR_ACCOUNT_DATA_TIMES => handle_csmg_ready_for_account_data_times(client_manager, packet).await,
             Opcodes::CMSG_CHAR_ENUM => handle_cmsg_char_enum(client_manager, world, packet).await,
@@ -97,7 +102,4 @@ impl PacketHandler {
             Opcodes::CMSG_AREATRIGGER => handle_cmsg_areatrigger(client_manager, packet).await,
             Opcodes::CMSG_ITEM_QUERY_SINGLE => handle_cmsg_item_query_single(client_manager, packet, world).await,
 
-            _ => bail!("Unhandled opcode"),
-        }
-    }
-}
+*/

@@ -1,5 +1,7 @@
 pub mod login_handler;
 pub use login_handler::handle_cmsg_auth_session;
+
+/*
 pub use login_handler::handle_cmsg_logout_cancel;
 pub use login_handler::handle_cmsg_logout_request;
 pub use login_handler::handle_cmsg_ping;
@@ -75,3 +77,5 @@ pub use movement_handler::send_smsg_transfer_pending;
 
 pub mod equipment_handler;
 pub use equipment_handler::handle_cmsg_item_query_single;
+
+*/

@@ -2,7 +2,7 @@ use super::world::prelude::*;
 use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::{ActionBar, DataStorage, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
-use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
+//use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::item::Item;
 use crate::prelude::*;
 use async_std::sync::RwLock;
@@ -13,10 +13,10 @@ use wrath_realm_db::RealmDatabase;
 
 const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 
-mod character_equipment;
-mod character_logout;
-mod character_movement;
-mod character_rested;
+//mod character_equipment;
+//mod character_logout;
+//mod character_movement;
+//mod character_rested;
 
 pub struct Character {
     pub guid: Guid,
@@ -57,11 +57,10 @@ pub struct Character {
     time_sync_cooldown: f32,
 
     //Teleporting
-    pub teleportation_state: TeleportationState,
+    //pub teleportation_state: TeleportationState,
 
-    pub logout_state: LogoutState,
-    rested_state: character_rested::RestedState,
-
+    //pub logout_state: LogoutState,
+    //rested_state: character_rested::RestedState,
     equipped_items: Vec<Arc<RwLock<Item>>>,
 }
 
@@ -92,9 +91,9 @@ impl Character {
             recently_removed_guids: vec![],
             time_sync_counter: 0,
             time_sync_cooldown: 0f32,
-            teleportation_state: TeleportationState::None,
-            logout_state: LogoutState::None,
-            rested_state: character_rested::RestedState::NotRested,
+            //teleportation_state: TeleportationState::None,
+            //logout_state: LogoutState::None,
+            //rested_state: character_rested::RestedState::NotRested,
             equipped_items: vec![],
         }
     }
@@ -127,7 +126,7 @@ impl Character {
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
         if character_account_data.is_empty() {
-            handlers::create_empty_character_account_data_rows(&realm_database, character_id).await?;
+            //handlers::create_empty_character_account_data_rows(&realm_database, character_id).await?;
         }
 
         let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
@@ -167,13 +166,13 @@ impl Character {
         self.set_unit_field_u32(UnitFields::Level, 1)?;
         self.set_unit_field_u32(UnitFields::Factiontemplate, 1)?;
 
-        self.load_equipment_from_database(world).await?;
+        //self.load_equipment_from_database(world).await?;
 
         Ok(())
     }
 
     pub async fn send_packets_before_add_to_map(&self) -> Result<()> {
-        handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
+        /*handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
         handlers::send_bind_update(self).await?;
         handlers::send_talents_info(self).await?;
         handlers::send_dungeon_difficulty(self).await?;
@@ -181,9 +180,12 @@ impl Character {
         handlers::send_action_buttons(self).await?;
         handlers::send_initial_world_states(self).await?;
         handlers::send_login_set_time_speed(self).await
+        */
+        Ok(())
     }
 
     pub async fn send_packets_after_add_to_map(&self, realm_database: Arc<RealmDatabase>) -> Result<()> {
+        /*
         handlers::send_verify_world(self).await?;
         handlers::send_character_account_data_times(&realm_database, self).await?;
         handlers::send_voice_chat_status(self, false).await?;
@@ -193,7 +195,7 @@ impl Character {
         handlers::send_time_sync(self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
-
+        */
         Ok(())
     }
 
@@ -204,7 +206,8 @@ impl Character {
 
         trace!("Received zone update for character {} into zone {}", self.name, zone);
         self.zone = zone;
-        handlers::send_initial_world_states(self).await
+        //handlers::send_initial_world_states(self).await
+        Ok(())
     }
 
     pub fn reset_time_sync(&mut self) {
@@ -213,11 +216,12 @@ impl Character {
     }
     pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
         self.tick_time_sync(delta_time).await?;
-        self.tick_logout_state(delta_time, world.clone()).await?;
+        //self.tick_logout_state(delta_time, world.clone()).await?;
 
-        self.handle_queued_teleport(world)
+        /*self.handle_queued_teleport(world)
             .await
             .unwrap_or_else(|e| warn!("Could not teleport player {}: Error {}", self.name, e));
+        */
 
         Ok(())
     }
@@ -226,7 +230,7 @@ impl Character {
         if self.time_sync_cooldown < 0f32 {
             self.time_sync_cooldown += 10f32;
             self.time_sync_counter += 1;
-            handlers::send_time_sync(self).await?;
+            //handlers::send_time_sync(self).await?;
         }
         Ok(())
     }
@@ -250,9 +254,11 @@ impl MapObject for Character {
     }
 
     async fn on_pushed_to_map(&mut self, map_manager: &MapManager) -> Result<()> {
+        /*
         self.push_create_blocks_for_items(map_manager).await?;
         let (block_count, mut update_data) = build_create_update_block_for_player(self, self)?;
         self.push_update_block(&mut update_data, block_count);
+        */
         Ok(())
     }
 }
@@ -361,7 +367,7 @@ impl ReceiveUpdates for Character {
         let (num, buf) = self.get_update_blocks();
         if num > 0 {
             info!("sent {} pending updates to {}", num, self.name);
-            handlers::send_update_packet(self, num, buf).await?;
+            //handlers::send_update_packet(self, num, buf).await?;
             self.clear_update_blocks();
         }
         Ok(())
