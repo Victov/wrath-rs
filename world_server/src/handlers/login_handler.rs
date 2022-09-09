@@ -11,7 +11,9 @@ use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use wow_srp::normalized_string::NormalizedString;
 use wow_srp::wrath_header::ProofSeed;
 use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
-use wow_world_messages::wrath::CMSG_AUTH_SESSION;
+use wow_world_messages::wrath::{
+    Addon, SMSG_AUTH_RESPONSE_WorldResult, ServerMessage, CMSG_AUTH_SESSION, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE, SMSG_TUTORIAL_FLAGS,
+};
 use wrath_auth_db::AuthDatabase;
 
 #[allow(dead_code)]
@@ -69,7 +71,7 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
     );
 
     if client_encryption.is_err() {
-        send_auth_response(AuthResponse::Reject, client).await?;
+        send_auth_response(SMSG_AUTH_RESPONSE_WorldResult::AuthReject, client).await?;
         async_std::task::sleep(std::time::Duration::from_secs(2)).await;
         bail!("Failed auth attempt, rejecting");
     }
@@ -81,7 +83,16 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
     }
 
     //Handle full world queuing here
-    send_auth_response(AuthResponse::AuthOk, client).await?;
+    send_auth_response(
+        SMSG_AUTH_RESPONSE_WorldResult::AuthOk {
+            billing_flags: 0,
+            billing_rested: 0,
+            billing_time: 0,
+            expansion: wow_world_messages::wrath::Expansion::WrathOfTheLichLing,
+        },
+        client,
+    )
+    .await?;
 
     let mut decompressed_addon_data = Vec::<u8>::new();
     {
@@ -97,8 +108,10 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
 
     let mut addon_reader = std::io::Cursor::new(decompressed_addon_data);
     let num_addons = addon_reader.read_u32::<LittleEndian>()?;
+    info!("num addons = {}", num_addons);
+    let mut addons: Vec<Addon> = Vec::new();
+    addons.reserve(num_addons as usize);
 
-    let (addon_packet_header, mut addon_packet_writer) = create_packet(Opcodes::SMSG_ADDON_INFO, 1024);
     for _ in 0..num_addons {
         use std::io::BufRead;
 
@@ -109,21 +122,25 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
         let _addon_has_signature = addon_reader.read_u8()? == 1;
         let addon_crc = addon_reader.read_u32::<LittleEndian>()?;
         let _addon_extra_crc = addon_reader.read_u32::<LittleEndian>()?;
-
-        addon_packet_writer.write_u8(2)?; //Addontype Blizzard
-        addon_packet_writer.write_u8(1)?; //Uses CRC??
         let uses_diffent_public_key = addon_crc != 0x4C1C776D; //Blizzard addon CRC
-        addon_packet_writer.write_u8(if uses_diffent_public_key { 1 } else { 0 })?;
+
+        addons.push(Addon {
+            uses_diffent_public_key: uses_diffent_public_key as u8,
+        });
+
         if uses_diffent_public_key {
             warn!("Unhandled non-blizzard addon: {}", addon_name);
             //Write blizzard public key
         }
-        addon_packet_writer.write_u32::<LittleEndian>(0)?;
-        addon_packet_writer.write_u8(0)?;
     }
-    addon_packet_writer.write_u8(0)?; //num banned addons
 
-    send_packet(client, &addon_packet_header, &addon_packet_writer).await?;
+    SMSG_ADDON_INFO { addons }
+        .astd_write_encrypted_server(
+            &mut *client.write_socket.lock().await,
+            client.encryption.lock().await.as_mut().unwrap().encrypter(),
+        )
+        .await?;
+
     send_clientcache_version(0, client).await?;
     send_tutorial_flags(client).await?;
 
@@ -136,18 +153,13 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
     Ok(())
 }
 
-async fn send_auth_response(response: AuthResponse, receiver: &Client) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_AUTH_RESPONSE, 11);
-    let resp_u8 = response as u8;
-    writer.write_u8(resp_u8)?;
-    if resp_u8 == AuthResponse::AuthOk as u8 {
-        writer.write_u32::<LittleEndian>(0)?;
-        writer.write_u8(0)?;
-        writer.write_u32::<LittleEndian>(0)?;
-        writer.write_u8(2)?; //0= vanilla, 1=tbc, 2=wotlk
-    }
-
-    send_packet(receiver, &header, &writer).await?;
+async fn send_auth_response(response: SMSG_AUTH_RESPONSE_WorldResult, client: &Client) -> Result<()> {
+    SMSG_AUTH_RESPONSE { result: response }
+        .astd_write_encrypted_server(
+            &mut *client.write_socket.lock().await,
+            client.encryption.lock().await.as_mut().unwrap().encrypter(),
+        )
+        .await?;
 
     Ok(())
 }
@@ -158,16 +170,24 @@ async fn send_clientcache_version(version: u32, receiver: &Client) -> Result<()>
     send_packet(receiver, &header, &writer).await
 }
 
-async fn send_tutorial_flags(receiver: &Client) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_TUTORIAL_FLAGS, 4 * 8);
-    //Each u32 is 32 bits that each indicate a tutorial message. 0 = not seen, 1 = seen.
-    //Needs to be stored in the database when the client indicates that they've seen a message
-    //So that it can be sent back from here. That part is todo; For now we will just let
-    //The client see every tutorial.
-    for _ in 0..8 {
-        writer.write_u32::<LittleEndian>(0)?;
+async fn send_tutorial_flags(client: &Client) -> Result<()> {
+    SMSG_TUTORIAL_FLAGS {
+        tutorial_data0: 0,
+        tutorial_data1: 0,
+        tutorial_data2: 0,
+        tutorial_data3: 0,
+        tutorial_data4: 0,
+        tutorial_data5: 0,
+        tutorial_data6: 0,
+        tutorial_data7: 0,
     }
-    send_packet(receiver, &header, &writer).await
+    .astd_write_encrypted_server(
+        &mut *client.write_socket.lock().await,
+        client.encryption.lock().await.as_mut().unwrap().encrypter(),
+    )
+    .await?;
+
+    Ok(())
 }
 
 #[allow(dead_code)]
@@ -277,4 +297,5 @@ pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, packet: &
 pub async fn send_smsg_logout_complete(character: &Character) -> Result<()> {
     let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_COMPLETE, 0);
     send_packet_to_character(character, &header, &writer).await
-} */
+}
+*/
