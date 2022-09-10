@@ -110,30 +110,27 @@ impl Client {
 
     async fn handle_incoming_packets(&self, packet_channel: Sender<PacketToHandle>) -> Result<()> {
         loop {
-            info!("incoming packet!");
             assert!(self.is_authenticated().await);
             let opcode = {
                 let encryption_option: &mut Option<ServerCrypto> = &mut *self.encryption.lock().await;
-                info!("got enc");
                 if let Some(encryption) = encryption_option.as_mut() {
                     let mut read_socket = self.read_socket.write().await;
-                    info!("got sock");
                     ClientOpcodeMessage::astd_read_encrypted(&mut *read_socket, encryption.decrypter()).await
                 } else {
                     bail!("Encryption didn't exist");
                 }
             };
-            info!("got opc");
             if let Err(e) = opcode {
-                warn!("Error in opcode: {:?}", e);
+                warn!(
+                    "Error in opcode: {:?}. The opcode is probably unknown in the wow_messages crate for this version",
+                    e
+                );
                 break;
             }
-            info!("opc not err");
             packet_channel.send(PacketToHandle {
                 client_id: self.id,
                 payload: Box::new(opcode.unwrap()),
             })?;
-            info!("sent in channel");
         }
         Ok(())
     }
