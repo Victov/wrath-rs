@@ -1,18 +1,15 @@
 use std::sync::Arc;
 
-use crate::character::Character;
 use crate::client::{Client, ClientState};
-use crate::client_manager::ClientManager;
 use crate::opcodes::Opcodes;
 use crate::packet::*;
-use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use wow_srp::normalized_string::NormalizedString;
 use wow_srp::wrath_header::ProofSeed;
-use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
 use wow_world_messages::wrath::{
-    Addon, SMSG_AUTH_RESPONSE_WorldResult, ServerMessage, CMSG_AUTH_SESSION, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE, SMSG_TUTORIAL_FLAGS,
+    Addon, BillingPlanFlags, SMSG_AUTH_RESPONSE_WorldResult, ServerMessage, CMSG_AUTH_SESSION, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE,
+    SMSG_TUTORIAL_FLAGS,
 };
 use wrath_auth_db::AuthDatabase;
 
@@ -85,7 +82,7 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
     //Handle full world queuing here
     send_auth_response(
         SMSG_AUTH_RESPONSE_WorldResult::AuthOk {
-            billing_flags: 0,
+            billing_flags: BillingPlanFlags::empty(),
             billing_rested: 0,
             billing_time: 0,
             expansion: wow_world_messages::wrath::Expansion::WrathOfTheLichLing,
@@ -125,7 +122,11 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
         let uses_diffent_public_key = addon_crc != 0x4C1C776D; //Blizzard addon CRC
 
         addons.push(Addon {
+            addon_type: 2,
+            uses_crc: 1,
             uses_diffent_public_key: uses_diffent_public_key as u8,
+            unknown1: 0,
+            unknown2: 0,
         });
 
         if uses_diffent_public_key {
