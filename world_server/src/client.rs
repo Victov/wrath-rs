@@ -124,7 +124,8 @@ impl Client {
                 }
             };
             info!("got opc");
-            if opcode.is_err() {
+            if let Err(e) = opcode {
+                warn!("Error in opcode: {:?}", e);
                 break;
             }
             info!("opc not err");

@@ -9,7 +9,7 @@ use wow_srp::normalized_string::NormalizedString;
 use wow_srp::wrath_header::ProofSeed;
 use wow_world_messages::wrath::{
     Addon, BillingPlanFlags, SMSG_AUTH_RESPONSE_WorldResult, ServerMessage, CMSG_AUTH_SESSION, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE,
-    SMSG_TUTORIAL_FLAGS,
+    SMSG_CLIENTCACHE_VERSION, SMSG_TUTORIAL_FLAGS,
 };
 use wrath_auth_db::AuthDatabase;
 
@@ -142,14 +142,18 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
         )
         .await?;
 
-    send_clientcache_version(0, client).await?;
+    SMSG_CLIENTCACHE_VERSION { version: 0 }
+        .astd_write_encrypted_server(
+            &mut *client.write_socket.lock().await,
+            client.encryption.lock().await.as_mut().unwrap().encrypter(),
+        )
+        .await?;
+
     send_tutorial_flags(client).await?;
 
-    {
-        let mut client_data = client.data.write().await;
-        client_data.client_state = ClientState::CharacterSelection;
-        client_data.account_id = Some(db_account.id);
-    }
+    let mut client_data = client.data.write().await;
+    client_data.client_state = ClientState::CharacterSelection;
+    client_data.account_id = Some(db_account.id);
 
     Ok(())
 }
@@ -163,12 +167,6 @@ async fn send_auth_response(response: SMSG_AUTH_RESPONSE_WorldResult, client: &C
         .await?;
 
     Ok(())
-}
-
-async fn send_clientcache_version(version: u32, receiver: &Client) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_CLIENTCACHE_VERSION, 4);
-    writer.write_u32::<LittleEndian>(version)?;
-    send_packet(receiver, &header, &writer).await
 }
 
 async fn send_tutorial_flags(client: &Client) -> Result<()> {
