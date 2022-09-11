@@ -1,34 +1,11 @@
 use super::client::Client;
-use super::opcodes::Opcodes;
-use crate::{character::*, prelude::*, world::prelude::*};
+use crate::{character::*, prelude::*};
 use async_std::prelude::*;
-use podio::{BigEndian, LittleEndian, WritePodExt};
-use std::convert::TryFrom;
-use std::io::Cursor;
+use std::{borrow::Borrow, ops::Deref, pin::Pin};
+use wow_world_messages::wrath::ServerMessage;
 
-pub struct ServerPacketHeader {
-    opcode: u16,
-    _length: u16,
-}
-
-impl ServerPacketHeader {
-    pub fn get_cmd(&self) -> Result<Opcodes> {
-        Ok(Opcodes::try_from(self.opcode as u32)?)
-    }
-}
-
-pub fn create_packet(opcode: Opcodes, allocate_size: usize) -> (ServerPacketHeader, Cursor<Vec<u8>>) {
-    let header = ServerPacketHeader {
-        opcode: opcode as u16,
-        _length: 0,
-    };
-
-    let buf: Vec<u8> = Vec::with_capacity(allocate_size);
-    let writer = std::io::Cursor::new(buf);
-
-    (header, writer)
-}
-
+/*
+ * TODO: refactor this to be inside ServerMessageExt
 pub async fn send_packet_to_all_in_range(
     character: &Character,
     include_self: bool,
@@ -58,52 +35,47 @@ pub async fn send_packet_to_all_in_range(
     }
 
     Ok(())
-}
+} */
 
-pub async fn send_packet_to_character(character: &Character, header: &ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()> {
-    let client = character
-        .client
-        .upgrade()
-        .ok_or_else(|| anyhow!("failed to get associated client from character"))?;
-
-    send_packet(&client, header, payload).await
-}
-
-pub async fn send_packet(client: &Client, header: &ServerPacketHeader, payload: &Cursor<Vec<u8>>) -> Result<()> {
-    use std::io::Write;
-
-    let payload_length = payload.get_ref().len();
-    if payload_length > 0x7FFF {
-        return Err(anyhow!("Sending large packet header, but we don't have support for that yet!"));
-    }
-
-    let mut header_buffer = Vec::<u8>::new();
-    let mut header_writer = std::io::Cursor::new(&mut header_buffer);
-    header_writer.write_u16::<BigEndian>(payload_length as u16 + 2u16)?;
-    header_writer.write_u16::<LittleEndian>(header.opcode)?;
-
-    /*
-    if client.crypto.read().await.is_initialized() {
-        client.crypto.write().await.encrypt(&mut header_buffer)?;
-    }*/
-
-    let final_buf = vec![0u8; payload_length + 4];
-    let mut final_writer = std::io::Cursor::new(final_buf);
-    final_writer.write_all(&header_buffer)?;
-    final_writer.write_all(payload.get_ref())?;
-
+pub trait ServerMessageExt: ServerMessage {
+    fn astd_send_to_character<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        character: impl Borrow<Character> + 'life1 + Send,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'async_trait>>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: Sync + 'async_trait,
     {
-        let mut write_socket = client.write_socket.lock().await;
-        let written_len = write_socket.write(&final_writer.into_inner()).await?;
-        write_socket.flush().await?;
-
-        if std::env::var("PRINT_OUTGOING_PACKETS")?.parse::<usize>()? == 1usize {
-            info!("Outgoing: {:?}", header.get_cmd());
-        }
-        if written_len != payload_length + 4 {
-            return Err(anyhow!("Wrong written length while sending packet"));
-        }
+        let client = character.borrow().client.upgrade().unwrap();
+        Box::pin(async move {
+            self.astd_write_encrypted_server(
+                &mut *client.write_socket.lock().await,
+                client.encryption.lock().await.as_mut().unwrap().encrypter(),
+            )
+            .await?;
+            Ok(())
+        })
     }
 
-    Ok(())
+    fn astd_send_to_client<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        client: impl Borrow<Client> + 'life1 + Send,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'async_trait>>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: Sync + 'async_trait,
+    {
+        Box::pin(async move {
+            let client: &Client = client.borrow();
+            self.astd_write_encrypted_server(
+                &mut *client.write_socket.lock().await,
+                client.encryption.lock().await.as_mut().unwrap().encrypter(),
+            )
+            .await?;
+            Ok(())
+        })
+    }
 }
+impl<T> ServerMessageExt for T where T: ServerMessage {}

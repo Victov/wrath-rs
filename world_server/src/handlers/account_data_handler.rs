@@ -1,11 +1,11 @@
-use crate::character::*;
 use crate::client::Client;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::World;
 use crate::ClientManager;
+use crate::{character::*, packet::ServerMessageExt};
 use wow_world_messages::wrath::{
-    CacheMask, ServerMessage, CMSG_REQUEST_ACCOUNT_DATA, CMSG_UPDATE_ACCOUNT_DATA, SMSG_ACCOUNT_DATA_TIMES, SMSG_UPDATE_ACCOUNT_DATA,
+    CacheMask, CMSG_REQUEST_ACCOUNT_DATA, CMSG_UPDATE_ACCOUNT_DATA, SMSG_ACCOUNT_DATA_TIMES, SMSG_UPDATE_ACCOUNT_DATA,
     SMSG_UPDATE_ACCOUNT_DATA_COMPLETE,
 };
 use wrath_auth_db::DBAccountData;
@@ -34,9 +34,7 @@ pub async fn handle_csmg_ready_for_account_data_times(client_manager: &ClientMan
     }
 
     let db_account_data = db_account_data;
-    send_account_wide_account_data_times(&client, &db_account_data).await?;
-
-    Ok(())
+    send_account_wide_account_data_times(&client, &db_account_data).await
 }
 
 async fn create_empty_account_data_rows(client_manager: &ClientManager, account_id: u32) -> Result<()> {
@@ -74,13 +72,8 @@ async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: 
         mask,
         data: masked_data.into(),
     }
-    .astd_write_encrypted_server(
-        &mut *client.write_socket.lock().await,
-        client.encryption.lock().await.as_mut().unwrap().encrypter(),
-    )
-    .await?;
-
-    Ok(())
+    .astd_send_to_client(client)
+    .await
 }
 
 async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> Result<()> {
@@ -157,13 +150,8 @@ pub async fn handle_csmg_update_account_data(
         data_type: data.data_type,
         unknown1: 0,
     }
-    .astd_write_encrypted_server(
-        &mut *client.write_socket.lock().await,
-        client.encryption.lock().await.as_mut().unwrap().encrypter(),
-    )
-    .await?;
-
-    Ok(())
+    .astd_send_to_client(client)
+    .await
 }
 
 pub async fn handle_cmsg_request_account_data(
@@ -210,10 +198,6 @@ pub async fn handle_cmsg_request_account_data(
         decompressed_size,
         compressed_data: account_data_bytes,
     }
-    .astd_write_encrypted_server(
-        &mut *client.write_socket.lock().await,
-        client.encryption.lock().await.as_mut().unwrap().encrypter(),
-    )
-    .await?;
-    Ok(())
+    .astd_send_to_client(client)
+    .await
 }

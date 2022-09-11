@@ -1,45 +1,16 @@
 use std::sync::Arc;
 
 use crate::client::{Client, ClientState};
-use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::prelude::*;
-use podio::{LittleEndian, ReadPodExt, WritePodExt};
+use podio::{LittleEndian, ReadPodExt};
 use wow_srp::normalized_string::NormalizedString;
 use wow_srp::wrath_header::ProofSeed;
 use wow_world_messages::wrath::{
-    Addon, BillingPlanFlags, SMSG_AUTH_RESPONSE_WorldResult, ServerMessage, CMSG_AUTH_SESSION, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE,
-    SMSG_CLIENTCACHE_VERSION, SMSG_TUTORIAL_FLAGS,
+    Addon, BillingPlanFlags, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION,
+    SMSG_TUTORIAL_FLAGS,
 };
 use wrath_auth_db::AuthDatabase;
-
-#[allow(dead_code)]
-#[derive(PartialEq)]
-enum AuthResponse {
-    AuthOk = 0x0C,
-    Failed = 0x0D,
-    Reject = 0x0E,
-    BadProof = 0x0F,
-    Unavailable = 0x10,
-    SystemError = 0x11,
-    BillingError = 0x12,
-    BillingExpired = 0x13,
-    VersionMismatch = 0x14,
-    UnknownAccount = 0x15,
-    IncorrectPass = 0x16,
-    SessionExpired = 0x17,
-    ServerShuttingDown = 0x18,
-    AlreadyLoggedin = 0x19,
-    LoginServerNotFound = 0x1A,
-    WaitQueue = 0x1B,
-    Banned = 0x1C,
-    AlreadyOnline = 0x1D,
-    NoTime = 0x1E,
-    DatabaseBusy = 0x1F,
-    Suspended = 0x20,
-    ParentalControl = 0x21,
-    LockedEnforced = 0x22,
-}
 
 pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, packet: &CMSG_AUTH_SESSION, auth_db: Arc<AuthDatabase>) -> Result<()> {
     if client.is_authenticated().await {
@@ -68,7 +39,12 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
     );
 
     if client_encryption.is_err() {
-        send_auth_response(SMSG_AUTH_RESPONSE_WorldResult::AuthReject, client).await?;
+        SMSG_AUTH_RESPONSE {
+            result: SMSG_AUTH_RESPONSE_WorldResult::AuthReject,
+        }
+        .astd_send_to_client(client)
+        .await?;
+
         async_std::task::sleep(std::time::Duration::from_secs(2)).await;
         bail!("Failed auth attempt, rejecting");
     }
@@ -79,18 +55,18 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
         *encryption = Some(client_encryption.unwrap());
     }
 
-    //Handle full world queuing here
-    send_auth_response(
-        SMSG_AUTH_RESPONSE_WorldResult::AuthOk {
+    SMSG_AUTH_RESPONSE {
+        result: SMSG_AUTH_RESPONSE_WorldResult::AuthOk {
             billing_flags: BillingPlanFlags::empty(),
             billing_rested: 0,
             billing_time: 0,
             expansion: wow_world_messages::wrath::Expansion::WrathOfTheLichLing,
         },
-        client,
-    )
+    }
+    .astd_send_to_client(client)
     .await?;
 
+    //Handle full world queuing here
     let mut decompressed_addon_data = Vec::<u8>::new();
     {
         use flate2::read::ZlibDecoder;
@@ -135,36 +111,14 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
         }
     }
 
-    SMSG_ADDON_INFO { addons }
-        .astd_write_encrypted_server(
-            &mut *client.write_socket.lock().await,
-            client.encryption.lock().await.as_mut().unwrap().encrypter(),
-        )
-        .await?;
-
-    SMSG_CLIENTCACHE_VERSION { version: 0 }
-        .astd_write_encrypted_server(
-            &mut *client.write_socket.lock().await,
-            client.encryption.lock().await.as_mut().unwrap().encrypter(),
-        )
-        .await?;
+    SMSG_ADDON_INFO { addons }.astd_send_to_client(client).await?;
+    SMSG_CLIENTCACHE_VERSION { version: 0 }.astd_send_to_client(client).await?;
 
     send_tutorial_flags(client).await?;
 
     let mut client_data = client.data.write().await;
     client_data.client_state = ClientState::CharacterSelection;
     client_data.account_id = Some(db_account.id);
-
-    Ok(())
-}
-
-async fn send_auth_response(response: SMSG_AUTH_RESPONSE_WorldResult, client: &Client) -> Result<()> {
-    SMSG_AUTH_RESPONSE { result: response }
-        .astd_write_encrypted_server(
-            &mut *client.write_socket.lock().await,
-            client.encryption.lock().await.as_mut().unwrap().encrypter(),
-        )
-        .await?;
 
     Ok(())
 }
@@ -180,13 +134,8 @@ async fn send_tutorial_flags(client: &Client) -> Result<()> {
         tutorial_data6: 0,
         tutorial_data7: 0,
     }
-    .astd_write_encrypted_server(
-        &mut *client.write_socket.lock().await,
-        client.encryption.lock().await.as_mut().unwrap().encrypter(),
-    )
-    .await?;
-
-    Ok(())
+    .astd_send_to_client(client)
+    .await
 }
 
 #[allow(dead_code)]
