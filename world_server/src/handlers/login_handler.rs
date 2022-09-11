@@ -1,14 +1,17 @@
 use std::sync::Arc;
 
+use crate::character::Character;
 use crate::client::{Client, ClientState};
+use crate::client_manager::ClientManager;
+use crate::data::PackedTime;
 use crate::packet::*;
 use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt};
 use wow_srp::normalized_string::NormalizedString;
 use wow_srp::wrath_header::ProofSeed;
 use wow_world_messages::wrath::{
-    Addon, BillingPlanFlags, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION,
-    SMSG_TUTORIAL_FLAGS,
+    Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, CMSG_PING, CMSG_REALM_SPLIT, SMSG_ADDON_INFO,
+    SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION, SMSG_LOGIN_SETTIMESPEED, SMSG_PONG, SMSG_REALM_SPLIT, SMSG_TUTORIAL_FLAGS,
 };
 use wrath_auth_db::AuthDatabase;
 
@@ -138,58 +141,39 @@ async fn send_tutorial_flags(client: &Client) -> Result<()> {
     .await
 }
 
-#[allow(dead_code)]
-enum RealmSplitState {
-    Normal = 0,
-    Split = 1,
-    SplitPending = 2,
+pub async fn handle_cmsg_realm_split(client_manager: &ClientManager, client_id: u64, packet: &CMSG_REALM_SPLIT) -> Result<()> {
+    let client = client_manager.get_client(client_id).await?;
+    SMSG_REALM_SPLIT {
+        realm_id: packet.realm_id,
+        state: RealmSplitState::Normal,
+        split_date: "01/01/01".into(),
+    }
+    .astd_send_to_client(client)
+    .await
 }
 
-/*
-pub async fn handle_cmsg_realm_split(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    use std::io::Write;
-
-    let realm_id = {
-        let mut reader = std::io::Cursor::new(&packet.payload);
-        reader.read_u32::<LittleEndian>()?
-    };
-
-    let (header, mut writer) = create_packet(Opcodes::SMSG_REALM_SPLIT, 12);
-    writer.write_u32::<LittleEndian>(realm_id)?;
-    writer.write_u32::<LittleEndian>(RealmSplitState::Normal as u32)?; //Realm splitting not implemented
-    writer.write_all("01/01/01".as_bytes())?;
-    writer.write_u8(0)?; //string terminator
-
-    let client = client_manager.get_client(packet.client_id).await?;
-    send_packet(&client, &header, &writer).await?;
-    Ok(())
-}
-
-pub async fn handle_cmsg_ping(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let mut reader = std::io::Cursor::new(&packet.payload);
-    let sequence = reader.read_u32::<LittleEndian>()?;
-    let _latency = reader.read_u32::<LittleEndian>()?;
-
-    let (header, mut writer) = create_packet(Opcodes::SMSG_PONG, 4);
-    writer.write_u32::<LittleEndian>(sequence)?;
-
-    let client = client_manager.get_client(packet.client_id).await?;
-    send_packet(&client, &header, &writer).await?;
-
-    Ok(())
+pub async fn handle_cmsg_ping(client_manager: &ClientManager, client_id: u64, packet: &CMSG_PING) -> Result<()> {
+    let client = client_manager.get_client(client_id).await?;
+    SMSG_PONG {
+        sequence_id: packet.sequence_id,
+    }
+    .astd_send_to_client(client)
+    .await
 }
 
 pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
-    use crate::data::WritePackedTime;
+    let packed_time: PackedTime = chrono::Local::now().into();
 
-    let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_SETTIMESPEED, 20);
-    writer.write_packed_time::<LittleEndian>(&chrono::Local::now().into())?;
-    writer.write_f32::<LittleEndian>(0.01667)?; //Seems to be hardcoded value
-    writer.write_u32::<LittleEndian>(0)?;
-    send_packet_to_character(character, &header, &writer).await?;
-
-    Ok(())
+    SMSG_LOGIN_SETTIMESPEED {
+        datetime: packed_time.into(),
+        timescale: 0.01667f32,
+        unknown1: 0,
+    }
+    .astd_send_to_character(character)
+    .await
 }
+
+/*
 
 #[derive(PartialEq, Debug)]
 pub enum LogoutState {

@@ -179,9 +179,8 @@ impl Character {
         handlers::send_initial_spells(self).await?;
         handlers::send_action_buttons(self).await?;
         handlers::send_initial_world_states(self).await?;
-        handlers::send_login_set_time_speed(self).await
         */
-        Ok(())
+        handlers::send_login_set_time_speed(self).await
     }
 
     pub async fn send_packets_after_add_to_map(&self, realm_database: Arc<RealmDatabase>) -> Result<()> {

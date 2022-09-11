@@ -55,6 +55,8 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_REQUEST_ACCOUNT_DATA(data) => {
                 handle_cmsg_request_account_data(client_manager, packet.client_id, world, data).await
             }
+            ClientOpcodeMessage::CMSG_REALM_SPLIT(data) => handle_cmsg_realm_split(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_PING(data) => handle_cmsg_ping(client_manager, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }
@@ -64,7 +66,6 @@ impl PacketHandler {
             Opcodes::CMSG_CHAR_ENUM => handle_cmsg_char_enum(client_manager, world, packet).await,
             Opcodes::CMSG_REALM_SPLIT => handle_cmsg_realm_split(client_manager, packet).await,
             Opcodes::CMSG_CHAR_CREATE => handle_cmsg_char_create(client_manager, world, packet).await,
-            Opcodes::CMSG_PING => handle_cmsg_ping(client_manager, packet).await,
             Opcodes::CMSG_PLAYER_LOGIN => handle_cmsg_player_login(client_manager, world, packet).await,
             Opcodes::CMSG_PLAYED_TIME => handle_cmsg_played_time(client_manager, packet).await,
             Opcodes::CMSG_QUERY_TIME => handle_cmsg_query_time(client_manager, packet).await,

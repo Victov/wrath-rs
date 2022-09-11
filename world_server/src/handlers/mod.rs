@@ -1,14 +1,12 @@
 pub mod login_handler;
 pub use login_handler::handle_cmsg_auth_session;
 
-/*
-pub use login_handler::handle_cmsg_logout_cancel;
-pub use login_handler::handle_cmsg_logout_request;
+//pub use login_handler::handle_cmsg_logout_cancel;
+//pub use login_handler::handle_cmsg_logout_request;
 pub use login_handler::handle_cmsg_ping;
 pub use login_handler::handle_cmsg_realm_split;
 pub use login_handler::send_login_set_time_speed;
-pub use login_handler::send_smsg_logout_complete;
-*/
+//pub use login_handler::send_smsg_logout_complete;
 
 mod account_data_handler;
 pub use account_data_handler::create_empty_character_account_data_rows;
