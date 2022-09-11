@@ -2,8 +2,12 @@ use crate::character::*;
 use crate::client::Client;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
+use crate::world::World;
 use crate::ClientManager;
-use wow_world_messages::wrath::{CacheMask, ServerMessage, SMSG_ACCOUNT_DATA_TIMES};
+use wow_world_messages::wrath::{
+    CacheMask, ServerMessage, CMSG_REQUEST_ACCOUNT_DATA, CMSG_UPDATE_ACCOUNT_DATA, SMSG_ACCOUNT_DATA_TIMES, SMSG_UPDATE_ACCOUNT_DATA,
+    SMSG_UPDATE_ACCOUNT_DATA_COMPLETE,
+};
 use wrath_auth_db::DBAccountData;
 use wrath_realm_db::RealmDatabase;
 
@@ -110,19 +114,15 @@ pub async fn send_character_account_data_times(realm_database: &RealmDatabase, c
     send_account_data_times(&client, CacheMask::PerCharacterCache, masked_data).await
 }
 
-/*
-pub async fn handle_csmg_update_account_data(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_csmg_update_account_data(
+    client_manager: &ClientManager,
+    client_id: u64,
+    world: &World,
+    data: &CMSG_UPDATE_ACCOUNT_DATA,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
 
-    let mut reader = std::io::Cursor::new(&packet.payload);
-
-    let data_type = reader.read_u32::<LittleEndian>()? as u8;
-    let time = reader.read_u32::<LittleEndian>()?;
-    let decompressed_size = reader.read_u32::<LittleEndian>()?;
-    let new_data = reader.read_exact(packet.payload.len() - 12)?;
-    assert_eq!(new_data.len() + 12, packet.header.length as usize);
-
-    if 1 << data_type & CacheMask::GlobalCache as u8 > 0 {
+    if 1 << data.data_type & CacheMask::GlobalCache as u32 > 0 {
         let account_id = client
             .data
             .read()
@@ -131,31 +131,51 @@ pub async fn handle_csmg_update_account_data(client_manager: &ClientManager, wor
             .ok_or_else(|| anyhow!("Failed to get account_id from client even though authenticated"))?;
         client_manager
             .auth_db
-            .update_account_data(account_id, time, data_type, decompressed_size, &new_data)
+            .update_account_data(
+                account_id,
+                data.unix_time,
+                data.data_type as u8,
+                data.decompressed_size,
+                data.compressed_data.as_slice(),
+            )
             .await?;
     } else if let Some(character_lock) = &client.data.read().await.active_character {
         let character_id = character_lock.read().await.guid.get_low_part();
         world
             .get_realm_database()
-            .update_character_account_data(character_id, time, data_type, decompressed_size, &new_data)
+            .update_character_account_data(
+                character_id,
+                data.unix_time,
+                data.data_type as u8,
+                data.decompressed_size,
+                &data.compressed_data,
+            )
             .await?;
     }
 
-    let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_ACCOUNT_DATA_COMPLETE, 8);
-    writer.write_u32::<LittleEndian>(data_type as u32)?;
-    writer.write_u32::<LittleEndian>(0)?;
-    send_packet(&client, &header, &writer).await?;
+    SMSG_UPDATE_ACCOUNT_DATA_COMPLETE {
+        data_type: data.data_type,
+        unknown1: 0,
+    }
+    .astd_write_encrypted_server(
+        &mut *client.write_socket.lock().await,
+        client.encryption.lock().await.as_mut().unwrap().encrypter(),
+    )
+    .await?;
 
     Ok(())
 }
 
-pub async fn handle_cmsg_request_account_data(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_cmsg_request_account_data(
+    client_manager: &ClientManager,
+    client_id: u64,
+    world: &World,
+    data: &CMSG_REQUEST_ACCOUNT_DATA,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
 
-    let mut reader = std::io::Cursor::new(&packet.payload);
-    let data_type = reader.read_u32::<LittleEndian>()?;
     let (decompressed_size, account_data_bytes) = {
-        if 1 << data_type & CacheMask::GlobalCache as u8 > 0 {
+        if 1 << data.data_type & CacheMask::GlobalCache as u32 > 0 {
             let account_id = client
                 .data
                 .read()
@@ -163,7 +183,7 @@ pub async fn handle_cmsg_request_account_data(client_manager: &ClientManager, wo
                 .account_id
                 .ok_or_else(|| anyhow!("Account had no account_id even though it is authenticated"))?;
 
-            let db_data = client_manager.auth_db.get_account_data_of_type(account_id, data_type as u8).await?;
+            let db_data = client_manager.auth_db.get_account_data_of_type(account_id, data.data_type as u8).await?;
             if let Some(bytes) = db_data.data {
                 (db_data.decompressed_size, bytes)
             } else {
@@ -173,7 +193,7 @@ pub async fn handle_cmsg_request_account_data(client_manager: &ClientManager, wo
             let character_id = active_character_lock.read().await.guid.get_low_part();
             let db_data = world
                 .get_realm_database()
-                .get_character_account_data_of_type(character_id, data_type as u8)
+                .get_character_account_data_of_type(character_id, data.data_type as u8)
                 .await?;
             if let Some(bytes) = db_data.data {
                 (db_data.decompressed_size, bytes)
@@ -185,11 +205,15 @@ pub async fn handle_cmsg_request_account_data(client_manager: &ClientManager, wo
         }
     };
 
-    let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_ACCOUNT_DATA, account_data_bytes.len() + 8);
-    writer.write_u32::<LittleEndian>(data_type)?;
-    writer.write_u32::<LittleEndian>(decompressed_size)?;
-    writer.write_all(&account_data_bytes)?;
-    send_packet(&client, &header, &writer).await
+    SMSG_UPDATE_ACCOUNT_DATA {
+        data_type: data.data_type,
+        decompressed_size,
+        compressed_data: account_data_bytes,
+    }
+    .astd_write_encrypted_server(
+        &mut *client.write_socket.lock().await,
+        client.encryption.lock().await.as_mut().unwrap().encrypter(),
+    )
+    .await?;
+    Ok(())
 }
-
-*/

@@ -12,9 +12,9 @@ pub use login_handler::send_smsg_logout_complete;
 
 mod account_data_handler;
 pub use account_data_handler::create_empty_character_account_data_rows;
-//pub use account_data_handler::handle_cmsg_request_account_data;
+pub use account_data_handler::handle_cmsg_request_account_data;
 pub use account_data_handler::handle_csmg_ready_for_account_data_times;
-//pub use account_data_handler::handle_csmg_update_account_data;
+pub use account_data_handler::handle_csmg_update_account_data;
 pub use account_data_handler::send_character_account_data_times;
 
 /*

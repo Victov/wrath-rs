@@ -3,7 +3,6 @@ use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
 use super::client_manager::ClientManager;
 use crate::client::ClientState;
 use crate::handlers::*;
-use crate::opcodes::Opcodes;
 use crate::prelude::*;
 use crate::world::World;
 use std::sync::mpsc::Receiver;
@@ -50,6 +49,12 @@ impl PacketHandler {
 
         match &*packet.payload {
             ClientOpcodeMessage::CMSG_READY_FOR_ACCOUNT_DATA_TIMES(_) => handle_csmg_ready_for_account_data_times(client_manager, packet).await,
+            ClientOpcodeMessage::CMSG_UPDATE_ACCOUNT_DATA(data) => {
+                handle_csmg_update_account_data(client_manager, packet.client_id, world, data).await
+            }
+            ClientOpcodeMessage::CMSG_REQUEST_ACCOUNT_DATA(data) => {
+                handle_cmsg_request_account_data(client_manager, packet.client_id, world, data).await
+            }
             _ => bail!("Unhandled opcode"),
         }
     }
@@ -60,9 +65,7 @@ impl PacketHandler {
             Opcodes::CMSG_REALM_SPLIT => handle_cmsg_realm_split(client_manager, packet).await,
             Opcodes::CMSG_CHAR_CREATE => handle_cmsg_char_create(client_manager, world, packet).await,
             Opcodes::CMSG_PING => handle_cmsg_ping(client_manager, packet).await,
-            Opcodes::CMSG_UPDATE_ACCOUNT_DATA => handle_csmg_update_account_data(client_manager, world, packet).await,
             Opcodes::CMSG_PLAYER_LOGIN => handle_cmsg_player_login(client_manager, world, packet).await,
-            Opcodes::CMSG_REQUEST_ACCOUNT_DATA => handle_cmsg_request_account_data(client_manager, world, packet).await,
             Opcodes::CMSG_PLAYED_TIME => handle_cmsg_played_time(client_manager, packet).await,
             Opcodes::CMSG_QUERY_TIME => handle_cmsg_query_time(client_manager, packet).await,
             Opcodes::CMSG_WORLD_STATE_UI_TIMER_UPDATE => handle_cmsg_world_state_ui_timer_update(client_manager, packet).await,
