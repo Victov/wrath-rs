@@ -49,14 +49,13 @@ impl PacketHandler {
         }
 
         match &*packet.payload {
+            ClientOpcodeMessage::CMSG_READY_FOR_ACCOUNT_DATA_TIMES(_) => handle_csmg_ready_for_account_data_times(client_manager, packet).await,
             _ => bail!("Unhandled opcode"),
         }
     }
 }
 
 /*
-            Opcodes::CMSG_AUTH_SESSION => handle_cmsg_auth_session(client_manager, packet).await,
-            Opcodes::CMSG_READY_FOR_ACCOUNT_DATA_TIMES => handle_csmg_ready_for_account_data_times(client_manager, packet).await,
             Opcodes::CMSG_CHAR_ENUM => handle_cmsg_char_enum(client_manager, world, packet).await,
             Opcodes::CMSG_REALM_SPLIT => handle_cmsg_realm_split(client_manager, packet).await,
             Opcodes::CMSG_CHAR_CREATE => handle_cmsg_char_create(client_manager, world, packet).await,
