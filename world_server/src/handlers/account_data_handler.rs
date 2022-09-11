@@ -12,6 +12,7 @@ use wrath_auth_db::DBAccountData;
 use wrath_realm_db::RealmDatabase;
 
 pub async fn handle_csmg_ready_for_account_data_times(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
+    info!("handle ready for data times");
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
 
     let account_id = {
@@ -32,7 +33,7 @@ pub async fn handle_csmg_ready_for_account_data_times(client_manager: &ClientMan
         }
         break;
     }
-
+    info!("got db things");
     let db_account_data = db_account_data;
     send_account_wide_account_data_times(&client, &db_account_data).await
 }
@@ -66,6 +67,8 @@ async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: 
         SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32
     };
 
+    info!("right before snd");
+
     SMSG_ACCOUNT_DATA_TIMES {
         unix_time,
         unknown1: 1,
@@ -73,7 +76,10 @@ async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: 
         data: masked_data.into(),
     }
     .astd_send_to_client(client)
-    .await
+    .await?;
+
+    info!("sent data times");
+    Ok(())
 }
 
 async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> Result<()> {

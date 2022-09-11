@@ -3,57 +3,27 @@ use crate::client::Client;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
 use crate::data::WritePositionAndOrientation;
-use crate::opcodes::Opcodes;
 use crate::packet::*;
-use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::map_object::{MapObject, WorldObject};
 use crate::world::World;
-use podio::{LittleEndian, ReadPodExt, WritePodExt};
-use std::{collections::HashMap, io::Write};
+use podio::LittleEndian;
+use std::collections::HashMap;
+use std::convert::TryFrom;
+use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
-pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, client_id: u64) -> Result<()> {
+    info!("into handle");
+    let client = client_manager.get_authenticated_client(client_id).await?;
 
-    let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_ENUM, 40);
-
-    let characters = world
+    let db_characters = world
         .get_realm_database()
         .get_characters_for_account(client.data.read().await.account_id.unwrap())
         .await?;
 
-    writer.write_u8(characters.len() as u8)?;
-
-    for character in characters {
-        let guid = Guid::new(character.id, HighGuid::Player);
-        let character_flags = 0; //todo: stuff like being ghost, hide cloak, hide helmet, etc
-        let is_first_login = 0u8;
-
-        writer.write_guid::<LittleEndian>(&guid)?;
-        writer.write_all(character.name.as_bytes())?; //Investigate: Don't need to manually write string terminator here?
-        writer.write_u8(character.race)?;
-        writer.write_u8(character.class)?;
-        writer.write_u8(character.gender)?;
-        writer.write_u8(character.skin_color)?;
-        writer.write_u8(character.face)?;
-        writer.write_u8(character.hair_style)?;
-        writer.write_u8(character.hair_color)?;
-        writer.write_u8(character.facial_style)?;
-        writer.write_u8(character.level)?;
-        writer.write_u32::<LittleEndian>(character.zone as u32)?;
-        writer.write_u32::<LittleEndian>(character.map as u32)?;
-        writer.write_f32::<LittleEndian>(character.x)?;
-        writer.write_f32::<LittleEndian>(character.y)?;
-        writer.write_f32::<LittleEndian>(character.z)?;
-        writer.write_u32::<LittleEndian>(character.guild_id)?;
-        writer.write_u32::<LittleEndian>(character_flags)?;
-        writer.write_u32::<LittleEndian>(0)?;
-        writer.write_u8(is_first_login)?;
-        writer.write_u32::<LittleEndian>(0)?; //pet display id
-        writer.write_u32::<LittleEndian>(0)?; //pet level
-        writer.write_u32::<LittleEndian>(0)?; //pet family
-
+    let mut characters_to_send = Vec::<wow_world_messages::wrath::Character>::new();
+    for character in db_characters {
         let equipment: HashMap<u8, wrath_realm_db::character_equipment::DBCharacterEquipmentDisplayInfo> = {
             let equipped_items = world.get_realm_database().get_all_character_equipment_display_info(character.id).await?;
             let mut hashmap = HashMap::default();
@@ -63,26 +33,70 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
             hashmap
         };
 
-        for equip_slot in EQUIPMENT_SLOTS_START..EQUIPMENT_SLOTS_END + 1 {
-            if let Some(equipped) = equipment.get(&equip_slot) {
-                writer.write_u32::<LittleEndian>(equipped.displayid.unwrap_or(0))?;
-                writer.write_u8(equipped.inventory_type.unwrap_or(0))?;
-                writer.write_u32::<LittleEndian>(equipped.enchant.unwrap_or(0))?;
+        let mut equipped_items_to_send = vec![];
+        for equip_slot in EQUIPMENT_SLOTS_START..BAG_SLOTS_END + 1 {
+            let gear = if let Some(equipped) = equipment.get(&equip_slot) {
+                CharacterGear {
+                    equipment_display_id: equipped.displayid.unwrap_or(0),
+                    inventory_type: InventoryType::try_from(equipped.inventory_type.unwrap_or(0)).unwrap(),
+                    enchantment: equipped.enchant.unwrap_or(0),
+                }
             } else {
-                writer.write_u32::<LittleEndian>(0)?; //equipped item display id
-                writer.write_u8(0)?; //inventory type
-                writer.write_u32::<LittleEndian>(0)?; //enchant aura id
-            }
+                CharacterGear {
+                    equipment_display_id: 0,
+                    inventory_type: InventoryType::Bag,
+                    enchantment: 0,
+                }
+            };
+            equipped_items_to_send.push(gear);
         }
 
-        for _bag_slot in BAG_SLOTS_START..BAG_SLOTS_END + 1 {
-            writer.write_u32::<LittleEndian>(0)?; //equipped item display id
-            writer.write_u8(0)?; //inventory type
-            writer.write_u32::<LittleEndian>(0)?; //enchant aura id
-        }
+        let character_flags = 0; //todo: stuff like being ghost, hide cloak, hide helmet, etc
+        let is_first_login = 0u8;
+
+        characters_to_send.push(wow_world_messages::wrath::Character {
+            //TODO: restore functionality of the HighGuid that the non-wow_world_messages version
+            //has
+            //
+            //let guid = Guid::new(character.id, HighGuid::Player);
+            guid: wow_world_messages::Guid::from(character.id as u64),
+            name: character.name.clone(),
+            race: Race::try_from(character.race).unwrap_or(Race::Human),
+            class: Class::try_from(character.class).unwrap_or(Class::Warrior),
+            gender: Gender::try_from(character.gender).unwrap_or(Gender::Male),
+            skin: character.skin_color,
+            face: character.face,
+            hair_style: character.hair_style,
+            hair_color: character.hair_color,
+            facial_hair: character.facial_style,
+            level: character.level as u8,
+            area: Area::try_from(character.zone as u32).unwrap_or(Area::ElwynnForest),
+            map: Map::try_from(character.map as u32).unwrap_or(Map::EasternKingdoms),
+            position: wow_world_messages::wrath::Vector3d {
+                x: character.x,
+                y: character.y,
+                z: character.z,
+            },
+            guild_id: character.guild_id,
+            flags: character_flags,
+            recustomization_flags: 0,
+            first_login: is_first_login,
+            pet_display_id: 0,
+            pet_level: 0,
+            pet_family: 0,
+            equipment: equipped_items_to_send.try_into().unwrap(),
+        });
+
+        info!("pushed 1 character: {}", character.name.clone());
     }
 
-    send_packet(&client, &header, &writer).await?;
+    SMSG_CHAR_ENUM {
+        characters: characters_to_send,
+    }
+    .astd_send_to_client(client)
+    .await?;
+
+    info!("sent");
     Ok(())
 }
 
@@ -114,6 +128,7 @@ enum CharacterCreateReponse {
     ForceLogin = 0x45,
 }
 
+/*
 pub async fn handle_cmsg_char_create(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     use std::io::BufRead;
 
@@ -242,3 +257,5 @@ pub async fn send_action_buttons(character: &Character) -> Result<()> {
     send_packet_to_character(character, &header, &writer).await?;
     Ok(())
 }
+
+*/
