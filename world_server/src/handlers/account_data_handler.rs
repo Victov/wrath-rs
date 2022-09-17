@@ -37,17 +37,18 @@ pub async fn handle_csmg_ready_for_account_data_times(client_manager: &ClientMan
 }
 
 async fn create_empty_account_data_rows(client_manager: &ClientManager, account_id: u32) -> Result<()> {
+    let mask = CacheMask::GlobalCache.as_int() as u8;
     for i in 0..8u8 {
-        //per-character data not yet implemented
-        if (CacheMask::GlobalCache as u8) & (1 << i) > 0 {
+        if mask & (1 << i) > 0 {
             client_manager.auth_db.create_account_data(account_id, i).await?;
         }
     }
+
     Ok(())
 }
 
 pub async fn create_empty_character_account_data_rows(realm_database: &RealmDatabase, character_id: u32) -> Result<()> {
-    let mask = CacheMask::PerCharacterCache as u8;
+    let mask = CacheMask::PerCharacterCache.as_int() as u8;
     for i in 0..8u8 {
         if mask & (1 << i) > 0 {
             realm_database.create_character_account_data(character_id, i).await?;
@@ -78,7 +79,7 @@ async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: 
 }
 
 async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> Result<()> {
-    let mask = CacheMask::GlobalCache as u32;
+    let mask = CacheMask::GlobalCache.as_int() as u32;
     let mut masked_data = vec![];
     for row in data {
         if mask & (1 << row.data_type) > 0 {
@@ -97,7 +98,7 @@ pub async fn send_character_account_data_times(realm_database: &RealmDatabase, c
 
     let data = realm_database.get_character_account_data(character.guid.get_low_part()).await?;
 
-    let mask = CacheMask::PerCharacterCache as u32;
+    let mask = CacheMask::PerCharacterCache.as_int();
     let mut masked_data = vec![];
     for row in data {
         if mask & (1 << row.data_type) > 0 {
@@ -116,7 +117,7 @@ pub async fn handle_csmg_update_account_data(
 ) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
 
-    if 1 << data.data_type & CacheMask::GlobalCache as u32 > 0 {
+    if 1 << data.data_type & CacheMask::GlobalCache.as_int() > 0 {
         let account_id = client
             .data
             .read()
@@ -164,7 +165,7 @@ pub async fn handle_cmsg_request_account_data(
     let client = client_manager.get_authenticated_client(client_id).await?;
 
     let (decompressed_size, account_data_bytes) = {
-        if 1 << data.data_type & CacheMask::GlobalCache as u32 > 0 {
+        if 1 << data.data_type & CacheMask::GlobalCache.as_int() > 0 {
             let account_id = client
                 .data
                 .read()
