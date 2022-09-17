@@ -54,8 +54,11 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
 
     //Set the crypto of the client for use from now on
     {
+        let (encrypt, decrypt) = client_encryption.unwrap().split();
         let mut encryption = client.encryption.lock().await;
-        *encryption = Some(client_encryption.unwrap());
+        *encryption = Some(encrypt);
+        let mut decryption = client.decryption.lock().await;
+        *decryption = Some(decrypt);
     }
 
     SMSG_AUTH_RESPONSE {

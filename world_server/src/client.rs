@@ -16,6 +16,8 @@ use std::sync::Arc;
 use tracing::instrument::WithSubscriber;
 use wow_srp::wrath_header::ProofSeed;
 use wow_srp::wrath_header::ServerCrypto;
+use wow_srp::wrath_header::ServerDecrypterHalf;
+use wow_srp::wrath_header::ServerEncrypterHalf;
 use wow_world_messages::wrath::astd_expect_client_message;
 use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
 use wow_world_messages::wrath::ServerMessage;
@@ -41,7 +43,8 @@ pub struct Client {
     pub id: u64,
     pub read_socket: Arc<RwLock<TcpStream>>,
     pub write_socket: Arc<Mutex<TcpStream>>,
-    pub encryption: Mutex<Option<ServerCrypto>>,
+    pub encryption: Mutex<Option<ServerEncrypterHalf>>,
+    pub decryption: Mutex<Option<ServerDecrypterHalf>>,
     pub data: RwLock<ClientData>,
 }
 
@@ -52,6 +55,7 @@ impl Client {
             read_socket,
             write_socket,
             encryption: Mutex::new(None),
+            decryption: Mutex::new(None),
             data: RwLock::new(ClientData {
                 client_state: ClientState::PreLogin,
                 account_id: None,
@@ -112,10 +116,10 @@ impl Client {
         loop {
             assert!(self.is_authenticated().await);
             let opcode = {
-                let encryption_option: &mut Option<ServerCrypto> = &mut *self.encryption.lock().await;
-                if let Some(encryption) = encryption_option.as_mut() {
+                let decryptor_opt: &mut Option<ServerDecrypterHalf> = &mut *self.decryption.lock().await;
+                if let Some(decryption) = decryptor_opt.as_mut() {
                     let mut read_socket = self.read_socket.write().await;
-                    ClientOpcodeMessage::astd_read_encrypted(&mut *read_socket, encryption.decrypter()).await
+                    ClientOpcodeMessage::astd_read_encrypted(&mut *read_socket, decryption).await
                 } else {
                     bail!("Encryption didn't exist");
                 }

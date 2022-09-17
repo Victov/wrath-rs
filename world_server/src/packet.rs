@@ -49,11 +49,8 @@ pub trait ServerMessageExt: ServerMessage {
     {
         let client = character.borrow().client.upgrade().unwrap();
         Box::pin(async move {
-            self.astd_write_encrypted_server(
-                &mut *client.write_socket.lock().await,
-                client.encryption.lock().await.as_mut().unwrap().encrypter(),
-            )
-            .await?;
+            self.astd_write_encrypted_server(&mut *client.write_socket.lock().await, client.encryption.lock().await.as_mut().unwrap())
+                .await?;
             Ok(())
         })
     }
@@ -69,11 +66,8 @@ pub trait ServerMessageExt: ServerMessage {
     {
         Box::pin(async move {
             let client: &Client = client.borrow();
-            self.astd_write_encrypted_server(
-                &mut *client.write_socket.lock().await,
-                client.encryption.lock().await.as_mut().unwrap().encrypter(),
-            )
-            .await?;
+            self.astd_write_encrypted_server(&mut *client.write_socket.lock().await, client.encryption.lock().await.as_mut().unwrap())
+                .await?;
             Ok(())
         })
     }
