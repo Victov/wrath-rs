@@ -10,8 +10,12 @@ use crate::world::World;
 use podio::LittleEndian;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::ffi::CStr;
 use std::ffi::CString;
+use wow_world_messages::wrath::WorldResult;
+use wow_world_messages::wrath::CMSG_CHAR_CREATE;
+use wow_world_messages::wrath::SMSG_CHAR_CREATE;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
@@ -57,16 +61,13 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
 
         assert_eq!(equipped_items_to_send.len(), 23);
 
-        //We have to get rid of the null terminator
-        let sanitized_name = String::try_from(CStr::from_bytes_with_nul(character.name.as_bytes()).unwrap().to_str().unwrap()).unwrap();
-
         characters_to_send.push(wow_world_messages::wrath::Character {
             //TODO: restore functionality of the HighGuid that the non-wow_world_messages version
             //has
             //
             //let guid = Guid::new(character.id, HighGuid::Player);
             guid: wow_world_messages::Guid::from(character.id as u64),
-            name: sanitized_name,
+            name: character.name,
             race: Race::try_from(character.race).unwrap_or(Race::Human),
             class: Class::try_from(character.class).unwrap_or(Class::Warrior),
             gender: Gender::try_from(character.gender).unwrap_or(Gender::Male),
@@ -103,60 +104,13 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
     Ok(())
 }
 
-#[allow(dead_code)]
-enum CharacterCreateReponse {
-    InProgres = 0x2E,
-    Success = 0x2F,
-    Error = 0x30,
-    Failed = 0x31,
-    NameInUse = 0x32,
-    Disable = 0x33,
-    PvpTeamsViolation = 0x34,
-    ServerLimit = 0x35,
-    AccountLimit = 0x36,
-    ServerQueue = 0x37,
-    OnlyExisting = 0x38,
-    Expansion = 0x39,
-    ExpansionClass = 0x3A,
-    LevelRequirement = 0x3B,
-    UniqueClassLimit = 0x3C,
-    CharacterInGuild = 0x3D,
-    RestrictedRaceClass = 0x3E,
-    CharacterChooseRace = 0x3F,
-    CharacterArenaLeader = 0x40,
-    CharacterDeleteMail = 0x41,
-    CharacterSwapFaction = 0x42,
-    CharacterRaceOnly = 0x43,
-    CharacterGoldLimit = 0x44,
-    ForceLogin = 0x45,
-}
-
-/*
-pub async fn handle_cmsg_char_create(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
-    use std::io::BufRead;
-
-    let mut reader = std::io::Cursor::new(&packet.payload);
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
-
+pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: u64, world: &World, data: &CMSG_CHAR_CREATE) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let account_id = client.data.read().await.account_id.unwrap();
-
     let realm_db = world.get_realm_database();
 
     let create_params = {
-        let mut name = Vec::<u8>::new();
-        reader.read_until(0u8, &mut name)?;
-        let name = String::from_utf8(name)?;
-        let race = reader.read_u8()?;
-        let class = reader.read_u8()?;
-        let gender = reader.read_u8()?;
-        let skin_color = reader.read_u8()?;
-        let face = reader.read_u8()?;
-        let hair_style = reader.read_u8()?;
-        let hair_color = reader.read_u8()?;
-        let facial_style = reader.read_u8()?;
-        let outfit = reader.read_u8()?;
-
-        let player_create_info = realm_db.get_player_create_info(race, class).await?;
+        let player_create_info = realm_db.get_player_create_info(data.race.as_int(), data.class.as_int()).await?;
 
         let x = player_create_info.position_x;
         let y = player_create_info.position_y;
@@ -166,16 +120,16 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, world: &Wor
 
         DBCharacterCreateParameters {
             account_id,
-            name,
-            race,
-            class,
-            gender,
-            skin_color,
-            face,
-            hair_style,
-            hair_color,
-            facial_style,
-            outfit,
+            name: data.name.clone(),
+            race: data.race.as_int(),
+            class: data.class.as_int(),
+            gender: data.gender.as_int(),
+            skin_color: data.skin_color,
+            face: data.face,
+            hair_style: data.hair_style,
+            hair_color: data.hair_color,
+            facial_style: data.facial_hair,
+            outfit: CMSG_CHAR_CREATE::OUTFIT_ID_VALUE,
             map,
             x,
             y,
@@ -185,13 +139,23 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, world: &Wor
     };
 
     if !realm_db.is_character_name_available(&create_params.name).await? {
-        send_char_create_reply(&client, CharacterCreateReponse::NameInUse).await?;
-        return Ok(()); //this is a perfectly valid handling, not Err
+        SMSG_CHAR_CREATE {
+            result: WorldResult::CharCreateNameInUse,
+        }
+        .astd_send_to_client(client)
+        .await?;
+
+        return Ok(());
     }
 
     let result = realm_db.create_character(&create_params).await;
     if result.is_err() {
-        send_char_create_reply(&client, CharacterCreateReponse::Failed).await?;
+        SMSG_CHAR_CREATE {
+            result: WorldResult::CharCreateFailed,
+        }
+        .astd_send_to_client(client)
+        .await?;
+
         return Err(anyhow!("Failed to insert character into database"));
     }
 
@@ -202,16 +166,14 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, world: &Wor
         .set_num_characters_on_realm(account_id, realm_id, num_chars)
         .await?;
 
-    send_char_create_reply(&client, CharacterCreateReponse::Success).await?;
-
-    Ok(())
+    SMSG_CHAR_CREATE {
+        result: WorldResult::CharCreateSuccess,
+    }
+    .astd_send_to_client(client)
+    .await
 }
 
-async fn send_char_create_reply(client: &Client, resp: CharacterCreateReponse) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_CHAR_CREATE, 1);
-    writer.write_u8(resp as u8)?;
-    send_packet(client, &header, &writer).await
-}
+/*
 
 pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
