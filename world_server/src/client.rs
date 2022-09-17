@@ -2,7 +2,6 @@ use super::character::*;
 use super::client_manager::ClientManager;
 use super::opcodes::Opcodes;
 use super::packet::*;
-use super::wowcrypto::*;
 use crate::handlers::handle_cmsg_auth_session;
 //use crate::handlers::login_handler::LogoutState;
 use crate::packet_handler::PacketToHandle;

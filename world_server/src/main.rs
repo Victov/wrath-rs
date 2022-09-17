@@ -25,7 +25,6 @@ mod opcodes;
 mod packet;
 mod packet_handler;
 mod world;
-mod wowcrypto;
 
 pub mod prelude {
     pub use super::data::guid::*;
