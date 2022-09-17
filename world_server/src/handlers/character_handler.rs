@@ -10,11 +10,12 @@ use crate::world::World;
 use podio::LittleEndian;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::ffi::CStr;
+use std::ffi::CString;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
 pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, client_id: u64) -> Result<()> {
-    info!("into handle");
     let client = client_manager.get_authenticated_client(client_id).await?;
 
     let db_characters = world
@@ -52,7 +53,12 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
         }
 
         let character_flags = 0; //todo: stuff like being ghost, hide cloak, hide helmet, etc
-        let is_first_login = false; //todo
+        let first_login = false; //todo
+
+        assert_eq!(equipped_items_to_send.len(), 23);
+
+        //We have to get rid of the null terminator
+        let sanitized_name = String::try_from(CStr::from_bytes_with_nul(character.name.as_bytes()).unwrap().to_str().unwrap()).unwrap();
 
         characters_to_send.push(wow_world_messages::wrath::Character {
             //TODO: restore functionality of the HighGuid that the non-wow_world_messages version
@@ -60,7 +66,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
             //
             //let guid = Guid::new(character.id, HighGuid::Player);
             guid: wow_world_messages::Guid::from(character.id as u64),
-            name: character.name.clone(),
+            name: sanitized_name,
             race: Race::try_from(character.race).unwrap_or(Race::Human),
             class: Class::try_from(character.class).unwrap_or(Class::Warrior),
             gender: Gender::try_from(character.gender).unwrap_or(Gender::Male),
@@ -70,7 +76,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
             hair_color: character.hair_color,
             facial_hair: character.facial_style,
             level: character.level as u8,
-            area: Area::try_from(character.zone as u32).unwrap_or(Area::ElwynnForest),
+            area: Area::try_from(character.zone as u32).unwrap_or(Area::NorthshireValley),
             map: Map::try_from(character.map as u32).unwrap_or(Map::EasternKingdoms),
             position: wow_world_messages::wrath::Vector3d {
                 x: character.x,
@@ -80,14 +86,12 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
             guild_id: character.guild_id,
             flags: character_flags,
             recustomization_flags: 0,
-            first_login: is_first_login,
+            first_login,
             pet_display_id: 0,
             pet_level: 0,
             pet_family: 0,
             equipment: equipped_items_to_send.try_into().unwrap(),
         });
-
-        info!("pushed 1 character: {}", character.name.clone());
     }
 
     SMSG_CHAR_ENUM {
@@ -96,7 +100,6 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
     .astd_send_to_client(client)
     .await?;
 
-    info!("sent");
     Ok(())
 }
 
