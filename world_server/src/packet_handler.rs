@@ -57,7 +57,7 @@ impl PacketHandler {
             }
             ClientOpcodeMessage::CMSG_REALM_SPLIT(data) => handle_cmsg_realm_split(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_PING(data) => handle_cmsg_ping(client_manager, packet.client_id, data).await,
-            ClientOpcodeMessage::CMSG_CHAR_ENUM(_) => handle_cmsg_char_enum(client_manager, world, packet.client_id).await,
+            //ClientOpcodeMessage::CMSG_CHAR_ENUM(_) => handle_cmsg_char_enum(client_manager, world, packet.client_id).await,
             _ => bail!("Unhandled opcode"),
         }
     }

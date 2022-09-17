@@ -52,7 +52,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
         }
 
         let character_flags = 0; //todo: stuff like being ghost, hide cloak, hide helmet, etc
-        let is_first_login = 0u8;
+        let is_first_login = false; //todo
 
         characters_to_send.push(wow_world_messages::wrath::Character {
             //TODO: restore functionality of the HighGuid that the non-wow_world_messages version

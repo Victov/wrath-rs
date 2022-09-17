@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::character::Character;
 use crate::client::{Client, ClientState};
 use crate::client_manager::ClientManager;
-use crate::data::PackedTime;
 use crate::packet::*;
 use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt};
@@ -13,6 +12,7 @@ use wow_world_messages::wrath::{
     Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, CMSG_PING, CMSG_REALM_SPLIT, SMSG_ADDON_INFO,
     SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION, SMSG_LOGIN_SETTIMESPEED, SMSG_PONG, SMSG_REALM_SPLIT, SMSG_TUTORIAL_FLAGS,
 };
+use wow_world_messages::DateTime;
 use wrath_auth_db::AuthDatabase;
 
 pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, packet: &CMSG_AUTH_SESSION, auth_db: Arc<AuthDatabase>) -> Result<()> {
@@ -103,7 +103,7 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
         addons.push(Addon {
             addon_type: 2,
             uses_crc: 1,
-            uses_diffent_public_key: uses_diffent_public_key as u8,
+            uses_diffent_public_key,
             unknown1: 0,
             unknown2: 0,
         });
@@ -127,18 +127,7 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
 }
 
 async fn send_tutorial_flags(client: &Client) -> Result<()> {
-    SMSG_TUTORIAL_FLAGS {
-        tutorial_data0: 0,
-        tutorial_data1: 0,
-        tutorial_data2: 0,
-        tutorial_data3: 0,
-        tutorial_data4: 0,
-        tutorial_data5: 0,
-        tutorial_data6: 0,
-        tutorial_data7: 0,
-    }
-    .astd_send_to_client(client)
-    .await
+    SMSG_TUTORIAL_FLAGS { tutorial_data: [0; 8] }.astd_send_to_client(client).await
 }
 
 pub async fn handle_cmsg_realm_split(client_manager: &ClientManager, client_id: u64, packet: &CMSG_REALM_SPLIT) -> Result<()> {
@@ -162,10 +151,10 @@ pub async fn handle_cmsg_ping(client_manager: &ClientManager, client_id: u64, pa
 }
 
 pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
-    let packed_time: PackedTime = chrono::Local::now().into();
-
     SMSG_LOGIN_SETTIMESPEED {
-        datetime: packed_time.into(),
+        datetime: chrono::Local::now()
+            .try_into()
+            .expect("Current date/time cannot be converted to packed date time format: {}"),
         timescale: 0.01667f32,
         unknown1: 0,
     }
