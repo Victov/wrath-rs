@@ -22,6 +22,7 @@ use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
 use wow_world_messages::wrath::ServerMessage;
 use wow_world_messages::wrath::CMSG_AUTH_SESSION;
 use wow_world_messages::wrath::SMSG_AUTH_CHALLENGE;
+use wow_world_messages::Guid;
 use wrath_auth_db::AuthDatabase;
 
 #[derive(Clone, PartialEq)]
@@ -213,13 +214,14 @@ impl Client {
         let character = character_lock.read().await;
         character.send_packets_before_add_to_map().await?;
 
-        world
-            .get_instance_manager()
-            .get_or_create_map(&(*character), character.map)
-            .await?
-            .push_object(Arc::downgrade(character_lock))
-            .await;
-
+        /*
+            world
+                .get_instance_manager()
+                .get_or_create_map(&(*character), character.map)
+                .await?
+                .push_object(Arc::downgrade(character_lock))
+                .await;
+        */
         character.send_packets_after_add_to_map(world.get_realm_database()).await?;
 
         Ok(())

@@ -23,10 +23,6 @@ pub trait HasValueFields: ValueFieldsRaw {
         self.set_field_u32(field as usize, value)
     }
 
-    fn set_field_guid(&mut self, field: usize, guid: &Guid) -> Result<()> {
-        self.set_field_u64(field, guid.get_full())
-    }
-
     fn set_field_u64(&mut self, field: usize, value: u64) -> Result<()> {
         let a = (value & 0x00000000FFFFFFFF) as u32;
         let b = ((value & 0xFFFFFFFF00000000) >> 32) as u32;

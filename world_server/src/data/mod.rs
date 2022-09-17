@@ -11,8 +11,6 @@ pub use action_bar::ActionBar;
 mod movement_info;
 pub use movement_info::*;
 
-pub mod guid;
-
 mod data_storage;
 pub use data_storage::*;
 

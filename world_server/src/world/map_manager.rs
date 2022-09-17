@@ -87,6 +87,7 @@ impl MapManager {
                         .map(|a| !a.get_recently_removed_range_guids().is_empty())
                         .unwrap_or(false);
 
+                    /*
                     if has_any_update_bit || any_removed || any_added || has_something_recently_removed {
                         //Hard unwrap should be safe here
                         let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object.as_world_object().unwrap())?;
@@ -117,6 +118,7 @@ impl MapManager {
                     }
 
                     valid_object.as_update_receiver_mut().unwrap().process_pending_updates().await?;
+                    */
                 }
             }
         }
@@ -233,6 +235,7 @@ impl MapManager {
 
                 if let Some(weak_ptr_to_lock) = objects_on_map.get(guid) {
                     if let Some(upgraded_lock_from_guid) = weak_ptr_to_lock.upgrade() {
+                        /*
                         let wants_updates = {
                             upgraded_lock_from_guid
                                 .read()
@@ -269,7 +272,7 @@ impl MapManager {
                                     wants_updates.push_update_block(&mut buffer, block_count);
                                 }
                             }
-                        }
+                        } */
                     } else {
                         //The object should have been cleaned up, so at this point this is a warning
                         //Don't do clean-up here. This exposes a problem elsewhere, don't try to fix it

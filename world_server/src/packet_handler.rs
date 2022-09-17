@@ -59,13 +59,13 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_PING(data) => handle_cmsg_ping(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_CHAR_ENUM(_) => handle_cmsg_char_enum(client_manager, world, packet.client_id).await,
             ClientOpcodeMessage::CMSG_CHAR_CREATE(data) => handle_cmsg_char_create(client_manager, packet.client_id, world, data).await,
+            ClientOpcodeMessage::CMSG_PLAYER_LOGIN(data) => handle_cmsg_player_login(client_manager, world, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }
 }
 
 /*
-            Opcodes::CMSG_PLAYER_LOGIN => handle_cmsg_player_login(client_manager, world, packet).await,
             Opcodes::CMSG_PLAYED_TIME => handle_cmsg_played_time(client_manager, packet).await,
             Opcodes::CMSG_QUERY_TIME => handle_cmsg_query_time(client_manager, packet).await,
             Opcodes::CMSG_WORLD_STATE_UI_TIMER_UPDATE => handle_cmsg_world_state_ui_timer_update(client_manager, packet).await,

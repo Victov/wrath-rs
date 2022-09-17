@@ -3,7 +3,7 @@ use crate::client::Client;
 use crate::constants::social::RelationType;
 use crate::data::{ActionBar, DataStorage, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 //use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
-use crate::item::Item;
+//use crate::item::Item;
 use crate::prelude::*;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
@@ -55,13 +55,12 @@ pub struct Character {
     //time sync
     pub time_sync_counter: u32,
     time_sync_cooldown: f32,
-
     //Teleporting
     //pub teleportation_state: TeleportationState,
 
     //pub logout_state: LogoutState,
     //rested_state: character_rested::RestedState,
-    equipped_items: Vec<Arc<RwLock<Item>>>,
+    //equipped_items: Vec<Arc<RwLock<Item>>>,
 }
 
 impl Character {
@@ -94,13 +93,13 @@ impl Character {
             //teleportation_state: TeleportationState::None,
             //logout_state: LogoutState::None,
             //rested_state: character_rested::RestedState::NotRested,
-            equipped_items: vec![],
+            //equipped_items: vec![],
         }
     }
 
     pub async fn load_from_database(&mut self, world: &World, data_storage: &DataStorage) -> Result<()> {
         let realm_database = world.get_realm_database();
-        let db_entry = realm_database.get_character(self.guid.get_low_part()).await?;
+        let db_entry = realm_database.get_character(self.guid.guid() as u32).await?;
         self.bind_location = Some(WorldZoneLocation {
             zone: db_entry.bind_zone as u32,
             map: db_entry.bind_map as u32,
@@ -122,7 +121,7 @@ impl Character {
         self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
-        let character_id = self.guid.get_low_part();
+        let character_id = self.guid.guid() as u32;
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
         if character_account_data.is_empty() {
@@ -142,17 +141,17 @@ impl Character {
                 0 => race_info.male_model_id,
                 _ => race_info.female_model_id,
             };
-            self.set_unit_field_u32(UnitFields::Displayid, display_id)?;
-            self.set_unit_field_u32(UnitFields::Nativedisplayid, display_id)?;
+            //self.set_unit_field_u32(UnitFields::Displayid, display_id)?;
+            //self.set_unit_field_u32(UnitFields::Nativedisplayid, display_id)?;
         }
 
         self.class = db_entry.class;
         if let Some(class_info) = data_storage.get_char_classes().get_entry(self.class as u32) {
-            self.set_power_type(class_info.power_type as u8)?;
+            //self.set_power_type(class_info.power_type as u8)?;
         }
 
-        self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().get_low_part())?;
-        self.set_object_field_u32(ObjectFields::HighGuid, self.get_guid().get_high_part())?;
+        /*self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().guid() as u32)?;
+        self.set_object_field_u32(ObjectFields::HighGuid, 0)?; //self.get_guid().get_high_part())?;
         self.set_object_field_u32(
             ObjectFields::Type,
             1 << ObjectType::Unit as u32 | 1 << ObjectType::Player as u32 | 1 << ObjectType::Object as u32,
@@ -165,7 +164,7 @@ impl Character {
         self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
         self.set_unit_field_u32(UnitFields::Level, 1)?;
         self.set_unit_field_u32(UnitFields::Factiontemplate, 1)?;
-
+        */
         //self.load_equipment_from_database(world).await?;
 
         Ok(())
@@ -262,6 +261,7 @@ impl MapObject for Character {
     }
 }
 
+/*
 //Implement features for gameobject. For character, almost all features (traits) are enabled (Some)
 impl GameObject for Character {
     fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates> {
@@ -403,3 +403,4 @@ impl ValueFieldsRaw for Character {
         &self.changed_update_mask
     }
 }
+*/

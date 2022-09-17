@@ -15,6 +15,7 @@ use std::ffi::CStr;
 use std::ffi::CString;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
+use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
 use wow_world_messages::wrath::SMSG_CHAR_CREATE;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
@@ -173,15 +174,9 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
     .await
 }
 
-/*
-
-pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
-
-    let guid = {
-        let mut reader = std::io::Cursor::new(&packet.payload);
-        reader.read_guid::<LittleEndian>()?
-    };
+pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &World, client_id: u64, data: &CMSG_PLAYER_LOGIN) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let guid = data.guid;
 
     client.load_and_set_active_character(client_manager, world, guid).await?;
     client.login_active_character(world).await?;
@@ -189,6 +184,7 @@ pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &Wo
     Ok(())
 }
 
+/*
 pub async fn send_verify_world(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_VERIFY_WORLD, 20);
     writer.write_u32::<LittleEndian>(character.map)?;

@@ -1,10 +1,11 @@
 use std::sync::Weak;
 
 use async_std::sync::RwLock;
+use wow_world_messages::Guid;
 
 pub use super::map_cell::MapCell;
 use super::map_manager::MapManager;
-use super::update_builder::ReceiveUpdates;
+//use super::update_builder::ReceiveUpdates;
 use super::value_fields::HasValueFields;
 use crate::character::Character;
 use crate::data::MovementInfo;
@@ -18,8 +19,8 @@ pub trait GameObject: Sync + Send {
     fn as_map_object_mut(&mut self) -> &mut dyn MapObject; //Mandatory to implement
     fn as_has_value_fields(&self) -> Option<&dyn HasValueFields>;
     fn as_has_value_fields_mut(&mut self) -> Option<&mut dyn HasValueFields>;
-    fn as_update_receiver(&self) -> Option<&dyn ReceiveUpdates>;
-    fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates>;
+    //fn as_update_receiver(&self) -> Option<&dyn ReceiveUpdates>;
+    //fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates>;
 
     //Special case shortcut
     fn as_character(&self) -> Option<&Character>;

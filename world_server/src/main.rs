@@ -20,17 +20,17 @@ mod console_input;
 mod constants;
 mod data;
 pub mod handlers;
-pub mod item;
+//pub mod item; //Disabled because Guids need refactor to support highGuids
 mod opcodes;
 mod packet;
 mod packet_handler;
 mod world;
 
 pub mod prelude {
-    pub use super::data::guid::*;
     pub use super::handlers;
     pub use anyhow::{anyhow, bail, Result};
     pub use tracing::{error, info, trace, warn};
+    pub use wow_world_messages::Guid;
 }
 use prelude::*;
 
