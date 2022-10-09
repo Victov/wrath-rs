@@ -7,7 +7,7 @@ use std::sync::Arc;
 use wow_world_messages::wrath::Map;
 
 use super::map_manager::MapManager;
-use super::map_object::{GameObject, MapObject};
+use super::prelude::GameObject;
 
 pub type InstanceID = u32;
 pub type MapID = u32;

@@ -45,15 +45,17 @@ pub use spell_handler::send_initial_spells;
 mod talent_handler;
 pub use talent_handler::send_talents_info;
 
+*/
 mod world_handler;
-pub use world_handler::handle_cmsg_time_sync_resp;
-pub use world_handler::handle_cmsg_zoneupdate;
-pub use world_handler::send_destroy_object;
-pub use world_handler::send_initial_world_states;
-pub use world_handler::send_time_sync;
-pub use world_handler::send_update_packet;
-pub use world_handler::send_world_state_update;
+//pub use world_handler::handle_cmsg_time_sync_resp;
+//pub use world_handler::handle_cmsg_zoneupdate;
+//pub use world_handler::send_destroy_object;
+//pub use world_handler::send_initial_world_states;
+//pub use world_handler::send_time_sync;
+pub use world_handler::send_smsg_update_objects;
+//pub use world_handler::send_world_state_update;
 
+/*
 mod social_handler;
 pub use social_handler::send_contact_list;
 

@@ -1,7 +1,7 @@
 use crate::client::Client;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
-use crate::world::prelude::MapObject;
+use crate::world::prelude::GameObject;
 use crate::world::World;
 use crate::ClientManager;
 use crate::{character::*, packet::ServerMessageExt};

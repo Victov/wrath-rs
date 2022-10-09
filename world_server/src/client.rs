@@ -1,7 +1,5 @@
 use super::character::*;
 use super::client_manager::ClientManager;
-use super::opcodes::Opcodes;
-use super::packet::*;
 use crate::handlers::handle_cmsg_auth_session;
 //use crate::handlers::login_handler::LogoutState;
 use crate::packet_handler::PacketToHandle;
@@ -12,9 +10,7 @@ use async_std::sync::{Mutex, RwLock};
 use async_std::task;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use tracing::instrument::WithSubscriber;
 use wow_srp::wrath_header::ProofSeed;
-use wow_srp::wrath_header::ServerCrypto;
 use wow_srp::wrath_header::ServerDecrypterHalf;
 use wow_srp::wrath_header::ServerEncrypterHalf;
 use wow_world_messages::wrath::astd_expect_client_message;
@@ -214,14 +210,12 @@ impl Client {
         let character = character_lock.read().await;
         character.send_packets_before_add_to_map().await?;
 
-        /*
-            world
-                .get_instance_manager()
-                .get_or_create_map(&(*character), character.map)
-                .await?
-                .push_object(Arc::downgrade(character_lock))
-                .await;
-        */
+        world
+            .get_instance_manager()
+            .get_or_create_map(&(*character), character.map)
+            .await?
+            .push_object(Arc::downgrade(character_lock))
+            .await;
         character.send_packets_after_add_to_map(world.get_realm_database()).await?;
 
         Ok(())

@@ -1,4 +1,7 @@
-use super::instance_manager::MapID;
+use super::{
+    instance_manager::MapID,
+    prelude::{build_create_update_block_for_player, build_out_of_range_update_block_for_player, build_values_update_block},
+};
 use std::collections::HashMap;
 use std::sync::Weak;
 
@@ -6,6 +9,7 @@ use super::prelude::GameObject;
 use crate::prelude::*;
 use async_std::sync::{Mutex, RwLock};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
+use wow_world_messages::wrath::UpdateMask;
 
 const VISIBILITY_RANGE: f32 = 5000.0f32;
 
@@ -70,54 +74,52 @@ impl MapManager {
         let any_added = self.process_add_queue().await?;
 
         let map_objects = self.objects_on_map.read().await;
-        for map_object in (*map_objects).values() {
-            self.update_in_range_set(map_object.clone()).await?;
+        for weak_locked_map_object in (*map_objects).values() {
+            self.update_in_range_set(weak_locked_map_object.clone()).await?;
 
-            if let Some(valid_object_lock) = map_object.upgrade() {
-                let valid_object = valid_object_lock.write().await;
-                if valid_object.as_world_object().map(|a| a.wants_updates()).unwrap_or(false) {
-                    let has_any_update_bit = valid_object
-                        .as_has_value_fields()
-                        .map(|a| a.get_update_mask().has_any_bit())
-                        .unwrap_or(false);
+            if let Some(locked_map_object) = weak_locked_map_object.upgrade() {
+                let mut map_object = locked_map_object.write().await;
+                let wants_to_receive_update_blocks = map_object.as_update_receiver().is_some();
+                assert_eq!(
+                    map_object.as_update_receiver().is_some(),
+                    map_object.as_update_receiver_mut().is_some(),
+                    "Implementing one without the other, this will cause problems on an upwrap later"
+                );
 
-                    let has_something_recently_removed = valid_object
-                        .as_world_object()
-                        .map(|a| !a.get_recently_removed_range_guids().is_empty())
-                        .unwrap_or(false);
+                if wants_to_receive_update_blocks {
+                    let has_any_update_bit = if let UpdateMask::Player(update_mask) = map_object.get_update_mask() {
+                        update_mask.has_any_header_set()
+                    } else {
+                        bail!("any other type not supported");
+                    };
 
-                    /*
+                    let has_something_recently_removed = map_object.get_recently_removed_range_guids().is_empty();
+
                     if has_any_update_bit || any_removed || any_added || has_something_recently_removed {
-                        //Hard unwrap should be safe here
-                        let (num_blocks, mut buf) = build_out_of_range_update_block_for_player(&*valid_object.as_world_object().unwrap())?;
-                        valid_object.as_world_object_mut().unwrap().clear_recently_removed_range_guids()?;
-                        valid_object.as_update_receiver_mut().unwrap().push_update_block(&mut buf, num_blocks);
+                        if let Some(out_of_range_update) = build_out_of_range_update_block_for_player(&*map_object) {
+                            map_object.clear_recently_removed_range_guids();
+                            map_object.as_update_receiver_mut().unwrap().push_object_update(out_of_range_update);
+                        }
 
-                        let (num_blocks, buf) =
-                            build_values_update_block(valid_object.as_map_object().get_guid(), &*valid_object.as_has_value_fields().unwrap())?;
+                        let values_update = build_values_update_block(&*map_object)?;
 
-                        valid_object
-                            .as_update_receiver_mut()
-                            .unwrap()
-                            .push_update_block(&mut buf.clone(), num_blocks);
+                        map_object.as_update_receiver_mut().unwrap().push_object_update(values_update.clone());
 
-                        let in_range_guids = valid_object.as_world_object().unwrap().get_in_range_guids();
-                        for in_range_guid in in_range_guids {
-                            if let Some(in_range_object_weak) = map_objects.get(in_range_guid) {
-                                if let Some(in_range_object_lock) = in_range_object_weak.upgrade() {
-                                    let mut in_range_object = in_range_object_lock.write().await;
-                                    in_range_object
-                                        .as_update_receiver_mut()
-                                        .unwrap()
-                                        .push_update_block(&mut buf.clone(), num_blocks);
-                                }
+                        let in_range_guids = map_object.get_in_range_guids();
+                        for in_range_object_lock in in_range_guids
+                            .iter()
+                            .filter_map(|guid| map_objects.get(guid))
+                            .filter_map(|weak| weak.upgrade())
+                        {
+                            let mut in_range_object = in_range_object_lock.write().await;
+                            if let Some(update_receiver) = in_range_object.as_update_receiver_mut() {
+                                update_receiver.push_object_update(values_update.clone());
                             }
                         }
-                        valid_object.as_has_value_fields_mut().unwrap().clear_update_mask();
+                        map_object.clear_update_mask_header();
                     }
 
-                    valid_object.as_update_receiver_mut().unwrap().process_pending_updates().await?;
-                    */
+                    map_object.as_update_receiver_mut().unwrap().process_pending_updates().await?;
                 }
             }
         }
@@ -152,14 +154,11 @@ impl MapManager {
         if let Some(object_lock) = object_ref.upgrade() {
             {
                 let object = object_lock.read().await;
-                self.objects_on_map
-                    .write()
-                    .await
-                    .insert(object.as_map_object().get_guid(), object_ref.clone());
-                if let Some(object) = object.as_world_object() {
+                if let Some(position) = object.get_position() {
+                    self.objects_on_map.write().await.insert(object.get_guid(), object_ref.clone());
                     let query_item = RStarTreeItem {
-                        x: object.get_position().position.x,
-                        y: object.get_position().position.y,
+                        x: position.position.x,
+                        y: position.position.y,
                         guid: object.get_guid(),
                     };
                     self.query_tree.write().await.insert(query_item);
@@ -168,7 +167,7 @@ impl MapManager {
 
             self.update_in_range_set(object_ref).await?;
 
-            object_lock.write().await.as_map_object_mut().on_pushed_to_map(self).await?;
+            object_lock.write().await.on_pushed_to_map(self).await?;
         } else {
             bail!("Recieved a weak ref to a character that no longer exists");
         }
@@ -176,18 +175,20 @@ impl MapManager {
         Ok(())
     }
 
-    async fn update_in_range_set(&self, object_ref: Weak<RwLock<dyn GameObject + 'static>>) -> Result<()> {
-        if let Some(target_object_lock) = object_ref.upgrade() {
-            if target_object_lock.read().await.as_world_object().is_none() {
+    async fn update_in_range_set(&self, weak_object_lock: Weak<RwLock<dyn GameObject + 'static>>) -> Result<()> {
+        if let Some(object_lock) = weak_object_lock.upgrade() {
+            //Check if this object even has positional data
+            if object_lock.read().await.get_position().is_none() {
                 return Ok(());
             }
             let tree = self.query_tree.read().await;
             let within_range: Vec<Guid> = {
                 //Safe to unwrap because we checked it before
-                let object = target_object_lock.read().await;
-                let object = object.as_world_object().unwrap();
-                let object_pos = [object.get_position().position.x, object.get_position().position.y];
-                tree.locate_within_distance(object_pos, VISIBILITY_RANGE).map(|a| a.guid).collect()
+                let object = object_lock.read().await;
+                let position = object.get_position().unwrap().position;
+                tree.locate_within_distance([position.x, position.y], VISIBILITY_RANGE)
+                    .map(|a| a.guid)
+                    .collect()
             };
 
             //Remove objects that we have in our in-range-list but that are no longer in range
@@ -195,19 +196,18 @@ impl MapManager {
             {
                 let mut destroyed_guids = vec![];
                 {
-                    let mut object = target_object_lock.write().await;
-                    let object = object.as_world_object_mut().unwrap();
-                    let in_range_list: Vec<Guid> = object.get_in_range_guids().iter().map(|a| a.clone()).collect();
-                    for &guid in in_range_list.iter() {
+                    let mut object = object_lock.write().await;
+                    let in_range_list: Vec<Guid> = object.get_in_range_guids();
+                    for guid in in_range_list {
                         if !within_range.contains(&guid) {
                             object.remove_in_range_object(guid)?;
 
-                            destroyed_guids.push(guid.to_owned());
+                            destroyed_guids.push(guid);
                         }
                     }
                 }
 
-                if let Some(character) = target_object_lock.read().await.as_character() {
+                if let Some(character) = object_lock.read().await.as_character() {
                     for guid in destroyed_guids {
                         //handlers::send_destroy_object(character, &guid, true).await?;
                     }
@@ -215,69 +215,40 @@ impl MapManager {
             }
 
             let objects_on_map = self.objects_on_map.read().await;
-            for &guid in within_range.iter() {
+            for guid in within_range {
                 //Only read locks required here
                 {
-                    let target_object = target_object_lock.read().await;
-                    let world_object = target_object.as_world_object().unwrap();
-                    if guid == world_object.get_guid() {
+                    let target_object = object_lock.read().await;
+                    if guid == target_object.get_guid() {
                         //skip ourselves
                         continue;
                     }
 
-                    if world_object.is_in_range(guid) {
+                    if target_object.is_in_range(guid) {
                         //skip if we already know this object in our range
                         continue;
                     }
                     trace!("New object in range! Guid: {}", guid);
                 }
 
-                if let Some(weak_ptr_to_lock) = objects_on_map.get(&guid) {
-                    if let Some(upgraded_lock_from_guid) = weak_ptr_to_lock.upgrade() {
-                        /*
-                        let wants_updates = {
-                            upgraded_lock_from_guid
-                                .read()
-                                .await
-                                .as_world_object()
-                                .map(|a| a.wants_updates())
-                                .unwrap_or(false)
-                        };
-                        {
-                            let mut write_obj = upgraded_lock_from_guid.write().await;
+                if let Some(lock_from_guid) = objects_on_map.get(&guid).and_then(|weak| weak.upgrade()) {
+                    let wants_updates = { lock_from_guid.read().await.as_update_receiver().is_some() };
+                    {
+                        let mut write_obj = lock_from_guid.write().await;
 
-                            write_obj
-                                .as_world_object_mut()
-                                .unwrap()
-                                .add_in_range_object(target_object_lock.read().await.as_world_object().unwrap().get_guid(), object_ref.clone())?;
+                        write_obj.add_in_range_object(object_lock.read().await.get_guid(), weak_object_lock.clone())?;
 
-                            if wants_updates {
-                                let (block_count, mut buffer) = build_create_update_block_for_player(&*write_obj, &*target_object_lock.read().await)?;
-
-                                write_obj.as_update_receiver_mut().unwrap().push_update_block(&mut buffer, block_count);
-                            }
+                        if wants_updates {
+                            let update_block = build_create_update_block_for_player(&*write_obj, &*object_lock.read().await)?;
+                            write_obj.as_update_receiver_mut().unwrap().push_object_update(update_block);
                         }
-                        {
-                            let mut write_target_object = target_object_lock.write().await;
-                            let mut wants_updates = false;
-                            if let Some(as_world_object) = write_target_object.as_world_object_mut() {
-                                as_world_object.add_in_range_object(guid, weak_ptr_to_lock.clone())?;
-                                wants_updates = as_world_object.wants_updates();
-                            }
-                            if wants_updates {
-                                let (block_count, mut buffer) =
-                                    build_create_update_block_for_player(&*write_target_object, &*upgraded_lock_from_guid.read().await)?;
-                                if let Some(wants_updates) = write_target_object.as_update_receiver_mut() {
-                                    wants_updates.push_update_block(&mut buffer, block_count);
-                                }
-                            }
-                        } */
-                    } else {
-                        //The object should have been cleaned up, so at this point this is a warning
-                        //Don't do clean-up here. This exposes a problem elsewhere, don't try to fix it
-                        //here
-                        warn!("We got an object in range that's no longer active on the server, weakref failed to upgrade");
-                        continue;
+                    }
+                    let mut object = object_lock.write().await;
+                    object.add_in_range_object(guid, weak_object_lock.clone())?;
+                    let wants_updates = object.as_update_receiver().is_some();
+                    if wants_updates {
+                        let update_block = build_create_update_block_for_player(&*object, &*object_lock.read().await)?;
+                        object.as_update_receiver_mut().unwrap().push_object_update(update_block);
                     }
                 } else {
                     error!("Map manager had a GUID in its spacial querying tree that wasn't known in the objects on the map");
@@ -292,14 +263,14 @@ impl MapManager {
     async fn rebuild_object_querying_tree(&self) -> Result<()> {
         let mut obj_list = vec![];
         let objects_on_map = self.objects_on_map.read().await;
-        for (guid, obj_weak_ptr) in objects_on_map.iter() {
-            if let Some(lock) = obj_weak_ptr.upgrade() {
+        for (guid, weak_lock) in objects_on_map.iter() {
+            if let Some(lock) = weak_lock.upgrade() {
                 let map_obj = lock.read().await;
-                if let Some(map_obj) = map_obj.as_world_object() {
+                if let Some(position) = map_obj.get_position() {
                     obj_list.push(RStarTreeItem {
                         guid: *guid,
-                        x: map_obj.get_position().position.x,
-                        y: map_obj.get_position().position.y,
+                        x: position.position.x,
+                        y: position.position.y,
                     });
                 }
             }
@@ -338,37 +309,29 @@ impl MapManager {
         } {
             if let Some(removed_object_lock) = weak_removed_object.upgrade() {
                 let mut removed_object = removed_object_lock.write().await;
-                if let Some(removed_object) = removed_object.as_world_object_mut() {
-                    let objects_on_map = self.objects_on_map.read().await;
-                    for in_range_guid in removed_object.get_in_range_guids() {
-                        if let Some(weak_in_range_object) = objects_on_map.get(&in_range_guid) {
-                            if let Some(in_range_object_lock) = weak_in_range_object.upgrade() {
-                                let mut in_range_object = in_range_object_lock.write().await;
-                                if let Some(character) = in_range_object.as_character() {
-                                    //handlers::send_destroy_object(character, guid, true).await?;
-                                }
-                                trace!("removed {} from range of {}", removed_object.get_guid(), in_range_guid);
-                                if let Some(in_range_object) = in_range_object.as_world_object_mut() {
-                                    in_range_object.remove_in_range_object(guid)?;
-                                }
-                            }
-                        }
+                let objects_on_map = self.objects_on_map.read().await;
+                for in_range_object_lock in removed_object
+                    .get_in_range_guids()
+                    .iter()
+                    .filter_map(|g| objects_on_map.get(g).and_then(|weak| weak.upgrade()))
+                {
+                    let mut in_range_object = in_range_object_lock.write().await;
+                    if let Some(character) = in_range_object.as_character() {
+                        //handlers::send_destroy_object(character, guid, true).await?;
                     }
-                    removed_object.clear_in_range_objects();
+                    trace!("removed {} from range of {}", removed_object.get_guid(), in_range_object.get_guid());
+                    in_range_object.remove_in_range_object(guid)?;
                 }
+                removed_object.clear_in_range_objects();
             } else {
                 //Failed to upgrade from a weakptr. This means the object is really gone, and we
                 //can't access its in-range-list anymore. Bruteforce the removal from everything on
                 //this map.
                 let objects_on_map = self.objects_on_map.read().await;
-                for object_weak in objects_on_map.values() {
-                    if let Some(object_lock) = object_weak.upgrade() {
-                        let mut object = object_lock.write().await;
-                        if let Some(object) = object.as_world_object_mut() {
-                            if object.is_in_range(guid) {
-                                object.remove_in_range_object(guid)?;
-                            }
-                        }
+                for object_lock in objects_on_map.values().filter_map(|w| w.upgrade()) {
+                    let mut object = object_lock.write().await;
+                    if object.is_in_range(guid) {
+                        object.remove_in_range_object(guid)?;
                     }
                 }
             }

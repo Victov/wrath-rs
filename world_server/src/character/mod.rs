@@ -8,7 +8,7 @@ use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
-use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, Power, Race, UpdatePlayer, Vector3d};
+use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, UpdateMask, UpdatePlayer, Vector3d};
 use wrath_realm_db::RealmDatabase;
 
 //mod character_equipment;
@@ -35,10 +35,9 @@ pub struct Character {
     pub last_playtime_calculation_timestamp: u32,
 
     //required for world updates and implenting ReceiveUpdates trait
-    creation_buffer: Vec<u8>,
-    creation_block_count: u32,
+    pending_object_updates: Vec<wow_world_messages::wrath::Object>,
 
-    //things required to keep MapObject working
+    //things required make GameObject working
     in_range_objects: HashMap<Guid, Weak<RwLock<dyn GameObject>>>,
     recently_removed_guids: Vec<Guid>,
 
@@ -69,8 +68,7 @@ impl Character {
             seconds_played_total: 0,
             seconds_played_at_level: 0,
             last_playtime_calculation_timestamp: 0,
-            creation_block_count: 0,
-            creation_buffer: vec![],
+            pending_object_updates: vec![],
             in_range_objects: HashMap::new(),
             recently_removed_guids: vec![],
             time_sync_counter: 0,
@@ -233,13 +231,21 @@ impl Character {
 }
 
 #[async_trait::async_trait]
-impl MapObject for Character {
+impl GameObject for Character {
     fn get_guid(&self) -> Guid {
         self.gameplay_data.object_GUID().unwrap()
     }
 
-    fn get_type(&self) -> updates::ObjectType {
+    fn get_type(&self) -> ObjectType {
         ObjectType::Player
+    }
+
+    fn get_update_mask(&self) -> UpdateMask {
+        UpdateMask::Player(self.gameplay_data.clone())
+    }
+
+    fn clear_update_mask_header(&mut self) {
+        self.gameplay_data.header_reset();
     }
 
     async fn on_pushed_to_map(&mut self, map_manager: &MapManager) -> Result<()> {
@@ -250,55 +256,16 @@ impl MapObject for Character {
         */
         Ok(())
     }
-}
-
-/*
-//Implement features for gameobject. For character, almost all features (traits) are enabled (Some)
-impl GameObject for Character {
-    fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates> {
-        Some(self)
-    }
-
-    fn as_update_receiver(&self) -> Option<&dyn ReceiveUpdates> {
-        Some(self)
-    }
-
-    fn as_world_object_mut(&mut self) -> Option<&mut dyn WorldObject> {
-        Some(self)
-    }
-
-    fn as_world_object(&self) -> Option<&dyn WorldObject> {
-        Some(self)
-    }
-
-    fn as_map_object_mut(&mut self) -> &mut dyn MapObject {
-        self
-    }
-
-    fn as_map_object(&self) -> &dyn MapObject {
-        self
-    }
 
     fn as_character(&self) -> Option<&Character> {
         Some(self)
     }
 
-    fn as_has_value_fields(&self) -> Option<&dyn HasValueFields> {
-        Some(self)
-    }
-
-    fn as_has_value_fields_mut(&mut self) -> Option<&mut dyn HasValueFields> {
-        Some(self)
-    }
-}
-*/
-
-impl WorldObject for Character {
-    fn get_position(&self) -> PositionAndOrientation {
-        PositionAndOrientation {
+    fn get_position(&self) -> Option<PositionAndOrientation> {
+        Some(PositionAndOrientation {
             position: self.movement_info.position,
             orientation: self.movement_info.orientation,
-        }
+        })
     }
 
     fn get_movement_info(&self) -> &MovementInfo {
@@ -337,65 +304,36 @@ impl WorldObject for Character {
         self.recently_removed_guids.clear();
     }
 
-    fn wants_updates(&self) -> bool {
-        true
+    fn as_update_receiver(&self) -> Option<&dyn ReceiveUpdates> {
+        Some(self)
+    }
+
+    fn as_update_receiver_mut(&mut self) -> Option<&mut dyn ReceiveUpdates> {
+        Some(self)
     }
 }
-/*
 
 #[async_trait::async_trait]
 impl ReceiveUpdates for Character {
-    fn push_update_block(&mut self, data: &mut Vec<u8>, block_count: u32) {
-        self.creation_buffer.append(data);
-        self.creation_block_count += block_count;
+    fn push_object_update(&mut self, object_update: wow_world_messages::wrath::Object) {
+        self.pending_object_updates.push(object_update);
     }
-    fn get_update_blocks(&self) -> (u32, &Vec<u8>) {
-        (self.creation_block_count, &self.creation_buffer)
+
+    fn get_object_updates(&self) -> &Vec<wow_world_messages::wrath::Object> {
+        &self.pending_object_updates
     }
-    fn clear_update_blocks(&mut self) {
-        self.creation_block_count = 0;
-        self.creation_buffer.clear();
+
+    fn clear_object_updates(&mut self) {
+        self.pending_object_updates.clear();
     }
 
     async fn process_pending_updates(&mut self) -> Result<()> {
-        let (num, buf) = self.get_update_blocks();
-        if num > 0 {
-            info!("sent {} pending updates to {}", num, self.name);
-            //handlers::send_update_packet(self, num, buf).await?;
-            self.clear_update_blocks();
+        let updates = self.get_object_updates();
+        if updates.len() > 0 {
+            info!("sent {} pending updates to {}", updates.len(), self.name);
+            handlers::send_smsg_update_objects(self, updates.clone()).await?;
+            self.clear_object_updates();
         }
         Ok(())
     }
 }
-
-impl ValueFieldsRaw for Character {
-    fn set_field_u32(&mut self, field: usize, value: u32) -> Result<()> {
-        if field > self.unit_value_fields.len() {
-            bail!("Out-of-range unit field being set")
-        }
-        self.unit_value_fields[field] = value;
-        self.changed_update_mask.set_bit(field, true)?;
-        trace!("Unit field {} on character {} set to {:#08x}", field, self.name, value);
-        Ok(())
-    }
-
-    fn get_field_u32(&self, field: usize) -> Result<u32> {
-        if field > self.unit_value_fields.len() {
-            bail!("Out-of-range unit field being accessed");
-        }
-        Ok(self.unit_value_fields[field])
-    }
-
-    fn get_num_value_fields(&self) -> usize {
-        NUM_UNIT_FIELDS
-    }
-
-    fn clear_update_mask(&mut self) {
-        self.changed_update_mask.clear();
-    }
-
-    fn get_update_mask(&self) -> &UpdateMask {
-        &self.changed_update_mask
-    }
-}
-*/

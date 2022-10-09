@@ -4,8 +4,10 @@ use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::prelude::*;
 use crate::PacketToHandle;
-use podio::{LittleEndian, ReadPodExt, WritePodExt};
+use wow_world_messages::wrath::Object;
+use wow_world_messages::wrath::SMSG_UPDATE_OBJECT;
 
+/*
 pub async fn handle_cmsg_zoneupdate(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
@@ -46,18 +48,13 @@ pub async fn send_world_state_update(character: &Character, world_state: u32, va
     send_packet_to_character(character, &header, &writer).await?;
     Ok(())
 }
+*/
 
-pub async fn send_update_packet(character: &Character, num_blocks: u32, data: &[u8]) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_OBJECT, 8);
-    writer.write_u32::<LittleEndian>(num_blocks)?;
-    {
-        use std::io::Write;
-        writer.write_all(data)?;
-    }
-
-    send_packet_to_character(character, &header, &writer).await
+pub async fn send_smsg_update_objects(character: &Character, objects: Vec<Object>) -> Result<()> {
+    SMSG_UPDATE_OBJECT { objects }.astd_send_to_character(character).await
 }
 
+/*
 pub async fn send_destroy_object(character: &Character, object_guid: &Guid, is_death: bool) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_DESTROY_OBJECT, 9);
     writer.write_guid_compressed(object_guid)?;
@@ -88,3 +85,5 @@ pub async fn handle_cmsg_time_sync_resp(client_manager: &ClientManager, packet: 
     }
     Ok(())
 }
+
+*/

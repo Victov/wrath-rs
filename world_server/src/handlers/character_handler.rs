@@ -3,12 +3,12 @@ use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
 use crate::packet::*;
 use crate::prelude::*;
-use crate::world::prelude::WorldObject;
+use crate::world::prelude::GameObject;
 use crate::world::World;
+use std::any;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
-use wow_world_messages::wrath;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
@@ -182,10 +182,14 @@ pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &Wo
 }
 
 pub async fn send_verify_world(character: &Character) -> Result<()> {
+    let position = character
+        .get_position()
+        .ok_or_else(|| anyhow!("Characters should always have a position"))?;
+
     SMSG_LOGIN_VERIFY_WORLD {
         map: character.map,
-        position: character.get_position().position,
-        orientation: character.get_position().orientation,
+        position: position.position,
+        orientation: position.orientation,
     }
     .astd_send_to_character(character)
     .await
