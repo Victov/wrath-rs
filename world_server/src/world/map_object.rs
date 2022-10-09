@@ -28,15 +28,15 @@ pub trait GameObject: Sync + Send {
 }
 
 pub trait WorldObject: MapObject {
-    fn get_position(&self) -> &PositionAndOrientation;
+    fn get_position(&self) -> PositionAndOrientation;
     fn get_movement_info(&self) -> &MovementInfo;
     fn is_in_range(&self, guid: Guid) -> bool;
-    fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn GameObject>>) -> Result<()>;
-    fn get_in_range_guids(&self) -> Vec<&Guid>;
+    fn add_in_range_object(&mut self, guid: Guid, object: Weak<RwLock<dyn GameObject>>) -> Result<()>;
+    fn get_in_range_guids(&self) -> Vec<Guid>;
     fn remove_in_range_object(&mut self, guid: Guid) -> Result<()>;
     fn clear_in_range_objects(&mut self);
-    fn get_recently_removed_range_guids(&self) -> &Vec<Guid>;
-    fn clear_recently_removed_range_guids(&mut self) -> Result<()>;
+    fn get_recently_removed_range_guids(&self) -> &[Guid];
+    fn clear_recently_removed_range_guids(&mut self);
     fn wants_updates(&self) -> bool;
 
     fn is_player(&self) -> bool {

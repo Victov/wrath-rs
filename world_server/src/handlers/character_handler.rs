@@ -1,15 +1,19 @@
+use crate::character::Character;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
 use crate::packet::*;
 use crate::prelude::*;
+use crate::world::prelude::WorldObject;
 use crate::world::World;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
+use wow_world_messages::wrath;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
 use wow_world_messages::wrath::SMSG_CHAR_CREATE;
+use wow_world_messages::wrath::SMSG_LOGIN_VERIFY_WORLD;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
 
@@ -177,16 +181,17 @@ pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &Wo
     Ok(())
 }
 
-/*
 pub async fn send_verify_world(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_LOGIN_VERIFY_WORLD, 20);
-    writer.write_u32::<LittleEndian>(character.map)?;
-    writer.write_position_and_orientation(character.get_position())?;
-    send_packet_to_character(character, &header, &writer).await?;
-
-    Ok(())
+    SMSG_LOGIN_VERIFY_WORLD {
+        map: character.map,
+        position: character.get_position().position,
+        orientation: character.get_position().orientation,
+    }
+    .astd_send_to_character(character)
+    .await
 }
 
+/*
 pub async fn send_bind_update(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_BINDPOINTUPDATE, 20);
     if let Some(bind_location) = &character.bind_location {

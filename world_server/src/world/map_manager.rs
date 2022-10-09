@@ -197,7 +197,7 @@ impl MapManager {
                 {
                     let mut object = target_object_lock.write().await;
                     let object = object.as_world_object_mut().unwrap();
-                    let in_range_list: Vec<Guid> = object.get_in_range_guids().iter().map(|a| *a.clone()).collect();
+                    let in_range_list: Vec<Guid> = object.get_in_range_guids().iter().map(|a| a.clone()).collect();
                     for &guid in in_range_list.iter() {
                         if !within_range.contains(&guid) {
                             object.remove_in_range_object(guid)?;
@@ -341,7 +341,7 @@ impl MapManager {
                 if let Some(removed_object) = removed_object.as_world_object_mut() {
                     let objects_on_map = self.objects_on_map.read().await;
                     for in_range_guid in removed_object.get_in_range_guids() {
-                        if let Some(weak_in_range_object) = objects_on_map.get(in_range_guid) {
+                        if let Some(weak_in_range_object) = objects_on_map.get(&in_range_guid) {
                             if let Some(in_range_object_lock) = weak_in_range_object.upgrade() {
                                 let mut in_range_object = in_range_object_lock.write().await;
                                 if let Some(character) = in_range_object.as_character() {

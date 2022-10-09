@@ -1,6 +1,6 @@
 use super::world::prelude::*;
 use crate::client::Client;
-use crate::data::{ActionBar, DataStorage, TutorialFlags, WorldZoneLocation};
+use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 //use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 //use crate::item::Item;
 use crate::prelude::*;
@@ -162,20 +162,19 @@ impl Character {
     }
 
     pub async fn send_packets_before_add_to_map(&self) -> Result<()> {
-        /*handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
-        handlers::send_bind_update(self).await?;
-        handlers::send_talents_info(self).await?;
-        handlers::send_dungeon_difficulty(self).await?;
-        handlers::send_initial_spells(self).await?;
-        handlers::send_action_buttons(self).await?;
-        handlers::send_initial_world_states(self).await?;
-        */
+        //handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
+        //handlers::send_bind_update(self).await?;
+        //handlers::send_talents_info(self).await?;
+        //handlers::send_dungeon_difficulty(self).await?;
+        //handlers::send_initial_spells(self).await?;
+        //handlers::send_action_buttons(self).await?;
+        //handlers::send_initial_world_states(self).await?;
         handlers::send_login_set_time_speed(self).await
     }
 
     pub async fn send_packets_after_add_to_map(&self, realm_database: Arc<RealmDatabase>) -> Result<()> {
-        /*
         handlers::send_verify_world(self).await?;
+        /*
         handlers::send_character_account_data_times(&realm_database, self).await?;
         handlers::send_voice_chat_status(self, false).await?;
         handlers::send_tutorial_flags(self).await?;
@@ -292,33 +291,37 @@ impl GameObject for Character {
         Some(self)
     }
 }
+*/
 
 impl WorldObject for Character {
-    fn get_position(&self) -> &PositionAndOrientation {
-        &self.movement_info.position
+    fn get_position(&self) -> PositionAndOrientation {
+        PositionAndOrientation {
+            position: self.movement_info.position,
+            orientation: self.movement_info.orientation,
+        }
     }
 
     fn get_movement_info(&self) -> &MovementInfo {
         &self.movement_info
     }
 
-    fn is_in_range(&self, guid: &Guid) -> bool {
-        self.in_range_objects.contains_key(guid)
+    fn is_in_range(&self, guid: Guid) -> bool {
+        self.in_range_objects.contains_key(&guid)
     }
 
-    fn add_in_range_object(&mut self, guid: &Guid, object: Weak<RwLock<dyn GameObject>>) -> Result<()> {
+    fn add_in_range_object(&mut self, guid: Guid, object: Weak<RwLock<dyn GameObject>>) -> Result<()> {
         assert!(!self.is_in_range(guid));
-        self.in_range_objects.insert(*guid, object);
+        self.in_range_objects.insert(guid, object);
         Ok(())
     }
 
-    fn get_in_range_guids(&self) -> Vec<&Guid> {
-        self.in_range_objects.keys().collect()
+    fn get_in_range_guids(&self) -> Vec<Guid> {
+        self.in_range_objects.keys().copied().collect()
     }
 
-    fn remove_in_range_object(&mut self, guid: &Guid) -> Result<()> {
-        self.in_range_objects.remove(guid);
-        self.recently_removed_guids.push(*guid);
+    fn remove_in_range_object(&mut self, guid: Guid) -> Result<()> {
+        self.in_range_objects.remove(&guid);
+        self.recently_removed_guids.push(guid);
         Ok(())
     }
 
@@ -326,19 +329,19 @@ impl WorldObject for Character {
         self.in_range_objects.clear();
     }
 
-    fn get_recently_removed_range_guids(&self) -> &Vec<Guid> {
-        &self.recently_removed_guids
+    fn get_recently_removed_range_guids(&self) -> &[Guid] {
+        self.recently_removed_guids.as_slice()
     }
 
-    fn clear_recently_removed_range_guids(&mut self) -> Result<()> {
+    fn clear_recently_removed_range_guids(&mut self) {
         self.recently_removed_guids.clear();
-        Ok(())
     }
 
     fn wants_updates(&self) -> bool {
         true
     }
 }
+/*
 
 #[async_trait::async_trait]
 impl ReceiveUpdates for Character {
