@@ -12,7 +12,6 @@ use wow_world_messages::wrath::{
     Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, CMSG_PING, CMSG_REALM_SPLIT, SMSG_ADDON_INFO,
     SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION, SMSG_LOGIN_SETTIMESPEED, SMSG_PONG, SMSG_REALM_SPLIT, SMSG_TUTORIAL_FLAGS,
 };
-use wow_world_messages::DateTime;
 use wrath_auth_db::AuthDatabase;
 
 pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, packet: &CMSG_AUTH_SESSION, auth_db: Arc<AuthDatabase>) -> Result<()> {
@@ -73,19 +72,9 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
     .await?;
 
     //Handle full world queuing here
-    let mut decompressed_addon_data = Vec::<u8>::new();
-    {
-        use flate2::read::ZlibDecoder;
-        use std::io::Read;
 
-        let mut addon_data_decoder = ZlibDecoder::new(packet.compressed_addon_info.as_slice());
-        addon_data_decoder.read_to_end(&mut decompressed_addon_data)?;
-        if decompressed_addon_data.len() != packet.decompressed_addon_info_size as usize {
-            return Err(anyhow!("decompressed addon data length didn't match expectation"));
-        }
-    }
-
-    let mut addon_reader = std::io::Cursor::new(decompressed_addon_data);
+    let addon_info = &packet.addon_info;
+    let mut addon_reader = std::io::Cursor::new(addon_info);
     let num_addons = addon_reader.read_u32::<LittleEndian>()?;
     info!("num addons = {}", num_addons);
     let mut addons: Vec<Addon> = Vec::new();

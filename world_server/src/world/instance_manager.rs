@@ -4,9 +4,10 @@ use crate::prelude::*;
 use async_std::sync::{RwLock, RwLockUpgradableReadGuard};
 use std::collections::HashMap;
 use std::sync::Arc;
+use wow_world_messages::wrath::Map;
 
 use super::map_manager::MapManager;
-use super::map_object::{GameObject, MapObject, WorldObject};
+use super::map_object::{GameObject, MapObject};
 
 pub type InstanceID = u32;
 pub type MapID = u32;
@@ -65,22 +66,22 @@ impl InstanceManager {
         Ok(())
     }
 
-    fn is_instance(&self, _map_id: MapID) -> bool {
+    fn is_instance(&self, map_id: Map) -> bool {
         //TODO: implement based on DBC storage
         false
     }
 
-    pub async fn get_or_create_map(&self, object: &impl GameObject, map_id: MapID) -> Result<Arc<MapManager>> {
-        let map = if !self.is_instance(map_id) {
+    pub async fn get_or_create_map(&self, object: &impl GameObject, map: Map) -> Result<Arc<MapManager>> {
+        let map = if !self.is_instance(map) {
             Ok(self
                 .world_maps
                 .write()
                 .await
-                .entry(map_id)
-                .or_insert_with(|| Arc::new(MapManager::new(map_id)))
+                .entry(map.as_int())
+                .or_insert_with(|| Arc::new(MapManager::new(map.as_int())))
                 .clone())
         } else if let Some(character) = object.as_character() {
-            Ok(self.get_or_create_map_for_instance(map_id, character.instance_id).await)
+            Ok(self.get_or_create_map_for_instance(map, character.instance_id).await)
         } else {
             Err(anyhow!("Not a valid map"))
         };
@@ -94,18 +95,18 @@ impl InstanceManager {
 
     pub async fn try_get_map_for_character(&self, character: &Character) -> Option<Arc<MapManager>> {
         if !self.is_instance(character.map) {
-            self.world_maps.read().await.get(&character.map).cloned()
+            self.world_maps.read().await.get(&character.map.as_int()).cloned()
         } else {
             self.multiple_instances.read().await.get(&character.instance_id).cloned()
         }
     }
 
-    async fn get_or_create_map_for_instance(&self, map_id: MapID, instance_id: InstanceID) -> Arc<MapManager> {
+    async fn get_or_create_map_for_instance(&self, map: Map, instance_id: InstanceID) -> Arc<MapManager> {
         self.multiple_instances
             .write()
             .await
             .entry(instance_id)
-            .or_insert(Arc::new(MapManager::new(map_id)))
+            .or_insert(Arc::new(MapManager::new(map.as_int())))
             .clone()
     }
 

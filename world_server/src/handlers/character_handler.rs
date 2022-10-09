@@ -1,18 +1,11 @@
-use crate::character::*;
-use crate::client::Client;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
-use crate::data::WritePositionAndOrientation;
 use crate::packet::*;
 use crate::prelude::*;
-use crate::world::map_object::{MapObject, WorldObject};
 use crate::world::World;
-use podio::LittleEndian;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
-use std::ffi::CStr;
-use std::ffi::CString;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;

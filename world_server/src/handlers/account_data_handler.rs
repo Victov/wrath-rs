@@ -1,6 +1,7 @@
 use crate::client::Client;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
+use crate::world::prelude::MapObject;
 use crate::world::World;
 use crate::ClientManager;
 use crate::{character::*, packet::ServerMessageExt};
@@ -96,7 +97,7 @@ pub async fn send_character_account_data_times(realm_database: &RealmDatabase, c
         .upgrade()
         .ok_or_else(|| anyhow!("couldn't upgrade client from character"))?;
 
-    let data = realm_database.get_character_account_data(character.guid.guid() as u32).await?;
+    let data = realm_database.get_character_account_data(character.get_guid().guid() as u32).await?;
 
     let mask = CacheMask::PerCharacterCache.as_int();
     let mut masked_data = vec![];
@@ -135,7 +136,7 @@ pub async fn handle_csmg_update_account_data(
             )
             .await?;
     } else if let Some(character_lock) = &client.data.read().await.active_character {
-        let character_id = character_lock.read().await.guid.guid() as u32;
+        let character_id = character_lock.read().await.get_guid().guid() as u32;
         world
             .get_realm_database()
             .update_character_account_data(
@@ -180,7 +181,7 @@ pub async fn handle_cmsg_request_account_data(
                 (0, vec![])
             }
         } else if let Some(active_character_lock) = &client.data.read().await.active_character {
-            let character_id = active_character_lock.read().await.guid.guid() as u32;
+            let character_id = active_character_lock.read().await.get_guid().guid() as u32;
             let db_data = world
                 .get_realm_database()
                 .get_character_account_data_of_type(character_id, data.data_type as u8)

@@ -1,7 +1,6 @@
 use super::world::prelude::*;
 use crate::client::Client;
-use crate::constants::social::RelationType;
-use crate::data::{ActionBar, DataStorage, MovementInfo, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::data::{ActionBar, DataStorage, TutorialFlags, WorldZoneLocation};
 //use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 //use crate::item::Item;
 use crate::prelude::*;
@@ -9,9 +8,8 @@ use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
+use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, Race, UpdatePlayer, Vector3d};
 use wrath_realm_db::RealmDatabase;
-
-const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 
 //mod character_equipment;
 //mod character_logout;
@@ -19,16 +17,13 @@ const NUM_UNIT_FIELDS: usize = PlayerFields::PlayerEnd as usize;
 //mod character_rested;
 
 pub struct Character {
-    pub guid: Guid,
     pub client: Weak<Client>,
+    pub gameplay_data: UpdatePlayer,
     pub name: String,
-    pub race: u8,
-    pub class: u8,
-    pub gender: u8,
     pub movement_info: MovementInfo,
 
-    pub map: u32,
-    pub zone: u32,
+    pub map: wow_world_messages::wrath::Map,
+    pub area: wow_world_messages::wrath::Area,
     pub instance_id: u32,
     pub bind_location: Option<WorldZoneLocation>,
     pub tutorial_flags: TutorialFlags,
@@ -42,11 +37,6 @@ pub struct Character {
     //required for world updates and implenting ReceiveUpdates trait
     creation_buffer: Vec<u8>,
     creation_block_count: u32,
-
-    //required for unit values and implementing ValueFieldsRaw trait, which in turn will grant us
-    //HasvalueFields trait, with all sorts of goodies
-    unit_value_fields: [u32; NUM_UNIT_FIELDS],
-    changed_update_mask: UpdateMask,
 
     //things required to keep MapObject working
     in_range_objects: HashMap<Guid, Weak<RwLock<dyn GameObject>>>,
@@ -66,15 +56,12 @@ pub struct Character {
 impl Character {
     pub fn new(client: Weak<Client>, guid: Guid) -> Self {
         Self {
-            guid,
             client,
+            gameplay_data: UpdatePlayer::builder().set_object_GUID(guid).finalize(),
             name: String::new(),
-            race: 0,
-            class: 0,
-            gender: 0,
             movement_info: MovementInfo::default(),
-            map: 0,
-            zone: 0,
+            map: Map::EasternKingdoms,
+            area: Area::NorthshireAbbey,
             instance_id: 0,
             bind_location: None,
             tutorial_flags: [0; 32].into(),
@@ -84,8 +71,6 @@ impl Character {
             last_playtime_calculation_timestamp: 0,
             creation_block_count: 0,
             creation_buffer: vec![],
-            unit_value_fields: [0; NUM_UNIT_FIELDS],
-            changed_update_mask: UpdateMask::new(NUM_UNIT_FIELDS),
             in_range_objects: HashMap::new(),
             recently_removed_guids: vec![],
             time_sync_counter: 0,
@@ -98,55 +83,62 @@ impl Character {
     }
 
     pub async fn load_from_database(&mut self, world: &World, data_storage: &DataStorage) -> Result<()> {
+        let character_id = self.get_guid().guid() as u32;
         let realm_database = world.get_realm_database();
-        let db_entry = realm_database.get_character(self.guid.guid() as u32).await?;
+
+        let db_entry = realm_database.get_character(character_id).await?;
         self.bind_location = Some(WorldZoneLocation {
-            zone: db_entry.bind_zone as u32,
-            map: db_entry.bind_map as u32,
-            x: db_entry.bind_x,
-            y: db_entry.bind_y,
-            z: db_entry.bind_z,
-            o: 0.0, //store in DB?
+            map: Map::try_from(db_entry.bind_map as u32)?,
+            area: Area::try_from(db_entry.bind_zone as u32)?,
+            position: Vector3d {
+                x: db_entry.bind_x,
+                y: db_entry.bind_y,
+                z: db_entry.bind_z,
+            },
+            orientation: 0.0, //store in DB?
         });
-        self.map = db_entry.map as u32;
+
+        self.map = Map::try_from(db_entry.map as u32)?;
+        self.area = Area::try_from(db_entry.zone as u32)?;
+
         self.movement_info = MovementInfo {
-            position: PositionAndOrientation {
+            position: Vector3d {
                 x: db_entry.x,
                 y: db_entry.y,
                 z: db_entry.z,
-                o: db_entry.o,
             },
             ..Default::default()
         };
+
         self.name = db_entry.name.clone();
 
         self.tutorial_flags = TutorialFlags::from_database_entry(&db_entry)?;
-        let character_id = self.guid.guid() as u32;
         let character_account_data = realm_database.get_character_account_data(character_id).await?;
 
         if character_account_data.is_empty() {
-            //handlers::create_empty_character_account_data_rows(&realm_database, character_id).await?;
+            handlers::create_empty_character_account_data_rows(&realm_database, character_id).await?;
         }
 
         let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
-
         self.last_playtime_calculation_timestamp = unix_time;
         self.seconds_played_total = db_entry.playtime_total;
         self.seconds_played_at_level = db_entry.playtime_level;
 
-        self.gender = db_entry.gender;
-        self.race = db_entry.race;
-        if let Some(race_info) = data_storage.get_char_races().get_entry(self.race as u32) {
-            let display_id = match self.gender {
-                0 => race_info.male_model_id,
+        let gender = Gender::try_from(db_entry.gender)?;
+        let race = Race::try_from(db_entry.race)?;
+
+        if let Some(race_info) = data_storage.get_char_races().get_entry(race.as_int() as u32) {
+            let display_id = match gender {
+                Gender::Male => race_info.male_model_id,
                 _ => race_info.female_model_id,
-            };
-            //self.set_unit_field_u32(UnitFields::Displayid, display_id)?;
-            //self.set_unit_field_u32(UnitFields::Nativedisplayid, display_id)?;
+            } as i32;
+            self.gameplay_data.set_unit_DISPLAYID(display_id);
+            self.gameplay_data.set_unit_NATIVEDISPLAYID(display_id);
         }
 
-        self.class = db_entry.class;
-        if let Some(class_info) = data_storage.get_char_classes().get_entry(self.class as u32) {
+        let class = Class::try_from(db_entry.class)?;
+        if let Some(class_info) = data_storage.get_char_classes().get_entry(class.as_int() as u32) {
+            //self.gameplay_data.set_player_BYTES(a, b, c, d)
             //self.set_power_type(class_info.power_type as u8)?;
         }
 
@@ -197,13 +189,13 @@ impl Character {
         Ok(())
     }
 
-    pub async fn zone_update(&mut self, zone: u32) -> Result<()> {
-        if self.zone == zone {
+    pub async fn zone_update(&mut self, area: Area) -> Result<()> {
+        if self.area == area {
             return Ok(());
         }
 
-        trace!("Received zone update for character {} into zone {}", self.name, zone);
-        self.zone = zone;
+        trace!("Received zone update for character {} into zone {}", self.name, area);
+        self.area = area;
         //handlers::send_initial_world_states(self).await
         Ok(())
     }
@@ -244,9 +236,10 @@ impl Character {
 
 #[async_trait::async_trait]
 impl MapObject for Character {
-    fn get_guid(&self) -> &Guid {
-        &self.guid
+    fn get_guid(&self) -> Guid {
+        self.gameplay_data.object_GUID().unwrap()
     }
+
     fn get_type(&self) -> updates::ObjectType {
         ObjectType::Player
     }
