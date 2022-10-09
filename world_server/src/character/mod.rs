@@ -5,6 +5,7 @@ use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags,
 //use crate::item::Item;
 use crate::prelude::*;
 use async_std::sync::RwLock;
+use bit_field::BitArray;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -63,7 +64,7 @@ impl Character {
             area: Area::NorthshireAbbey,
             instance_id: 0,
             bind_location: None,
-            tutorial_flags: [0; 32].into(),
+            tutorial_flags: TutorialFlags::default(),
             action_bar: ActionBar::new(),
             seconds_played_total: 0,
             seconds_played_at_level: 0,
@@ -170,12 +171,12 @@ impl Character {
         handlers::send_login_set_time_speed(self).await
     }
 
-    pub async fn send_packets_after_add_to_map(&self, realm_database: Arc<RealmDatabase>) -> Result<()> {
+    pub async fn send_packets_after_add_to_map(&self, _realm_database: Arc<RealmDatabase>) -> Result<()> {
         handlers::send_verify_world(self).await?;
-        /*
-        handlers::send_character_account_data_times(&realm_database, self).await?;
-        handlers::send_voice_chat_status(self, false).await?;
+        //handlers::send_character_account_data_times(&realm_database, self).await?;
+        //handlers::send_voice_chat_status(self, false).await?;
         handlers::send_tutorial_flags(self).await?;
+        /*
         handlers::send_faction_list(self).await?;
         handlers::send_aura_update_all(self).await?;
         handlers::send_time_sync(self).await?;
@@ -248,12 +249,10 @@ impl GameObject for Character {
         self.gameplay_data.header_reset();
     }
 
-    async fn on_pushed_to_map(&mut self, map_manager: &MapManager) -> Result<()> {
-        /*
-        self.push_create_blocks_for_items(map_manager).await?;
-        let (block_count, mut update_data) = build_create_update_block_for_player(self, self)?;
-        self.push_update_block(&mut update_data, block_count);
-        */
+    async fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
+        //self.push_create_blocks_for_items(map_manager).await?;
+        let update_block = build_create_update_block_for_player(self, self)?;
+        self.push_object_update(update_block);
         Ok(())
     }
 

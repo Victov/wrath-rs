@@ -216,6 +216,7 @@ impl Client {
             .await?
             .push_object(Arc::downgrade(character_lock))
             .await;
+
         character.send_packets_after_add_to_map(world.get_realm_database()).await?;
 
         Ok(())
