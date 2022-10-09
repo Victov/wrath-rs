@@ -8,7 +8,7 @@ use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
-use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, Race, UpdatePlayer, Vector3d};
+use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, Power, Race, UpdatePlayer, Vector3d};
 use wrath_realm_db::RealmDatabase;
 
 //mod character_equipment;
@@ -87,9 +87,13 @@ impl Character {
         let realm_database = world.get_realm_database();
 
         let db_entry = realm_database.get_character(character_id).await?;
+
+        //We don't properly store this in the DB, so try_from will fail because it's always 0
+        let bind_area = Area::try_from(db_entry.bind_zone as u32).unwrap_or(Area::NorthshireAbbey);
+
         self.bind_location = Some(WorldZoneLocation {
             map: Map::try_from(db_entry.bind_map as u32)?,
-            area: Area::try_from(db_entry.bind_zone as u32)?,
+            area: bind_area,
             position: Vector3d {
                 x: db_entry.bind_x,
                 y: db_entry.bind_y,
@@ -99,7 +103,9 @@ impl Character {
         });
 
         self.map = Map::try_from(db_entry.map as u32)?;
-        self.area = Area::try_from(db_entry.zone as u32)?;
+
+        //We don't set this field properly in character creation so consequently its wrong here
+        self.area = Area::try_from(db_entry.zone as u32).unwrap_or(Area::NorthshireAbbey);
 
         self.movement_info = MovementInfo {
             position: Vector3d {
@@ -126,6 +132,7 @@ impl Character {
 
         let gender = Gender::try_from(db_entry.gender)?;
         let race = Race::try_from(db_entry.race)?;
+        let class = Class::try_from(db_entry.class)?;
 
         if let Some(race_info) = data_storage.get_char_races().get_entry(race.as_int() as u32) {
             let display_id = match gender {
@@ -136,27 +143,19 @@ impl Character {
             self.gameplay_data.set_unit_NATIVEDISPLAYID(display_id);
         }
 
-        let class = Class::try_from(db_entry.class)?;
-        if let Some(class_info) = data_storage.get_char_classes().get_entry(class.as_int() as u32) {
-            //self.gameplay_data.set_player_BYTES(a, b, c, d)
-            //self.set_power_type(class_info.power_type as u8)?;
-        }
+        let class_info = data_storage
+            .get_char_classes()
+            .get_entry(class.as_int() as u32)
+            .ok_or_else(|| anyhow!("No classinfo for this class"))?;
 
-        /*self.set_object_field_u32(ObjectFields::LowGuid, self.get_guid().guid() as u32)?;
-        self.set_object_field_u32(ObjectFields::HighGuid, 0)?; //self.get_guid().get_high_part())?;
-        self.set_object_field_u32(
-            ObjectFields::Type,
-            1 << ObjectType::Unit as u32 | 1 << ObjectType::Player as u32 | 1 << ObjectType::Object as u32,
-        )?;
-        self.set_object_field_f32(ObjectFields::Scale, 1.0f32)?;
-        self.set_class(self.class)?;
-        self.set_race(self.race)?;
-        self.set_gender(self.gender)?;
-        self.set_unit_field_u32(UnitFields::Health, 100)?;
-        self.set_unit_field_u32(UnitFields::Maxhealth, 100)?;
-        self.set_unit_field_u32(UnitFields::Level, 1)?;
-        self.set_unit_field_u32(UnitFields::Factiontemplate, 1)?;
-        */
+        let power = Power::try_from(class_info.power_type as u8)?;
+        self.gameplay_data.set_unit_BYTES_0(race, class, gender, power);
+        self.gameplay_data.set_unit_HEALTH(100);
+        self.gameplay_data.set_unit_MAXHEALTH(100);
+        self.gameplay_data.set_unit_LEVEL(1);
+        self.gameplay_data.set_unit_FACTIONTEMPLATE(1);
+        self.gameplay_data.set_object_SCALE_X(1.0f32);
+
         //self.load_equipment_from_database(world).await?;
 
         Ok(())
