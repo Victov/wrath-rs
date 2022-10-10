@@ -166,7 +166,7 @@ impl Character {
         //handlers::send_talents_info(self).await?;
         //handlers::send_dungeon_difficulty(self).await?;
         //handlers::send_initial_spells(self).await?;
-        //handlers::send_action_buttons(self).await?;
+        handlers::send_action_buttons(self).await?;
         //handlers::send_initial_world_states(self).await?;
         handlers::send_login_set_time_speed(self).await
     }

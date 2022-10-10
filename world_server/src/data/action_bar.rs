@@ -1,14 +1,15 @@
-const SIZEPERSLOT: usize = 4;
+use wow_world_messages::wrath::ActionButton;
+
 const MAXSLOTS: usize = 144;
 
 pub struct ActionBar {
-    pub data: [u8; SIZEPERSLOT * MAXSLOTS],
+    pub data: [ActionButton; MAXSLOTS],
 }
 
 impl ActionBar {
     pub fn new() -> Self {
         Self {
-            data: [0; SIZEPERSLOT * MAXSLOTS],
+            data: [ActionButton::default(); MAXSLOTS],
         }
     }
 }

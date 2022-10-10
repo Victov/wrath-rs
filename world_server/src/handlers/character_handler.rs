@@ -12,6 +12,7 @@ use std::convert::TryInto;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
+use wow_world_messages::wrath::SMSG_ACTION_BUTTONS;
 use wow_world_messages::wrath::SMSG_CHAR_CREATE;
 use wow_world_messages::wrath::SMSG_LOGIN_VERIFY_WORLD;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
@@ -211,14 +212,14 @@ pub async fn send_bind_update(character: &Character) -> Result<()> {
 
     Ok(())
 }
+*/
 
 pub async fn send_action_buttons(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_ACTION_BUTTONS, character.action_bar.data.len());
-    writer.write_u8(0)?; //Talent specialization
-    writer.write_all(&character.action_bar.data)?;
-
-    send_packet_to_character(character, &header, &writer).await?;
-    Ok(())
+    SMSG_ACTION_BUTTONS {
+        behavior: wow_world_messages::wrath::SMSG_ACTION_BUTTONS_ActionBarBehavior::Initial {
+            data: character.action_bar.data,
+        },
+    }
+    .astd_send_to_character(character)
+    .await
 }
-
-*/
