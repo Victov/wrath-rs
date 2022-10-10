@@ -106,6 +106,9 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
         }
     }
 
+    //TODO: wow_world_messages needs changes to NOT write the size of the addon vec before writing
+    //the addon vec, it corrupts the packet. Probably a skip-serialize tag that can be added to the
+    //wowm file to the number_of_addons field to indicate the array size, but NOT write it into the final packet
     SMSG_ADDON_INFO { addons }.astd_send_to_client(client).await?;
     SMSG_CLIENTCACHE_VERSION { version: 0 }.astd_send_to_client(client).await?;
 

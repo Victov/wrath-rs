@@ -51,8 +51,8 @@ mod world_handler;
 //pub use world_handler::handle_cmsg_zoneupdate;
 //pub use world_handler::send_destroy_object;
 //pub use world_handler::send_initial_world_states;
-//pub use world_handler::send_time_sync;
 pub use world_handler::send_smsg_update_objects;
+pub use world_handler::send_time_sync;
 //pub use world_handler::send_world_state_update;
 
 /*

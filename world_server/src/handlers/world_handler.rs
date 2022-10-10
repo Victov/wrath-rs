@@ -5,6 +5,7 @@ use crate::packet::*;
 use crate::prelude::*;
 use crate::PacketToHandle;
 use wow_world_messages::wrath::Object;
+use wow_world_messages::wrath::SMSG_TIME_SYNC_REQ;
 use wow_world_messages::wrath::SMSG_UPDATE_OBJECT;
 
 /*
@@ -61,13 +62,16 @@ pub async fn send_destroy_object(character: &Character, object_guid: &Guid, is_d
     writer.write_u8(is_death as u8)?;
     send_packet_to_character(character, &header, &writer).await
 }
-
+*/
 pub async fn send_time_sync(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_TIME_SYNC_REQ, 4);
-    writer.write_u32::<LittleEndian>(character.time_sync_counter)?;
-    send_packet_to_character(character, &header, &writer).await
+    SMSG_TIME_SYNC_REQ {
+        time_sync: character.time_sync_counter,
+    }
+    .astd_send_to_character(character)
+    .await
 }
 
+/*
 pub async fn handle_cmsg_time_sync_resp(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;

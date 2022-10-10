@@ -5,7 +5,6 @@ use crate::packet::*;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
-use std::any;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;

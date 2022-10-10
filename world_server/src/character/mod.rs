@@ -9,7 +9,9 @@ use bit_field::BitArray;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
-use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, UpdateMask, UpdatePlayer, Vector3d};
+use wow_world_messages::wrath::{
+    Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, UpdateMask, UpdatePlayer, Vector3d, SMSG_TIME_SYNC_REQ,
+};
 use wrath_realm_db::RealmDatabase;
 
 //mod character_equipment;
@@ -171,18 +173,16 @@ impl Character {
         handlers::send_login_set_time_speed(self).await
     }
 
-    pub async fn send_packets_after_add_to_map(&self, _realm_database: Arc<RealmDatabase>) -> Result<()> {
+    pub async fn send_packets_after_add_to_map(&self, realm_database: Arc<RealmDatabase>) -> Result<()> {
         handlers::send_verify_world(self).await?;
-        //handlers::send_character_account_data_times(&realm_database, self).await?;
+        handlers::send_character_account_data_times(&realm_database, self).await?;
         //handlers::send_voice_chat_status(self, false).await?;
         handlers::send_tutorial_flags(self).await?;
-        /*
-        handlers::send_faction_list(self).await?;
-        handlers::send_aura_update_all(self).await?;
+        //handlers::send_faction_list(self).await?;
+        //handlers::send_aura_update_all(self).await?;
         handlers::send_time_sync(self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
-        */
         Ok(())
     }
 
