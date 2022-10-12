@@ -5,13 +5,10 @@ use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags,
 //use crate::item::Item;
 use crate::prelude::*;
 use async_std::sync::RwLock;
-use bit_field::BitArray;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
-use wow_world_messages::wrath::{
-    Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, UpdateMask, UpdatePlayer, Vector3d, SMSG_TIME_SYNC_REQ,
-};
+use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UpdateMask, UpdatePlayer, Vector3d};
 use wrath_realm_db::RealmDatabase;
 
 //mod character_equipment;
@@ -163,7 +160,7 @@ impl Character {
     }
 
     pub async fn send_packets_before_add_to_map(&self) -> Result<()> {
-        //handlers::send_contact_list(self, &[RelationType::Friend, RelationType::Muted, RelationType::Ignore]).await?;
+        handlers::send_contact_list(self, RelationType::empty().set_FRIEND().set_IGNORED().set_MUTED().set_RECRUITAFRIEND()).await?;
         //handlers::send_bind_update(self).await?;
         //handlers::send_talents_info(self).await?;
         //handlers::send_dungeon_difficulty(self).await?;

@@ -55,10 +55,10 @@ pub use world_handler::send_smsg_update_objects;
 pub use world_handler::send_time_sync;
 //pub use world_handler::send_world_state_update;
 
-/*
 mod social_handler;
 pub use social_handler::send_contact_list;
 
+/*
 mod queries_handler;
 pub use queries_handler::handle_cmsg_name_query;
 pub use queries_handler::handle_cmsg_played_time;
@@ -79,5 +79,4 @@ pub use movement_handler::send_smsg_transfer_pending;
 
 pub mod equipment_handler;
 pub use equipment_handler::handle_cmsg_item_query_single;
-
 */
