@@ -12,6 +12,7 @@ use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
 use wow_world_messages::wrath::SMSG_ACTION_BUTTONS;
+use wow_world_messages::wrath::SMSG_BINDPOINTUPDATE;
 use wow_world_messages::wrath::SMSG_CHAR_CREATE;
 use wow_world_messages::wrath::SMSG_LOGIN_VERIFY_WORLD;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
@@ -195,23 +196,19 @@ pub async fn send_verify_world(character: &Character) -> Result<()> {
     .await
 }
 
-/*
 pub async fn send_bind_update(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_BINDPOINTUPDATE, 20);
     if let Some(bind_location) = &character.bind_location {
-        writer.write_f32::<LittleEndian>(bind_location.x)?;
-        writer.write_f32::<LittleEndian>(bind_location.y)?;
-        writer.write_f32::<LittleEndian>(bind_location.z)?;
-        writer.write_u32::<LittleEndian>(bind_location.map)?;
-        writer.write_u32::<LittleEndian>(bind_location.zone)?;
-        send_packet_to_character(character, &header, &writer).await?;
+        SMSG_BINDPOINTUPDATE {
+            position: bind_location.position,
+            map: bind_location.map,
+            area: bind_location.area,
+        }
+        .astd_send_to_character(character)
+        .await
     } else {
         bail!("Requested to send Bind Update but character has no bind location")
     }
-
-    Ok(())
 }
-*/
 
 pub async fn send_action_buttons(character: &Character) -> Result<()> {
     SMSG_ACTION_BUTTONS {

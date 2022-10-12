@@ -161,7 +161,7 @@ impl Character {
 
     pub async fn send_packets_before_add_to_map(&self) -> Result<()> {
         handlers::send_contact_list(self, RelationType::empty().set_FRIEND().set_IGNORED().set_MUTED().set_RECRUITAFRIEND()).await?;
-        //handlers::send_bind_update(self).await?;
+        handlers::send_bind_update(self).await?;
         //handlers::send_talents_info(self).await?;
         //handlers::send_dungeon_difficulty(self).await?;
         //handlers::send_initial_spells(self).await?;
