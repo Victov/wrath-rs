@@ -34,10 +34,11 @@ pub use voice_chat_handler::send_voice_chat_status;
 mod tutorial_handler;
 //pub use tutorial_handler::handle_cmsg_tutorial_flag;
 pub use tutorial_handler::send_tutorial_flags;
-/*
+
 mod faction_handler;
 pub use faction_handler::send_faction_list;
 
+/*
 mod spell_handler;
 pub use spell_handler::handle_cmsg_set_actionbar_toggles;
 pub use spell_handler::send_aura_update_all;

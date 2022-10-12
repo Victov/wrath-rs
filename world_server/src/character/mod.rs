@@ -175,7 +175,7 @@ impl Character {
         handlers::send_character_account_data_times(&realm_database, self).await?;
         handlers::send_voice_chat_status(self).await?;
         handlers::send_tutorial_flags(self).await?;
-        //handlers::send_faction_list(self).await?;
+        handlers::send_faction_list(self).await?;
         //handlers::send_aura_update_all(self).await?;
         handlers::send_time_sync(self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
