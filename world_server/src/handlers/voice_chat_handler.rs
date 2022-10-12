@@ -1,12 +1,12 @@
-use crate::character::Character;
-use crate::opcodes::Opcodes;
-use crate::packet::*;
 use crate::prelude::*;
-use podio::WritePodExt;
+use crate::{character::Character, packet::ServerMessageExt};
+use wow_world_messages::wrath::{ComplaintStatus, SMSG_FEATURE_SYSTEM_STATUS};
 
-pub async fn send_voice_chat_status(character: &Character, enabled: bool) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_FEATURE_SYSTEM_STATUS, 1);
-    writer.write_u8(2)?; //Unknown
-    writer.write_u8(enabled as u8)?;
-    send_packet_to_character(character, &header, &writer).await
+pub async fn send_voice_chat_status(character: &Character) -> Result<()> {
+    SMSG_FEATURE_SYSTEM_STATUS {
+        complaint_status: ComplaintStatus::EnabledWithAutoIgnore,
+        voice_chat_enabled: false,
+    }
+    .astd_send_to_character(character)
+    .await
 }
