@@ -62,9 +62,9 @@ impl MapManager {
         self.objects_on_map.read().await.len() == 0 && self.add_queue.lock().await.len() == 0
     }
 
-    pub async fn try_get_object(&self, guid: &Guid) -> Option<Weak<RwLock<dyn GameObject>>> {
+    pub async fn try_get_object(&self, guid: Guid) -> Option<Weak<RwLock<dyn GameObject>>> {
         let map_objects = self.objects_on_map.read().await;
-        map_objects.get(guid).cloned()
+        map_objects.get(&guid).cloned()
     }
 
     pub async fn tick(&self, _delta_time: f32) -> Result<()> {

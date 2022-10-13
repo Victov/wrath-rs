@@ -1,27 +1,28 @@
-use crate::data::{MovementInfo, PositionAndOrientation, WorldZoneLocation};
+use wow_world_messages::wrath::{ExtraMovementFlags, MovementInfo, MovementInfo_MovementFlags};
+
+use crate::data::PositionAndOrientation;
 use crate::handlers::movement_handler::{TeleportationDistance, TeleportationState};
-use crate::prelude::*;
-use crate::world::prelude::*;
-use std::sync::Arc;
 
 impl super::Character {
-    pub fn process_movement(&mut self, movement_info: &MovementInfo) {
-        self.movement_info = movement_info.clone();
+    pub fn process_movement(&mut self, movement_info: MovementInfo) {
+        self.movement_info = movement_info;
     }
 
     pub fn set_position(&mut self, position: &PositionAndOrientation) {
-        self.movement_info.position = position.clone();
+        self.movement_info.position = position.position;
+        self.movement_info.orientation = position.orientation;
     }
 
     fn reset_move_flags(&mut self) {
-        self.movement_info.movement_flags = 0;
-        self.movement_info.movement_flags2 = 0;
+        self.movement_info.flags = MovementInfo_MovementFlags::empty();
+        self.movement_info.extra_flags = ExtraMovementFlags::empty();
     }
 
     pub fn teleport_to(&mut self, destination: TeleportationDistance) {
         self.teleportation_state = TeleportationState::Queued(destination);
     }
 
+    /*
     pub(super) async fn handle_queued_teleport(&mut self, world: Arc<World>) -> Result<()> {
         //Handle the possibility that the player may have logged out
         //between queuing and handling the teleport
@@ -41,7 +42,7 @@ impl super::Character {
 
         self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Near(destination.clone()));
 
-        handlers::send_msg_move_teleport_ack(self, &destination).await?;
+        //handlers::send_msg_move_teleport_ack(self, &destination).await?;
         Ok(())
     }
 
@@ -69,5 +70,5 @@ impl super::Character {
 
         self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Far(destination));
         Ok(())
-    }
+    }*/
 }

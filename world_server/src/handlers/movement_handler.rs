@@ -1,21 +1,76 @@
-use crate::character::Character;
 use crate::client_manager::ClientManager;
-use crate::data::{
-    guid::*, AreaTriggerPurpose, PositionAndOrientation, ReadMovementInfo, WorldZoneLocation, WriteMovementInfo, WritePositionAndOrientation,
-};
-use crate::opcodes::Opcodes;
-use crate::packet::*;
-use crate::packet_handler::PacketToHandle;
+use crate::data::{PositionAndOrientation, WorldZoneLocation};
+use crate::packet::ServerMessageExt;
 use crate::prelude::*;
-use crate::world::map_object::MapObject;
-use crate::world::prelude::stand_state::UnitStandState;
 use crate::world::World;
-use async_std::sync::RwLockUpgradableReadGuard;
-use podio::{LittleEndian, ReadPodExt, WritePodExt};
-use std::sync::Arc;
+use wow_world_messages::wrath::{
+    MSG_MOVE_FALL_LAND_Client, MSG_MOVE_FALL_LAND_Server, MSG_MOVE_HEARTBEAT_Client, MSG_MOVE_HEARTBEAT_Server, MSG_MOVE_JUMP_Client,
+    MSG_MOVE_JUMP_Server, MSG_MOVE_SET_FACING_Client, MSG_MOVE_SET_FACING_Server, MSG_MOVE_SET_RUN_MODE_Client, MSG_MOVE_SET_RUN_MODE_Server,
+    MSG_MOVE_SET_WALK_MODE_Client, MSG_MOVE_SET_WALK_MODE_Server, MSG_MOVE_START_BACKWARD_Client, MSG_MOVE_START_BACKWARD_Server,
+    MSG_MOVE_START_FORWARD_Client, MSG_MOVE_START_FORWARD_Server, MSG_MOVE_START_PITCH_DOWN_Client, MSG_MOVE_START_PITCH_DOWN_Server,
+    MSG_MOVE_START_PITCH_UP_Client, MSG_MOVE_START_PITCH_UP_Server, MSG_MOVE_START_STRAFE_LEFT_Client, MSG_MOVE_START_STRAFE_LEFT_Server,
+    MSG_MOVE_START_STRAFE_RIGHT_Client, MSG_MOVE_START_STRAFE_RIGHT_Server, MSG_MOVE_START_SWIM_Client, MSG_MOVE_START_SWIM_Server,
+    MSG_MOVE_START_TURN_LEFT_Client, MSG_MOVE_START_TURN_LEFT_Server, MSG_MOVE_START_TURN_RIGHT_Client, MSG_MOVE_START_TURN_RIGHT_Server,
+    MSG_MOVE_STOP_Client, MSG_MOVE_STOP_PITCH_Client, MSG_MOVE_STOP_PITCH_Server, MSG_MOVE_STOP_STRAFE_Client, MSG_MOVE_STOP_STRAFE_Server,
+    MSG_MOVE_STOP_SWIM_Client, MSG_MOVE_STOP_SWIM_Server, MSG_MOVE_STOP_Server, MovementInfo, ServerMessage,
+};
 
-pub async fn handle_movement_generic(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub trait ClientMovementMessage {
+    type OutgoingType: ServerMessage + Sync;
+    fn get_guid(&self) -> Guid;
+    fn get_movement_info(&self) -> MovementInfo;
+    fn into_outgoing_type(self) -> Self::OutgoingType;
+}
+
+macro_rules! define_movement_packet_pair {
+    ($client_packet_type:ty, $server_packet_type:ty) => {
+        impl ClientMovementMessage for $client_packet_type {
+            type OutgoingType = $server_packet_type;
+            fn get_guid(&self) -> Guid {
+                self.guid
+            }
+
+            fn get_movement_info(&self) -> MovementInfo {
+                self.info.clone()
+            }
+
+            fn into_outgoing_type(self) -> Self::OutgoingType {
+                Self::OutgoingType {
+                    guid: self.guid,
+                    info: self.info,
+                }
+            }
+        }
+    };
+}
+
+define_movement_packet_pair!(MSG_MOVE_START_FORWARD_Client, MSG_MOVE_START_FORWARD_Server);
+define_movement_packet_pair!(MSG_MOVE_START_BACKWARD_Client, MSG_MOVE_START_BACKWARD_Server);
+define_movement_packet_pair!(MSG_MOVE_STOP_Client, MSG_MOVE_STOP_Server);
+define_movement_packet_pair!(MSG_MOVE_START_STRAFE_LEFT_Client, MSG_MOVE_START_STRAFE_LEFT_Server);
+define_movement_packet_pair!(MSG_MOVE_START_STRAFE_RIGHT_Client, MSG_MOVE_START_STRAFE_RIGHT_Server);
+define_movement_packet_pair!(MSG_MOVE_STOP_STRAFE_Client, MSG_MOVE_STOP_STRAFE_Server);
+define_movement_packet_pair!(MSG_MOVE_JUMP_Client, MSG_MOVE_JUMP_Server);
+define_movement_packet_pair!(MSG_MOVE_START_TURN_LEFT_Client, MSG_MOVE_START_TURN_LEFT_Server);
+define_movement_packet_pair!(MSG_MOVE_START_TURN_RIGHT_Client, MSG_MOVE_START_TURN_RIGHT_Server);
+define_movement_packet_pair!(MSG_MOVE_START_PITCH_UP_Client, MSG_MOVE_START_PITCH_UP_Server);
+define_movement_packet_pair!(MSG_MOVE_START_PITCH_DOWN_Client, MSG_MOVE_START_PITCH_DOWN_Server);
+define_movement_packet_pair!(MSG_MOVE_STOP_PITCH_Client, MSG_MOVE_STOP_PITCH_Server);
+define_movement_packet_pair!(MSG_MOVE_SET_RUN_MODE_Client, MSG_MOVE_SET_RUN_MODE_Server);
+define_movement_packet_pair!(MSG_MOVE_SET_WALK_MODE_Client, MSG_MOVE_SET_WALK_MODE_Server);
+define_movement_packet_pair!(MSG_MOVE_FALL_LAND_Client, MSG_MOVE_FALL_LAND_Server);
+define_movement_packet_pair!(MSG_MOVE_START_SWIM_Client, MSG_MOVE_START_SWIM_Server);
+define_movement_packet_pair!(MSG_MOVE_STOP_SWIM_Client, MSG_MOVE_STOP_SWIM_Server);
+define_movement_packet_pair!(MSG_MOVE_SET_FACING_Client, MSG_MOVE_SET_FACING_Server);
+define_movement_packet_pair!(MSG_MOVE_HEARTBEAT_Client, MSG_MOVE_HEARTBEAT_Server);
+
+pub async fn handle_movement_generic<T: ClientMovementMessage>(
+    client_manager: &ClientManager,
+    client_id: u64,
+    world: &World,
+    packet: T,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
     {
         let character = character_lock.read().await;
@@ -25,23 +80,17 @@ pub async fn handle_movement_generic(client_manager: &ClientManager, world: &Wor
         }
     }
 
-    let mut reader = std::io::Cursor::new(&packet.payload);
-    let guid = reader.read_guid_compressed()?;
-    let movement_info = reader.read_movement_info()?;
+    let _guid = packet.get_guid();
+    let movement_info = packet.get_movement_info();
+    let server_outgoing_packet = packet.into_outgoing_type();
 
     {
         let mut character = character_lock.write().await;
-        character.process_movement(&movement_info);
+        character.process_movement(movement_info);
     }
 
-    let (header, mut writer) = create_packet(packet.header.get_cmd()?, 8);
-    writer.write_guid_compressed(&guid)?;
-    writer.write_movement_info(&movement_info)?;
-
     let character = character_lock.read().await;
-    send_packet_to_all_in_range(&character, false, world, &header, &writer).await?;
-
-    Ok(())
+    server_outgoing_packet.astd_send_to_all_in_range(&*character, false, world).await
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -57,6 +106,7 @@ pub enum TeleportationDistance {
     Far(WorldZoneLocation),
 }
 
+/*
 pub async fn send_msg_move_teleport_ack(character: &Character, destination: &PositionAndOrientation) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::MSG_MOVE_TELEPORT_ACK, 64);
 
@@ -180,3 +230,4 @@ pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &Pa
     }
     Ok(())
 }
+*/

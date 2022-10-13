@@ -60,6 +60,39 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_CHAR_ENUM(_) => handle_cmsg_char_enum(client_manager, world, packet.client_id).await,
             ClientOpcodeMessage::CMSG_CHAR_CREATE(data) => handle_cmsg_char_create(client_manager, packet.client_id, world, data).await,
             ClientOpcodeMessage::CMSG_PLAYER_LOGIN(data) => handle_cmsg_player_login(client_manager, world, packet.client_id, data).await,
+            ClientOpcodeMessage::MSG_MOVE_START_FORWARD(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_START_BACKWARD(data) => {
+                handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await
+            }
+            ClientOpcodeMessage::MSG_MOVE_STOP(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_START_STRAFE_LEFT(data) => {
+                handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await
+            }
+            ClientOpcodeMessage::MSG_MOVE_START_STRAFE_RIGHT(data) => {
+                handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await
+            }
+            ClientOpcodeMessage::MSG_MOVE_STOP_STRAFE(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_JUMP(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_START_TURN_LEFT(data) => {
+                handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await
+            }
+            ClientOpcodeMessage::MSG_MOVE_START_TURN_RIGHT(data) => {
+                handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await
+            }
+            ClientOpcodeMessage::MSG_MOVE_START_PITCH_UP(data) => {
+                handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await
+            }
+            ClientOpcodeMessage::MSG_MOVE_START_PITCH_DOWN(data) => {
+                handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await
+            }
+            ClientOpcodeMessage::MSG_MOVE_STOP_PITCH(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_SET_RUN_MODE(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_SET_WALK_MODE(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_FALL_LAND(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_START_SWIM(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_STOP_SWIM(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_SET_FACING(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_HEARTBEAT(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             _ => bail!("Unhandled opcode"),
         }
     }
@@ -73,27 +106,6 @@ impl PacketHandler {
             Opcodes::CMSG_NAME_QUERY => handle_cmsg_name_query(client_manager, world, packet).await,
             Opcodes::CMSG_SET_ACTIONBAR_TOGGLES => handle_cmsg_set_actionbar_toggles(client_manager, packet).await,
             Opcodes::CMSG_ZONEUPDATE => handle_cmsg_zoneupdate(client_manager, packet).await,
-            Opcodes::MSG_MOVE_START_FORWARD => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_START_BACKWARD => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_STOP => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_START_STRAFE_LEFT => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_START_STRAFE_RIGHT => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_STOP_STRAFE => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_JUMP => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_START_TURN_LEFT => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_START_TURN_RIGHT => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_STOP_TURN => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_START_PITCH_UP => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_START_PITCH_DOWN => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_STOP_PITCH => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_SET_RUN_MODE => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_SET_WALK_MODE => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_FALL_LAND => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_START_SWIM => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_STOP_SWIM => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_SET_FACING => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_SET_PITCH => handle_movement_generic(client_manager, world, packet).await,
-            Opcodes::MSG_MOVE_HEARTBEAT => handle_movement_generic(client_manager, world, packet).await,
             Opcodes::CMSG_TIME_SYNC_RESP => handle_cmsg_time_sync_resp(client_manager, packet).await,
             Opcodes::MSG_MOVE_TELEPORT_ACK => handle_msg_move_teleport_ack(client_manager, packet).await,
             Opcodes::MSG_MOVE_WORLDPORT_ACK => handle_msg_move_worldport_ack(client_manager, world, packet).await,

@@ -1,43 +1,50 @@
 use super::client::Client;
-use crate::{character::*, prelude::*};
+use crate::{character::*, prelude::*, world::game_object::GameObject, world::World};
 use async_std::prelude::*;
 use std::{borrow::Borrow, ops::Deref, pin::Pin};
 use wow_world_messages::wrath::ServerMessage;
 
-/*
- * TODO: refactor this to be inside ServerMessageExt
-pub async fn send_packet_to_all_in_range(
-    character: &Character,
-    include_self: bool,
-    world: &World,
-    header: &ServerPacketHeader,
-    payload: &Cursor<Vec<u8>>,
-) -> Result<()> {
-    if let Some(map) = world.get_instance_manager().try_get_map_for_character(character).await {
-        let in_range_guids = character.as_world_object().unwrap().get_in_range_guids();
-        for guid in in_range_guids {
-            let object_lock = map
-                .try_get_object(guid)
-                .await
-                .ok_or_else(|| anyhow!("GUID is in range, but not a valid object"))?
-                .upgrade()
-                .ok_or_else(|| anyhow!("object was on the map, but is no longer valid to send packets to"))?;
-            let read_obj = object_lock.read().await;
-            if let Some(in_range_character) = read_obj.as_character() {
-                send_packet_to_character(in_range_character, header, payload).await?;
+pub trait ServerMessageExt: ServerMessage {
+    fn astd_send_to_all_in_range<'life0, 'life1, 'life2, 'async_trait>(
+        &'life0 self,
+        character: impl Borrow<Character> + 'life1 + Send,
+        include_self: bool,
+        world: impl Borrow<World> + 'life2 + Send,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'async_trait>>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        'life2: 'async_trait,
+        Self: Sync + 'async_trait,
+    {
+        Box::pin(async move {
+            let character = character.borrow();
+            let world = world.borrow();
+
+            if let Some(map) = world.get_instance_manager().try_get_map_for_character(character).await {
+                let in_range_guids = character.get_in_range_guids();
+                for guid in in_range_guids {
+                    let object_lock = map
+                        .try_get_object(guid)
+                        .await
+                        .ok_or_else(|| anyhow!("GUID is in range, but not a valid object"))?
+                        .upgrade()
+                        .ok_or_else(|| anyhow!("object was on the map, but is no longer valid to send packets to"))?;
+                    let read_obj = object_lock.read().await;
+                    if let Some(in_range_character) = read_obj.as_character() {
+                        self.astd_send_to_character(in_range_character).await?;
+                    }
+                }
+                if include_self {
+                    self.astd_send_to_character(character).await?;
+                }
+            } else {
+                warn!("Trying to send packet to all in range, but this character is not on a map");
             }
-        }
-        if include_self {
-            send_packet_to_character(character, header, payload).await?;
-        }
-    } else {
-        warn!("Trying to send packet to all in range, but this character is not on a map");
+            Ok(())
+        })
     }
 
-    Ok(())
-} */
-
-pub trait ServerMessageExt: ServerMessage {
     fn astd_send_to_character<'life0, 'life1, 'async_trait>(
         &'life0 self,
         character: impl Borrow<Character> + 'life1 + Send,

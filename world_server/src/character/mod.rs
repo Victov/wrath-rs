@@ -1,6 +1,7 @@
 use super::world::prelude::*;
 use crate::client::Client;
 use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::handlers::movement_handler::TeleportationState;
 //use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 //use crate::item::Item;
 use crate::prelude::*;
@@ -13,7 +14,7 @@ use wrath_realm_db::RealmDatabase;
 
 //mod character_equipment;
 //mod character_logout;
-//mod character_movement;
+mod character_movement;
 //mod character_rested;
 
 pub struct Character {
@@ -44,9 +45,9 @@ pub struct Character {
     //time sync
     pub time_sync_counter: u32,
     time_sync_cooldown: f32,
-    //Teleporting
-    //pub teleportation_state: TeleportationState,
 
+    //Teleporting
+    pub teleportation_state: TeleportationState,
     //pub logout_state: LogoutState,
     //rested_state: character_rested::RestedState,
     //equipped_items: Vec<Arc<RwLock<Item>>>,
@@ -73,7 +74,7 @@ impl Character {
             recently_removed_guids: vec![],
             time_sync_counter: 0,
             time_sync_cooldown: 0f32,
-            //teleportation_state: TeleportationState::None,
+            teleportation_state: TeleportationState::None,
             //logout_state: LogoutState::None,
             //rested_state: character_rested::RestedState::NotRested,
             //equipped_items: vec![],
