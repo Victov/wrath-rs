@@ -1,8 +1,13 @@
+use std::sync::Arc;
+
+use crate::character::Character;
 use crate::client_manager::ClientManager;
 use crate::data::{PositionAndOrientation, WorldZoneLocation};
 use crate::packet::ServerMessageExt;
 use crate::prelude::*;
+use crate::world::prelude::GameObject;
 use crate::world::World;
+use async_std::sync::RwLockUpgradableReadGuard;
 use wow_world_messages::wrath::{
     MSG_MOVE_FALL_LAND_Client, MSG_MOVE_FALL_LAND_Server, MSG_MOVE_HEARTBEAT_Client, MSG_MOVE_HEARTBEAT_Server, MSG_MOVE_JUMP_Client,
     MSG_MOVE_JUMP_Server, MSG_MOVE_SET_FACING_Client, MSG_MOVE_SET_FACING_Server, MSG_MOVE_SET_RUN_MODE_Client, MSG_MOVE_SET_RUN_MODE_Server,
@@ -12,7 +17,8 @@ use wow_world_messages::wrath::{
     MSG_MOVE_START_STRAFE_RIGHT_Client, MSG_MOVE_START_STRAFE_RIGHT_Server, MSG_MOVE_START_SWIM_Client, MSG_MOVE_START_SWIM_Server,
     MSG_MOVE_START_TURN_LEFT_Client, MSG_MOVE_START_TURN_LEFT_Server, MSG_MOVE_START_TURN_RIGHT_Client, MSG_MOVE_START_TURN_RIGHT_Server,
     MSG_MOVE_STOP_Client, MSG_MOVE_STOP_PITCH_Client, MSG_MOVE_STOP_PITCH_Server, MSG_MOVE_STOP_STRAFE_Client, MSG_MOVE_STOP_STRAFE_Server,
-    MSG_MOVE_STOP_SWIM_Client, MSG_MOVE_STOP_SWIM_Server, MSG_MOVE_STOP_Server, MovementInfo, ServerMessage,
+    MSG_MOVE_STOP_SWIM_Client, MSG_MOVE_STOP_SWIM_Server, MSG_MOVE_STOP_Server, MSG_MOVE_TELEPORT_ACK_Client, MSG_MOVE_TELEPORT_ACK_Server, Map,
+    MovementInfo, ServerMessage, MSG_MOVE_WORLDPORT_ACK, SMSG_NEW_WORLD, SMSG_TRANSFER_PENDING,
 };
 
 pub trait ClientMovementMessage {
@@ -106,47 +112,36 @@ pub enum TeleportationDistance {
     Far(WorldZoneLocation),
 }
 
-/*
 pub async fn send_msg_move_teleport_ack(character: &Character, destination: &PositionAndOrientation) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::MSG_MOVE_TELEPORT_ACK, 64);
-
-    let mut movement_info = character.movement_info.clone();
-    movement_info.position = destination.clone();
-
-    writer.write_guid_compressed(&character.guid)?;
-    writer.write_u32::<LittleEndian>(0)?; //This value is supposed to increment with every teleport?
-    writer.write_movement_info(&movement_info)?;
-
-    send_packet_to_character(character, &header, &writer).await
+    MSG_MOVE_TELEPORT_ACK_Server {
+        guid: character.get_guid(),
+        movement_counter: 0, //TODO: Value should increment with every teleport?
+        info: character.get_movement_info().clone(),
+    }
+    .astd_send_to_character(character)
+    .await
 }
 
-pub async fn send_smsg_transfer_pending(character: &Character, map_id: u32) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_TRANSFER_PENDING, 12);
-    writer.write_u32::<LittleEndian>(map_id)?;
-    send_packet_to_character(character, &header, &writer).await
+pub async fn send_smsg_transfer_pending(character: &Character, map: Map) -> Result<()> {
+    SMSG_TRANSFER_PENDING { map, has_transport: None }.astd_send_to_character(character).await
 }
 
-pub async fn send_smsg_new_world(character: &Character, map_id: u32, position: &PositionAndOrientation) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_NEW_WORLD, 20);
-    writer.write_u32::<LittleEndian>(map_id)?;
-    writer.write_position_and_orientation(position)?;
-    send_packet_to_character(character, &header, &writer).await
+pub async fn send_smsg_new_world(character: &Character, map: Map, position: PositionAndOrientation) -> Result<()> {
+    SMSG_NEW_WORLD {
+        map,
+        position: position.position,
+        orientation: position.orientation,
+    }
+    .astd_send_to_character(character)
+    .await
 }
 
-pub async fn handle_msg_move_teleport_ack(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_msg_move_teleport_ack(client_manager: &ClientManager, client_id: u64, _packet: &MSG_MOVE_TELEPORT_ACK_Client) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
-
     let character = character_lock.upgradable_read().await;
 
     if let TeleportationState::Executing(TeleportationDistance::Near(destination)) = character.teleportation_state.clone() {
-        let mut reader = std::io::Cursor::new(&packet.payload);
-
-        //TODO: check validity of these returned things.
-        let _mover_guid = reader.read_guid_compressed()?;
-        let _counter = reader.read_u32::<LittleEndian>()?;
-        let _time = reader.read_u32::<LittleEndian>()?;
-
         let mut character = RwLockUpgradableReadGuard::upgrade(character).await;
         character.set_position(&destination);
         character.teleportation_state = TeleportationState::None;
@@ -155,15 +150,18 @@ pub async fn handle_msg_move_teleport_ack(client_manager: &ClientManager, packet
     Ok(())
 }
 
-pub async fn handle_msg_move_worldport_ack(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_msg_move_worldport_ack(
+    client_manager: &ClientManager,
+    client_id: u64,
+    world: &World,
+    _packet: &MSG_MOVE_WORLDPORT_ACK,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
-
     let character = character_lock.upgradable_read().await;
 
     if let TeleportationState::Executing(TeleportationDistance::Far(destination)) = character.teleportation_state.clone() {
         let mut character = RwLockUpgradableReadGuard::upgrade(character).await;
-
         let map = world.get_instance_manager().get_or_create_map(&(*character), destination.map).await?;
 
         character.map = destination.map;
@@ -179,6 +177,7 @@ pub async fn handle_msg_move_worldport_ack(client_manager: &ClientManager, world
     Ok(())
 }
 
+/*
 pub async fn send_smsg_stand_state_update(character: &Character, stand_state: UnitStandState) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_STANDSTATE_UPDATE, 1);
     writer.write_u8(stand_state as u8)?;
@@ -229,5 +228,4 @@ pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &Pa
         character.handle_enter_inn()?;
     }
     Ok(())
-}
-*/
+} */

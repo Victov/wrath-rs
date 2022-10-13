@@ -93,6 +93,8 @@ impl PacketHandler {
             ClientOpcodeMessage::MSG_MOVE_STOP_SWIM(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_SET_FACING(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_HEARTBEAT(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_TELEPORT_ACK(data) => handle_msg_move_teleport_ack(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::MSG_MOVE_WORLDPORT_ACK(data) => handle_msg_move_worldport_ack(client_manager, packet.client_id, world, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }
@@ -107,8 +109,6 @@ impl PacketHandler {
             Opcodes::CMSG_SET_ACTIONBAR_TOGGLES => handle_cmsg_set_actionbar_toggles(client_manager, packet).await,
             Opcodes::CMSG_ZONEUPDATE => handle_cmsg_zoneupdate(client_manager, packet).await,
             Opcodes::CMSG_TIME_SYNC_RESP => handle_cmsg_time_sync_resp(client_manager, packet).await,
-            Opcodes::MSG_MOVE_TELEPORT_ACK => handle_msg_move_teleport_ack(client_manager, packet).await,
-            Opcodes::MSG_MOVE_WORLDPORT_ACK => handle_msg_move_worldport_ack(client_manager, world, packet).await,
             Opcodes::CMSG_LOGOUT_REQUEST => handle_cmsg_logout_request(client_manager, packet).await,
             Opcodes::CMSG_LOGOUT_CANCEL => handle_cmsg_logout_cancel(client_manager, packet).await,
             Opcodes::CMSG_FORCE_MOVE_ROOT_ACK => Ok(()),   //Don't do anything, disable warning spam

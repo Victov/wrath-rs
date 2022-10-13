@@ -21,3 +21,12 @@ pub struct PositionAndOrientation {
     pub position: Vector3d,
     pub orientation: f32,
 }
+
+impl From<WorldZoneLocation> for PositionAndOrientation {
+    fn from(wzl: WorldZoneLocation) -> Self {
+        Self {
+            position: wzl.position,
+            orientation: wzl.orientation,
+        }
+    }
+}

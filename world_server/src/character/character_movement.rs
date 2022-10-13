@@ -1,7 +1,9 @@
-use wow_world_messages::wrath::{ExtraMovementFlags, MovementInfo, MovementInfo_MovementFlags};
-
-use crate::data::PositionAndOrientation;
+use crate::data::{PositionAndOrientation, WorldZoneLocation};
 use crate::handlers::movement_handler::{TeleportationDistance, TeleportationState};
+use crate::prelude::*;
+use crate::world::{game_object::GameObject, World};
+use std::sync::Arc;
+use wow_world_messages::wrath::{ExtraMovementFlags, MovementInfo, MovementInfo_MovementFlags};
 
 impl super::Character {
     pub fn process_movement(&mut self, movement_info: MovementInfo) {
@@ -22,9 +24,8 @@ impl super::Character {
         self.teleportation_state = TeleportationState::Queued(destination);
     }
 
-    /*
     pub(super) async fn handle_queued_teleport(&mut self, world: Arc<World>) -> Result<()> {
-        //Handle the possibility that the player may have logged out
+        //TODO: Handle the possibility that the player may have logged out
         //between queuing and handling the teleport
 
         let state = self.teleportation_state.clone();
@@ -39,10 +40,9 @@ impl super::Character {
 
     async fn execute_near_teleport(&mut self, destination: PositionAndOrientation) -> Result<()> {
         //The rest of the teleportation is handled when the client sends back this packet
-
         self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Near(destination.clone()));
 
-        //handlers::send_msg_move_teleport_ack(self, &destination).await?;
+        handlers::send_msg_move_teleport_ack(self, &destination).await?;
         Ok(())
     }
 
@@ -63,12 +63,12 @@ impl super::Character {
             .await
             .ok_or_else(|| anyhow!("Player is teleporting away from an invalid map"))?;
 
-        old_map.remove_object_by_guid(&self.guid).await;
+        old_map.remove_object_by_guid(self.get_guid()).await;
 
         let wzl = destination.clone().into();
-        handlers::send_smsg_new_world(self, destination.map, &wzl).await?;
+        handlers::send_smsg_new_world(self, destination.map, wzl).await?;
 
         self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Far(destination));
         Ok(())
-    }*/
+    }
 }
