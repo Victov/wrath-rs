@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::character::Character;
 use crate::client_manager::ClientManager;
 use crate::data::{PositionAndOrientation, WorldZoneLocation};
@@ -8,6 +6,7 @@ use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
 use async_std::sync::RwLockUpgradableReadGuard;
+use std::sync::Arc;
 use wow_world_messages::wrath::{
     MSG_MOVE_FALL_LAND_Client, MSG_MOVE_FALL_LAND_Server, MSG_MOVE_HEARTBEAT_Client, MSG_MOVE_HEARTBEAT_Server, MSG_MOVE_JUMP_Client,
     MSG_MOVE_JUMP_Server, MSG_MOVE_SET_FACING_Client, MSG_MOVE_SET_FACING_Server, MSG_MOVE_SET_RUN_MODE_Client, MSG_MOVE_SET_RUN_MODE_Server,
@@ -18,7 +17,8 @@ use wow_world_messages::wrath::{
     MSG_MOVE_START_TURN_LEFT_Client, MSG_MOVE_START_TURN_LEFT_Server, MSG_MOVE_START_TURN_RIGHT_Client, MSG_MOVE_START_TURN_RIGHT_Server,
     MSG_MOVE_STOP_Client, MSG_MOVE_STOP_PITCH_Client, MSG_MOVE_STOP_PITCH_Server, MSG_MOVE_STOP_STRAFE_Client, MSG_MOVE_STOP_STRAFE_Server,
     MSG_MOVE_STOP_SWIM_Client, MSG_MOVE_STOP_SWIM_Server, MSG_MOVE_STOP_Server, MSG_MOVE_TELEPORT_ACK_Client, MSG_MOVE_TELEPORT_ACK_Server, Map,
-    MovementInfo, ServerMessage, MSG_MOVE_WORLDPORT_ACK, SMSG_NEW_WORLD, SMSG_TRANSFER_PENDING,
+    MovementInfo, ServerMessage, UnitStandState, MSG_MOVE_WORLDPORT_ACK, SMSG_FORCE_MOVE_ROOT, SMSG_FORCE_MOVE_UNROOT, SMSG_NEW_WORLD,
+    SMSG_STANDSTATE_UPDATE, SMSG_TRANSFER_PENDING,
 };
 
 pub trait ClientMovementMessage {
@@ -177,27 +177,29 @@ pub async fn handle_msg_move_worldport_ack(
     Ok(())
 }
 
-/*
 pub async fn send_smsg_stand_state_update(character: &Character, stand_state: UnitStandState) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_STANDSTATE_UPDATE, 1);
-    writer.write_u8(stand_state as u8)?;
-    send_packet_to_character(character, &header, &writer).await
+    SMSG_STANDSTATE_UPDATE { state: stand_state }.astd_send_to_character(character).await
 }
 
 pub async fn send_smsg_force_move_root(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_FORCE_MOVE_ROOT, 4);
-    writer.write_guid_compressed(character.get_guid())?;
-    writer.write_u32::<LittleEndian>(0)?;
-    send_packet_to_character(character, &header, &writer).await
+    SMSG_FORCE_MOVE_ROOT {
+        guid: character.get_guid(),
+        counter: 0,
+    }
+    .astd_send_to_character(character)
+    .await
 }
 
 pub async fn send_smsg_force_move_unroot(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_FORCE_MOVE_UNROOT, 4);
-    writer.write_guid_compressed(character.get_guid())?;
-    writer.write_u32::<LittleEndian>(0)?;
-    send_packet_to_character(character, &header, &writer).await
+    SMSG_FORCE_MOVE_UNROOT {
+        guid: character.get_guid(),
+        counter: 0,
+    }
+    .astd_send_to_character(character)
+    .await
 }
 
+/*
 pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;

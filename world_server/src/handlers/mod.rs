@@ -74,10 +74,10 @@ pub use movement_handler::handle_movement_generic;
 pub use movement_handler::handle_msg_move_teleport_ack;
 pub use movement_handler::handle_msg_move_worldport_ack;
 pub use movement_handler::send_msg_move_teleport_ack;
-//pub use movement_handler::send_smsg_force_move_root;
-//pub use movement_handler::send_smsg_force_move_unroot;
+pub use movement_handler::send_smsg_force_move_root;
+pub use movement_handler::send_smsg_force_move_unroot;
 pub use movement_handler::send_smsg_new_world;
-//pub use movement_handler::send_smsg_stand_state_update;
+pub use movement_handler::send_smsg_stand_state_update;
 pub use movement_handler::send_smsg_transfer_pending;
 
 /*

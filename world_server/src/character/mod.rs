@@ -9,7 +9,9 @@ use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
-use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UpdateMask, UpdatePlayer, Vector3d};
+use wow_world_messages::wrath::{
+    Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UnitStandState, UpdateMask, UpdatePlayer, Vector3d,
+};
 use wrath_realm_db::RealmDatabase;
 
 //mod character_equipment;
@@ -203,10 +205,9 @@ impl Character {
         self.tick_time_sync(delta_time).await?;
         //self.tick_logout_state(delta_time, world.clone()).await?;
 
-        /*self.handle_queued_teleport(world)
+        self.handle_queued_teleport(world)
             .await
             .unwrap_or_else(|e| warn!("Could not teleport player {}: Error {}", self.name, e));
-        */
 
         Ok(())
     }
@@ -226,6 +227,29 @@ impl Character {
             .upgrade()
             .ok_or_else(|| anyhow!("Could not get an Arc to the character because the owning client does not exist"))?;
         client.get_active_character().await
+    }
+
+    async fn set_stand_state(&mut self, state: UnitStandState) -> Result<()> {
+        //TODO: stand state is one of the unit bytes, figure out which
+        //self.gameplay_data.set_unit_BYTES_1(a, b, c, d)
+        handlers::send_smsg_stand_state_update(self, state).await
+    }
+
+    async fn set_rooted(&self, rooted: bool) -> Result<()> {
+        if rooted {
+            handlers::send_smsg_force_move_root(self).await
+        } else {
+            handlers::send_smsg_force_move_unroot(self).await
+        }
+    }
+
+    fn set_rested_bytes(&mut self, rested: bool) -> Result<()> {
+        let _value = match rested {
+            true => 1,
+            false => 2,
+        };
+        //self.set_byte(PlayerFields::Bytes2 as usize, 3, value)
+        Ok(())
     }
 }
 
