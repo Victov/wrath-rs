@@ -244,7 +244,7 @@ impl Character {
         }
     }
 
-    fn set_stunned(&mut self, stunned: bool) -> Result<()> {
+    fn set_stunned(&mut self, _stunned: bool) -> Result<()> {
         //TODO: modify 1 bit in self.gameplay_data.unit_FLAGS
         //see UnitFlags for index
         Ok(())
@@ -258,6 +258,23 @@ impl Character {
         //self.set_byte(PlayerFields::Bytes2 as usize, 3, value)
         Ok(())
     }
+
+    pub fn get_race(&self) -> Race {
+        self.gameplay_data.unit_BYTES_0().map_or(Race::Human, |(race, _, _, _)| race)
+    }
+
+    pub fn get_class(&self) -> Class {
+        self.gameplay_data.unit_BYTES_0().map_or(Class::Warrior, |(_, class, _, _)| class)
+    }
+
+    pub fn get_gender(&self) -> Gender {
+        self.gameplay_data.unit_BYTES_0().map_or(Gender::Male, |(_, _, gender, _)| gender)
+    }
+
+    pub fn get_power_type(&self) -> Power {
+        self.gameplay_data.unit_BYTES_0().map_or(Power::Mana, |(_, _, _, power)| power)
+    }
+
     //-------------------
     //END STUFF THAT NEEDS TO MOVE TO UpdateMaskExt
     //-------------------
