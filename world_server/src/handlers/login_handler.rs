@@ -1,16 +1,16 @@
-use std::sync::Arc;
-
 use crate::character::Character;
 use crate::client::{Client, ClientState};
 use crate::client_manager::ClientManager;
 use crate::packet::*;
 use crate::prelude::*;
 use podio::{LittleEndian, ReadPodExt};
+use std::sync::Arc;
 use wow_srp::normalized_string::NormalizedString;
 use wow_srp::wrath_header::ProofSeed;
 use wow_world_messages::wrath::{
-    Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, CMSG_PING, CMSG_REALM_SPLIT, SMSG_ADDON_INFO,
-    SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION, SMSG_LOGIN_SETTIMESPEED, SMSG_PONG, SMSG_REALM_SPLIT, SMSG_TUTORIAL_FLAGS,
+    Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, CMSG_LOGOUT_CANCEL, CMSG_LOGOUT_REQUEST, CMSG_PING,
+    CMSG_REALM_SPLIT, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION, SMSG_LOGIN_SETTIMESPEED, SMSG_LOGOUT_CANCEL_ACK,
+    SMSG_LOGOUT_COMPLETE, SMSG_LOGOUT_RESPONSE, SMSG_PONG, SMSG_REALM_SPLIT, SMSG_TUTORIAL_FLAGS,
 };
 use wrath_auth_db::AuthDatabase;
 
@@ -157,8 +157,6 @@ pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
     .await
 }
 
-/*
-
 #[derive(PartialEq, Debug)]
 pub enum LogoutState {
     None,
@@ -167,51 +165,26 @@ pub enum LogoutState {
     ReturnToCharSelect,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, PartialEq, Eq)]
-pub enum LogoutResult {
-    Success,
-    FailInCombat,
-    FailFrozenByGM,
-    FailJumpingOrFalling,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum LogoutSpeed {
-    Delayed,
-    Instant,
-}
-
-pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
-    let character_lock = client.get_active_character().await?;
+pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, client_id: u64, packet: &CMSG_LOGOUT_REQUEST) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
 
     let (result, speed) = {
+        let character_lock = client.get_active_character().await?;
         let mut character = character_lock.write().await;
         character.try_logout().await?
     };
 
-    let (header, mut writer) = create_packet(Opcodes::SMSG_LOGOUT_RESPONSE, 5);
-    writer.write_u16::<LittleEndian>(result as u16)?;
-    writer.write_u16::<LittleEndian>(speed as u16)?;
-    send_packet(&client, &header, &writer).await
+    SMSG_LOGOUT_RESPONSE { result, speed }.astd_send_to_client(client).await
 }
 
-pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, client_id: u64, packet: &CMSG_LOGOUT_CANCEL) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
-
-    {
-        let mut character = character_lock.write().await;
-        character.cancel_logout().await?;
-    }
-
-    let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_CANCEL_ACK, 0);
-    send_packet(&client, &header, &writer).await
+    let mut character = character_lock.write().await;
+    character.cancel_logout().await?;
+    SMSG_LOGOUT_CANCEL_ACK {}.astd_send_to_client(client).await
 }
 
 pub async fn send_smsg_logout_complete(character: &Character) -> Result<()> {
-    let (header, writer) = create_packet(Opcodes::SMSG_LOGOUT_COMPLETE, 0);
-    send_packet_to_character(character, &header, &writer).await
+    SMSG_LOGOUT_COMPLETE {}.astd_send_to_character(character).await
 }
-*/

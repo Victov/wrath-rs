@@ -1,5 +1,3 @@
-use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
-
 use super::client_manager::ClientManager;
 use crate::client::ClientState;
 use crate::handlers::*;
@@ -7,6 +5,7 @@ use crate::prelude::*;
 use crate::world::World;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
+use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
 
 pub struct PacketToHandle {
     pub client_id: u64,
@@ -95,6 +94,8 @@ impl PacketHandler {
             ClientOpcodeMessage::MSG_MOVE_HEARTBEAT(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_TELEPORT_ACK(data) => handle_msg_move_teleport_ack(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::MSG_MOVE_WORLDPORT_ACK(data) => handle_msg_move_worldport_ack(client_manager, packet.client_id, world, data).await,
+            ClientOpcodeMessage::CMSG_LOGOUT_REQUEST(data) => handle_cmsg_logout_request(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_LOGOUT_CANCEL(data) => handle_cmsg_logout_cancel(client_manager, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }
@@ -109,8 +110,6 @@ impl PacketHandler {
             Opcodes::CMSG_SET_ACTIONBAR_TOGGLES => handle_cmsg_set_actionbar_toggles(client_manager, packet).await,
             Opcodes::CMSG_ZONEUPDATE => handle_cmsg_zoneupdate(client_manager, packet).await,
             Opcodes::CMSG_TIME_SYNC_RESP => handle_cmsg_time_sync_resp(client_manager, packet).await,
-            Opcodes::CMSG_LOGOUT_REQUEST => handle_cmsg_logout_request(client_manager, packet).await,
-            Opcodes::CMSG_LOGOUT_CANCEL => handle_cmsg_logout_cancel(client_manager, packet).await,
             Opcodes::CMSG_FORCE_MOVE_ROOT_ACK => Ok(()),   //Don't do anything, disable warning spam
             Opcodes::CMSG_FORCE_MOVE_UNROOT_ACK => Ok(()), //Don't do anything, disable warning spam
             Opcodes::CMSG_AREATRIGGER => handle_cmsg_areatrigger(client_manager, packet).await,

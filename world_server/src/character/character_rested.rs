@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use crate::world::prelude::*;
 
 #[derive(PartialEq, Debug)]
 pub(super) enum RestedState {
