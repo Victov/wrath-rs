@@ -166,7 +166,7 @@ impl Character {
         handlers::send_contact_list(self, RelationType::empty().set_FRIEND().set_IGNORED().set_MUTED().set_RECRUITAFRIEND()).await?;
         handlers::send_bind_update(self).await?;
         //handlers::send_talents_info(self).await?;
-        //handlers::send_dungeon_difficulty(self).await?;
+        handlers::send_dungeon_difficulty(self).await?;
         //handlers::send_initial_spells(self).await?;
         handlers::send_action_buttons(self).await?;
         //handlers::send_initial_world_states(self).await?;
