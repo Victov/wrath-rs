@@ -6,14 +6,16 @@ use crate::packet::*;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::World;
-use podio::{LittleEndian, ReadPodExt, WritePodExt};
 use std::time::{SystemTime, UNIX_EPOCH};
+use wow_world_messages::wrath::{
+    CMSG_PLAYED_TIME, CMSG_QUERY_TIME, CMSG_WORLD_STATE_UI_TIMER_UPDATE, SMSG_PLAYED_TIME, SMSG_QUERY_TIME_RESPONSE, SMSG_WORLD_STATE_UI_TIMER_UPDATE,
+};
 
-pub async fn handle_cmsg_played_time(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_cmsg_played_time(client_manager: &ClientManager, client_id: u64, packet: &CMSG_PLAYED_TIME) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
 
-    let (playtime_total, playtime_level) = {
+    let (total_played_time, level_played_time) = {
         let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
         let mut character = character_lock.write().await;
         let delta_seconds = unix_time - character.last_playtime_calculation_timestamp;
@@ -23,38 +25,37 @@ pub async fn handle_cmsg_played_time(client_manager: &ClientManager, packet: &Pa
         (character.seconds_played_total, character.seconds_played_at_level)
     };
 
-    let show_on_ui = {
-        let mut reader = std::io::Cursor::new(&packet.payload);
-        reader.read_u8()?
-    };
-
-    let (header, mut writer) = create_packet(Opcodes::SMSG_PLAYED_TIME, 8);
-    writer.write_u32::<LittleEndian>(playtime_total)?;
-    writer.write_u32::<LittleEndian>(playtime_level)?;
-    writer.write_u8(show_on_ui)?;
-    send_packet(&client, &header, &writer).await?;
-    Ok(())
+    SMSG_PLAYED_TIME {
+        total_played_time,
+        level_played_time,
+        show_on_ui: packet.show_on_ui,
+    }
+    .astd_send_to_client(client)
+    .await
 }
 
-pub async fn handle_cmsg_query_time(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_client(packet.client_id).await?;
+pub async fn handle_cmsg_query_time(client_manager: &ClientManager, client_id: u64, packet: &CMSG_QUERY_TIME) -> Result<()> {
+    let client = client_manager.get_client(client_id).await?;
     let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
-    let (header, mut writer) = create_packet(Opcodes::SMSG_QUERY_TIME_RESPONSE, 8);
-    writer.write_u32::<LittleEndian>(unix_time)?;
-    writer.write_u32::<LittleEndian>(0)?; //unknown?
-    send_packet(&client, &header, &writer).await?;
-    Ok(())
+    SMSG_QUERY_TIME_RESPONSE {
+        time: unix_time,
+        time_until_daily_quest_reset: 0,
+    }
+    .astd_send_to_client(client)
+    .await
 }
 
-pub async fn handle_cmsg_world_state_ui_timer_update(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_client(packet.client_id).await?;
+pub async fn handle_cmsg_world_state_ui_timer_update(
+    client_manager: &ClientManager,
+    client_id: u64,
+    packet: &CMSG_WORLD_STATE_UI_TIMER_UPDATE,
+) -> Result<()> {
+    let client = client_manager.get_client(client_id).await?;
     let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
-    let (header, mut writer) = create_packet(Opcodes::SMSG_WORLD_STATE_UI_TIMER_UPDATE, 4);
-    writer.write_u32::<LittleEndian>(unix_time)?;
-    send_packet(&client, &header, &writer).await?;
-    Ok(())
+    SMSG_WORLD_STATE_UI_TIMER_UPDATE { time: unix_time }.astd_send_to_client(client).await
 }
 
+/*
 pub async fn handle_cmsg_name_query(client_manager: &ClientManager, world: &World, packet: &PacketToHandle) -> Result<()> {
     let client = client_manager.get_authenticated_client(packet.client_id).await?;
     let character_lock = client.get_active_character().await?;
@@ -101,4 +102,4 @@ async fn send_name_query_response(receiver: &Client, target_character: &Characte
 
     send_packet(receiver, &header, &writer).await?;
     Ok(())
-}
+}*/
