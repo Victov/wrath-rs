@@ -166,9 +166,7 @@ impl Character {
     pub async fn send_packets_before_add_to_map(&self) -> Result<()> {
         handlers::send_contact_list(self, RelationType::empty().set_FRIEND().set_IGNORED().set_MUTED().set_RECRUITAFRIEND()).await?;
         handlers::send_bind_update(self).await?;
-        //handlers::send_talents_info(self).await?;
         handlers::send_dungeon_difficulty(self).await?;
-        //handlers::send_initial_spells(self).await?;
         handlers::send_action_buttons(self).await?;
         //handlers::send_initial_world_states(self).await?;
         handlers::send_login_set_time_speed(self).await
@@ -180,7 +178,6 @@ impl Character {
         handlers::send_voice_chat_status(self).await?;
         handlers::send_tutorial_flags(self).await?;
         handlers::send_faction_list(self).await?;
-        //handlers::send_aura_update_all(self).await?;
         handlers::send_time_sync(self).await?;
         //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
         //handlers::send_world_state_update(&self, 0xC77, 0).await?;
