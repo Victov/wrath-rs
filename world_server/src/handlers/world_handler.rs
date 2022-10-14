@@ -1,27 +1,21 @@
 use crate::character::*;
 use crate::client_manager::ClientManager;
-use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::prelude::*;
-use crate::PacketToHandle;
 use wow_world_messages::wrath::Object;
+use wow_world_messages::wrath::CMSG_ZONEUPDATE;
 use wow_world_messages::wrath::SMSG_TIME_SYNC_REQ;
 use wow_world_messages::wrath::SMSG_UPDATE_OBJECT;
 
-/*
-pub async fn handle_cmsg_zoneupdate(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_cmsg_zoneupdate(client_manager: &ClientManager, client_id: u64, packet: &CMSG_ZONEUPDATE) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
 
-    let zone_id = {
-        let mut reader = std::io::Cursor::new(&packet.payload);
-        reader.read_u32::<LittleEndian>()?
-    };
-
     let mut character = character_lock.write().await;
-    (*character).zone_update(zone_id).await
+    (*character).zone_update(packet.area).await
 }
 
+/*
 pub async fn send_initial_world_states(character: &Character) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_INIT_WORLD_STATES, 8);
     writer.write_u32::<LittleEndian>(character.map)?;
@@ -56,13 +50,14 @@ pub async fn send_smsg_update_objects(character: &Character, objects: Vec<Object
 }
 
 /*
-pub async fn send_destroy_object(character: &Character, object_guid: &Guid, is_death: bool) -> Result<()> {
+pub async fn send_destroy_object(character: &Character, object_guid: Guid, is_death: bool) -> Result<()> {
     let (header, mut writer) = create_packet(Opcodes::SMSG_DESTROY_OBJECT, 9);
     writer.write_guid_compressed(object_guid)?;
     writer.write_u8(is_death as u8)?;
     send_packet_to_character(character, &header, &writer).await
 }
 */
+
 pub async fn send_time_sync(character: &Character) -> Result<()> {
     SMSG_TIME_SYNC_REQ {
         time_sync: character.time_sync_counter,

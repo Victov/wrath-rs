@@ -37,7 +37,7 @@ pub use faction_handler::send_faction_list;
 
 mod world_handler;
 //pub use world_handler::handle_cmsg_time_sync_resp;
-//pub use world_handler::handle_cmsg_zoneupdate;
+pub use world_handler::handle_cmsg_zoneupdate;
 //pub use world_handler::send_destroy_object;
 //pub use world_handler::send_initial_world_states;
 pub use world_handler::send_smsg_update_objects;
