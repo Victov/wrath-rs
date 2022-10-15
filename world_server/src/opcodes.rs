@@ -1,5 +1,10 @@
 use num_enum::TryFromPrimitive;
 
+/* NOTE:
+ * These opcodes are not actually used anywhere since we now use wow_messages.
+ * We keep them around purely as reference material: an unknown opcode number comes in and we can
+ * use this list to roughly get an idea what we need to add to wow_messages
+ * */
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
