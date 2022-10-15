@@ -107,6 +107,7 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_AREATRIGGER(data) => handle_cmsg_areatrigger(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_FORCE_MOVE_ROOT_ACK(_) => Ok(()),
             ClientOpcodeMessage::CMSG_FORCE_MOVE_UNROOT_ACK(_) => Ok(()),
+            ClientOpcodeMessage::CMSG_NAME_QUERY(data) => handle_cmsg_name_query(client_manager, packet.client_id, world, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }
