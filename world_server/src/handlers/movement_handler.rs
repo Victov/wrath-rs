@@ -1,6 +1,6 @@
 use crate::character::Character;
 use crate::client_manager::ClientManager;
-use crate::data::{PositionAndOrientation, WorldZoneLocation};
+use crate::data::{AreaTriggerPurpose, PositionAndOrientation, WorldZoneLocation};
 use crate::packet::ServerMessageExt;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
@@ -8,12 +8,12 @@ use crate::world::World;
 use async_std::sync::RwLockUpgradableReadGuard;
 use std::sync::Arc;
 use wow_world_messages::wrath::{
-    ClientMessage, MSG_MOVE_TELEPORT_ACK_Client, MSG_MOVE_TELEPORT_ACK_Server, Map, MovementInfo, ServerMessage, UnitStandState, MSG_MOVE_FALL_LAND,
-    MSG_MOVE_HEARTBEAT, MSG_MOVE_JUMP, MSG_MOVE_SET_FACING, MSG_MOVE_SET_RUN_MODE, MSG_MOVE_SET_WALK_MODE, MSG_MOVE_START_BACKWARD,
-    MSG_MOVE_START_FORWARD, MSG_MOVE_START_PITCH_DOWN, MSG_MOVE_START_PITCH_UP, MSG_MOVE_START_STRAFE_LEFT, MSG_MOVE_START_STRAFE_RIGHT,
-    MSG_MOVE_START_SWIM, MSG_MOVE_START_TURN_LEFT, MSG_MOVE_START_TURN_RIGHT, MSG_MOVE_STOP, MSG_MOVE_STOP_PITCH, MSG_MOVE_STOP_STRAFE,
-    MSG_MOVE_STOP_SWIM, MSG_MOVE_WORLDPORT_ACK, SMSG_FORCE_MOVE_ROOT, SMSG_FORCE_MOVE_UNROOT, SMSG_NEW_WORLD, SMSG_STANDSTATE_UPDATE,
-    SMSG_TRANSFER_PENDING,
+    Area, ClientMessage, MSG_MOVE_TELEPORT_ACK_Client, MSG_MOVE_TELEPORT_ACK_Server, Map, MovementInfo, ServerMessage, UnitStandState, Vector3d,
+    CMSG_AREATRIGGER, MSG_MOVE_FALL_LAND, MSG_MOVE_HEARTBEAT, MSG_MOVE_JUMP, MSG_MOVE_SET_FACING, MSG_MOVE_SET_RUN_MODE, MSG_MOVE_SET_WALK_MODE,
+    MSG_MOVE_START_BACKWARD, MSG_MOVE_START_FORWARD, MSG_MOVE_START_PITCH_DOWN, MSG_MOVE_START_PITCH_UP, MSG_MOVE_START_STRAFE_LEFT,
+    MSG_MOVE_START_STRAFE_RIGHT, MSG_MOVE_START_SWIM, MSG_MOVE_START_TURN_LEFT, MSG_MOVE_START_TURN_RIGHT, MSG_MOVE_STOP, MSG_MOVE_STOP_PITCH,
+    MSG_MOVE_STOP_STRAFE, MSG_MOVE_STOP_SWIM, MSG_MOVE_WORLDPORT_ACK, SMSG_FORCE_MOVE_ROOT, SMSG_FORCE_MOVE_UNROOT, SMSG_NEW_WORLD,
+    SMSG_STANDSTATE_UPDATE, SMSG_TRANSFER_PENDING,
 };
 
 pub trait MovementMessage: Sync + ServerMessage + ClientMessage {
@@ -178,15 +178,11 @@ pub async fn send_smsg_force_move_unroot(character: &Character) -> Result<()> {
     .await
 }
 
-/*
-pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, client_id: u64, packet: &CMSG_AREATRIGGER) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
 
-    let area_trigger_id = {
-        let mut reader = std::io::Cursor::new(&packet.payload);
-        reader.read_u32::<LittleEndian>()?
-    };
+    let area_trigger_id = packet.trigger_id;
 
     let trigger_data = client_manager
         .data_storage
@@ -196,12 +192,14 @@ pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &Pa
     if let AreaTriggerPurpose::Teleport(teleport_data) = &trigger_data.purpose {
         let mut character = character_lock.write().await;
         let destination = WorldZoneLocation {
-            x: teleport_data.target_position_x,
-            y: teleport_data.target_position_y,
-            z: teleport_data.target_position_z,
-            o: teleport_data.target_orientation,
-            map: teleport_data.target_map as u32,
-            zone: 0, //todo?
+            position: Vector3d {
+                x: teleport_data.target_position_x,
+                y: teleport_data.target_position_y,
+                z: teleport_data.target_position_z,
+            },
+            orientation: teleport_data.target_orientation,
+            map: (teleport_data.target_map as u32).try_into()?,
+            area: Area::NorthshireValley, //TODO
         };
         character.teleport_to(TeleportationDistance::Far(destination))
     } else if let AreaTriggerPurpose::RestedArea = &trigger_data.purpose {
@@ -209,4 +207,4 @@ pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, packet: &Pa
         character.handle_enter_inn()?;
     }
     Ok(())
-} */
+}

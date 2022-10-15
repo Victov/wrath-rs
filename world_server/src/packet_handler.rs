@@ -102,6 +102,9 @@ impl PacketHandler {
                 handle_cmsg_world_state_ui_timer_update(client_manager, packet.client_id, data).await
             }
             ClientOpcodeMessage::CMSG_ZONEUPDATE(data) => handle_cmsg_zoneupdate(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_AREATRIGGER(data) => handle_cmsg_areatrigger(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_FORCE_MOVE_ROOT_ACK(_) => Ok(()),
+            ClientOpcodeMessage::CMSG_FORCE_MOVE_UNROOT_ACK(_) => Ok(()),
             _ => bail!("Unhandled opcode"),
         }
     }
@@ -109,9 +112,4 @@ impl PacketHandler {
 
 /*
             Opcodes::CMSG_TUTORIAL_FLAG => handle_cmsg_tutorial_flag(client_manager, packet).await,
-            Opcodes::CMSG_TIME_SYNC_RESP => handle_cmsg_time_sync_resp(client_manager, packet).await,
-            Opcodes::CMSG_FORCE_MOVE_ROOT_ACK => Ok(()),   //Don't do anything, disable warning spam
-            Opcodes::CMSG_FORCE_MOVE_UNROOT_ACK => Ok(()), //Don't do anything, disable warning spam
-            Opcodes::CMSG_AREATRIGGER => handle_cmsg_areatrigger(client_manager, packet).await,
-
 */
