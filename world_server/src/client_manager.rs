@@ -3,8 +3,7 @@ use super::packet_handler::PacketToHandle;
 use crate::data::DataStorage;
 use crate::prelude::*;
 use crate::world::World;
-use async_std::net::{TcpListener, TcpStream};
-use async_std::prelude::*;
+use async_std::net::TcpListener;
 use async_std::stream::StreamExt;
 use async_std::sync::{Mutex, RwLock};
 use async_std::task;
@@ -17,7 +16,6 @@ use wrath_auth_db::AuthDatabase;
 pub struct ClientManager {
     pub auth_db: Arc<AuthDatabase>,
     pub data_storage: Arc<DataStorage>,
-    pub realm_seed: u32,
     clients: RwLock<HashMap<u64, Arc<Client>>>,
 }
 
@@ -26,7 +24,6 @@ impl ClientManager {
         Self {
             auth_db,
             data_storage,
-            realm_seed: rand::thread_rng().next_u32(),
             clients: RwLock::new(HashMap::new()),
         }
     }
@@ -93,27 +90,18 @@ impl ClientManager {
                 let mut hashmap = self.clients.write().await;
                 hashmap.insert(client_id, client.clone());
             }
-
-            let realm_seed = self.realm_seed;
-
-            client.send_auth_challenge(realm_seed).await.unwrap_or_else(|e| {
-                error!("Error while sending auth challenge: {:?}", e);
-            });
-
-            let packet_channel_for_client = packet_handle_sender.clone();
-            task::spawn(async move {
-                handle_incoming_packets(client.clone(), read_socket_wrapped, packet_channel_for_client)
-                    .await
-                    .unwrap_or_else(|e| {
-                        warn!("Error while handling packet {:?}", e);
-                    });
-
-                //Client stopped handling packets. Probably disconnected. Remove from client list?
-                client
-                    .disconnect()
-                    .await
-                    .unwrap_or_else(|e| warn!("Something went wrong while disconnecting client: {:?}", e));
-            });
+            {
+                //Have to make local copies of all these things to avoid `self` references in the
+                //asyncmove block.
+                let client = client.clone();
+                let packet_handle_sender = packet_handle_sender.clone();
+                let auth_db = self.auth_db.clone();
+                task::spawn(async move {
+                    let p = packet_handle_sender.clone();
+                    let a_db = auth_db.clone();
+                    client.authenticate_and_start_receiving_data(p, a_db).await;
+                });
+            }
         }
 
         Ok(())
@@ -132,32 +120,4 @@ impl ClientManager {
         let clientlock = hashmap.get(&id).ok_or_else(|| anyhow!("Failed to get client for client id: {}", id))?;
         Ok(clientlock.clone())
     }
-}
-
-async fn handle_incoming_packets(client: Arc<Client>, socket: Arc<RwLock<TcpStream>>, packet_channel: Sender<PacketToHandle>) -> Result<()> {
-    let mut buf = vec![0u8; 4096];
-    let mut read_length;
-    loop {
-        {
-            let mut read_socket = socket.write().await;
-            read_length = read_socket.read(&mut buf).await?;
-            if read_length == 0 {
-                //Disconnected, break the loop and exit the function
-                break;
-            }
-        }
-        let mut ptr = 0;
-        while ptr < read_length {
-            let header = super::packet::read_header(&buf, ptr, &client).await?;
-            let payload_length = header.length as usize;
-            let shrunk_buf = buf.iter().skip(ptr + 6).take(payload_length).copied().collect();
-            packet_channel.send(PacketToHandle {
-                client_id: client.id,
-                header,
-                payload: shrunk_buf,
-            })?;
-            ptr += 6 + payload_length;
-        }
-    }
-    Ok(())
 }

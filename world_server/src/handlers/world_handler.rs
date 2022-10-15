@@ -1,89 +1,84 @@
 use crate::character::*;
 use crate::client_manager::ClientManager;
-use crate::opcodes::Opcodes;
 use crate::packet::*;
 use crate::prelude::*;
-use crate::PacketToHandle;
-use podio::{LittleEndian, ReadPodExt, WritePodExt};
+use wow_world_messages::wrath::Area;
+use wow_world_messages::wrath::Object;
+use wow_world_messages::wrath::WorldState;
+use wow_world_messages::wrath::CMSG_TIME_SYNC_RESP;
+use wow_world_messages::wrath::CMSG_ZONEUPDATE;
+use wow_world_messages::wrath::SMSG_DESTROY_OBJECT;
+use wow_world_messages::wrath::SMSG_INIT_WORLD_STATES;
+use wow_world_messages::wrath::SMSG_TIME_SYNC_REQ;
+use wow_world_messages::wrath::SMSG_UPDATE_OBJECT;
+use wow_world_messages::wrath::SMSG_UPDATE_WORLD_STATE;
 
-pub async fn handle_cmsg_zoneupdate(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_cmsg_zoneupdate(client_manager: &ClientManager, client_id: u64, packet: &CMSG_ZONEUPDATE) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
 
-    let zone_id = {
-        let mut reader = std::io::Cursor::new(&packet.payload);
-        reader.read_u32::<LittleEndian>()?
-    };
-
     let mut character = character_lock.write().await;
-    (*character).zone_update(zone_id).await
+    (*character).zone_update(packet.area).await
 }
 
 pub async fn send_initial_world_states(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_INIT_WORLD_STATES, 8);
-    writer.write_u32::<LittleEndian>(character.map)?;
-    writer.write_u32::<LittleEndian>(character.zone)?;
-    writer.write_u32::<LittleEndian>(0)?; //area
+    SMSG_INIT_WORLD_STATES {
+        map: character.map,
+        area: character.area,
+        sub_area: Area::NorthshireValley, //TODO: implement sub-areas
 
-    //hardcode for now, should be dynamic
-    writer.write_u16::<LittleEndian>(2)?; //count of world states
-
-    writer.write_u32::<LittleEndian>(3191)?; //arena season world state id
-    writer.write_u32::<LittleEndian>(1)?;
-    writer.write_u32::<LittleEndian>(3901)?; //arena progress world state id
-    writer.write_u32::<LittleEndian>(1)?;
-
-    send_packet_to_character(character, &header, &writer).await?;
-    Ok(())
+        //TODO figure out what these world states are and where to find non-hardcoded values
+        //These need to end up in an enum
+        states: vec![
+            WorldState {
+                state: 3191, //Arena season
+                value: 1,
+            },
+            WorldState {
+                state: 3901, //Arena season progress
+                value: 1,
+            },
+        ],
+    }
+    .astd_send_to_character(character)
+    .await
 }
 
 #[allow(dead_code)]
-pub async fn send_world_state_update(character: &Character, world_state: u32, value: u32) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_WORLD_STATE, 8);
-    writer.write_u32::<LittleEndian>(world_state)?;
-    writer.write_u32::<LittleEndian>(value)?;
-
-    send_packet_to_character(character, &header, &writer).await?;
-    Ok(())
+pub async fn send_world_state_update(character: &Character, world_state: WorldState) -> Result<()> {
+    SMSG_UPDATE_WORLD_STATE { state: world_state }.astd_send_to_character(character).await
 }
 
-pub async fn send_update_packet(character: &Character, num_blocks: u32, data: &[u8]) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_UPDATE_OBJECT, 8);
-    writer.write_u32::<LittleEndian>(num_blocks)?;
-    {
-        use std::io::Write;
-        writer.write_all(data)?;
+pub async fn send_smsg_update_objects(character: &Character, objects: Vec<Object>) -> Result<()> {
+    SMSG_UPDATE_OBJECT { objects }.astd_send_to_character(character).await
+}
+
+pub async fn send_destroy_object(character: &Character, object_guid: Guid, is_death: bool) -> Result<()> {
+    SMSG_DESTROY_OBJECT {
+        guid: object_guid,
+        target_died: is_death,
     }
-
-    send_packet_to_character(character, &header, &writer).await
-}
-
-pub async fn send_destroy_object(character: &Character, object_guid: &Guid, is_death: bool) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_DESTROY_OBJECT, 9);
-    writer.write_guid_compressed(object_guid)?;
-    writer.write_u8(is_death as u8)?;
-    send_packet_to_character(character, &header, &writer).await
+    .astd_send_to_character(character)
+    .await
 }
 
 pub async fn send_time_sync(character: &Character) -> Result<()> {
-    let (header, mut writer) = create_packet(Opcodes::SMSG_TIME_SYNC_REQ, 4);
-    writer.write_u32::<LittleEndian>(character.time_sync_counter)?;
-    send_packet_to_character(character, &header, &writer).await
+    SMSG_TIME_SYNC_REQ {
+        time_sync: character.time_sync_counter,
+    }
+    .astd_send_to_character(character)
+    .await
 }
 
-pub async fn handle_cmsg_time_sync_resp(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+pub async fn handle_cmsg_time_sync_resp(client_manager: &ClientManager, client_id: u64, packet: &CMSG_TIME_SYNC_RESP) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
 
-    let mut reader = std::io::Cursor::new(&packet.payload);
-    let counter = reader.read_u32::<LittleEndian>()?;
-    let _client_ticks = reader.read_u32::<LittleEndian>()?;
-
     let character = character_lock.read().await;
-    if counter != character.time_sync_counter {
+    if packet.time_sync != character.time_sync_counter {
         warn!(
             "Character {} has time sync issues. Reported: {}, expected {}, Could be cheating?",
-            character.name, counter, character.time_sync_counter
+            character.name, packet.time_sync, character.time_sync_counter
         );
     }
     Ok(())

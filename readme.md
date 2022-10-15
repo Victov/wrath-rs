@@ -1,5 +1,5 @@
 # Wrath-rs: World of Warcraft: Wotlk server emulator in pure rust.
-This is an educational project to create  a server emulator for World of Warcraft patch 3.3.5 (12340) in Rust. It uses `async-std` to remain fully asynchronous for maximum performance. It is nowhere near playable, let alone feature complete right now. Contributions in the form of pull requests are welcome, though there is currently no well-organised backlog of issues or workflow. 
+This is an educational project to create  a server emulator for World of Warcraft patch 3.3.5 (12340) in Rust. It uses `async-std` to remain fully asynchronous for maximum performance. It is nowhere near playable, let alone feature complete right now. Contributions in the form of pull requests are welcome. Wrath-rs is part of a fantastic Rust WoW community. Be sure to check out [awesome-wow-rust](https://github.com/arlyon/awesome-wow-rust) for more cool projects and a link to our Discord.
 
 ## Current Feature Status
 - [x] Login and character creation.
@@ -9,7 +9,8 @@ This is an educational project to create  a server emulator for World of Warcraf
 - [ ] Creatures
 
 ## Getting Started
-Install Rust and clone the repo. Set up a MySQL server. wrath-rs requires a MySQL connection to manage its data. Queries in code are checked at compile-time with a live database connection, so a fully set-up database is required in order to compile the project. 
+Install Rust and clone the repo. Set up a MySQL server. wrath-rs requires a MySQL connection to manage its data. Queries in code are checked at compile-time with a live database connection, so a fully set-up database is required in order to compile the project. An optional docker setup for the database is available, see [Dockersised Setup](#dockerised-setup). Wrath-rs uses [wow_messages](https://github.com/gtker/wow_messages) for its type-safe message serde. When any messages are missing, we aim to add them to `wow_messages` and PR the changes upstream so everybody can benefit from them. 
+
 ### Database Setup
 Get a MySQL server up and running. Install `cargo sqlx` by following [these instructions](https://github.com/launchbadge/sqlx/tree/master/sqlx-cli)
 
@@ -22,6 +23,7 @@ cargo sqlx database create
 cargo sqlx migrate run
 ```
 With your favourite database browser you can now verify that the authentication database has been created and some testing accounts have been inserted to get you started. Repeat this process for the `databases/wrath-realm-db` folder. Verify that also the world database has been set up.
+
 ### Compiling the project
 Navigate to the `auth_server` folder, set up the `.env` file from provided `.env.template` and you are ready to compile and run the Authentication server.
 ```

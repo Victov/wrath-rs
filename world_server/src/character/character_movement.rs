@@ -1,21 +1,23 @@
-use crate::data::{MovementInfo, PositionAndOrientation, WorldZoneLocation};
+use crate::data::{PositionAndOrientation, WorldZoneLocation};
 use crate::handlers::movement_handler::{TeleportationDistance, TeleportationState};
 use crate::prelude::*;
-use crate::world::prelude::*;
+use crate::world::{game_object::GameObject, World};
 use std::sync::Arc;
+use wow_world_messages::wrath::{ExtraMovementFlags, MovementInfo, MovementInfo_MovementFlags};
 
 impl super::Character {
-    pub fn process_movement(&mut self, movement_info: &MovementInfo) {
-        self.movement_info = movement_info.clone();
+    pub fn process_movement(&mut self, movement_info: MovementInfo) {
+        self.movement_info = movement_info;
     }
 
     pub fn set_position(&mut self, position: &PositionAndOrientation) {
-        self.movement_info.position = position.clone();
+        self.movement_info.position = position.position;
+        self.movement_info.orientation = position.orientation;
     }
 
     fn reset_move_flags(&mut self) {
-        self.movement_info.movement_flags = 0;
-        self.movement_info.movement_flags2 = 0;
+        self.movement_info.flags = MovementInfo_MovementFlags::empty();
+        self.movement_info.extra_flags = ExtraMovementFlags::empty();
     }
 
     pub fn teleport_to(&mut self, destination: TeleportationDistance) {
@@ -23,7 +25,7 @@ impl super::Character {
     }
 
     pub(super) async fn handle_queued_teleport(&mut self, world: Arc<World>) -> Result<()> {
-        //Handle the possibility that the player may have logged out
+        //TODO: Handle the possibility that the player may have logged out
         //between queuing and handling the teleport
 
         let state = self.teleportation_state.clone();
@@ -38,7 +40,6 @@ impl super::Character {
 
     async fn execute_near_teleport(&mut self, destination: PositionAndOrientation) -> Result<()> {
         //The rest of the teleportation is handled when the client sends back this packet
-
         self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Near(destination.clone()));
 
         handlers::send_msg_move_teleport_ack(self, &destination).await?;
@@ -62,10 +63,10 @@ impl super::Character {
             .await
             .ok_or_else(|| anyhow!("Player is teleporting away from an invalid map"))?;
 
-        old_map.remove_object_by_guid(&self.guid).await;
+        old_map.remove_object_by_guid(self.get_guid()).await;
 
         let wzl = destination.clone().into();
-        handlers::send_smsg_new_world(self, destination.map, &wzl).await?;
+        handlers::send_smsg_new_world(self, destination.map, wzl).await?;
 
         self.teleportation_state = TeleportationState::Executing(TeleportationDistance::Far(destination));
         Ok(())

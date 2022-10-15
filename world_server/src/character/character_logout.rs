@@ -1,9 +1,8 @@
-use crate::data::MovementFlags;
-use crate::handlers::login_handler::{LogoutResult, LogoutSpeed};
 use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::prelude::*;
 use crate::world::prelude::*;
 use std::sync::Arc;
+use wow_world_messages::wrath::{LogoutResult, LogoutSpeed, UnitStandState};
 
 impl super::Character {
     pub(super) async fn tick_logout_state(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
@@ -23,11 +22,8 @@ impl super::Character {
     pub async fn try_logout(&mut self) -> Result<(LogoutResult, LogoutSpeed)> {
         //TODO: add checks about being in combat (refuse), etc
 
-        if self
-            .movement_info
-            .has_any_movement_flag(&[MovementFlags::Falling, MovementFlags::FallingFar])
-        {
-            return Ok((LogoutResult::FailJumpingOrFalling, LogoutSpeed::Delayed));
+        if self.movement_info.flags.get_FALLING_FAR() || self.movement_info.flags.get_FALLING_SLOW() {
+            return Ok((LogoutResult::FailureJumpingOrFalling, LogoutSpeed::Delayed));
         }
 
         let delayed = !self.is_in_rested_area();
@@ -36,7 +32,7 @@ impl super::Character {
                 self.logout_state = LogoutState::Pending(std::time::Duration::from_secs(20));
                 self.set_stunned(true)?;
                 self.set_rooted(true).await?;
-                self.set_character_stand_state(stand_state::UnitStandState::Sit).await?;
+                self.set_stand_state(UnitStandState::Sit).await?;
                 (LogoutResult::Success, LogoutSpeed::Delayed)
             }
             LogoutState::None if !delayed => {
@@ -51,11 +47,12 @@ impl super::Character {
         if let LogoutState::Pending(_) = self.logout_state {
             self.set_stunned(false)?;
             self.set_rooted(false).await?;
-            self.set_character_stand_state(stand_state::UnitStandState::Stand).await?;
+            self.set_stand_state(UnitStandState::Stand).await?;
             self.logout_state = LogoutState::None;
+            Ok(())
         } else {
+            bail!("Cancelling logout, but no logout is in progress")
         }
-        Ok(())
     }
 
     //This function will trigger every tick as long as the state is LogoutState::Executing
@@ -69,7 +66,7 @@ impl super::Character {
             .try_get_map_for_character(self)
             .await
             .ok_or_else(|| anyhow!("Invalid map during logout"))?
-            .remove_object_by_guid(&self.guid)
+            .remove_object_by_guid(self.get_guid())
             .await;
 
         handlers::send_smsg_logout_complete(self).await?;

@@ -3,26 +3,16 @@ use instance_manager::InstanceManager;
 use std::sync::Arc;
 use wrath_realm_db::RealmDatabase;
 
-pub mod character_value_helpers;
+pub mod game_object;
 mod instance_manager;
-pub mod item_value_helpers;
-pub mod map_cell;
 mod map_manager;
-pub mod map_object;
-pub mod unit_value_helpers;
-pub mod update_builder;
-pub mod value_fields;
+mod update_builder;
 
 pub mod prelude {
-    pub use super::super::constants::updates::*;
     pub use super::super::constants::*;
-    pub use super::character_value_helpers::CharacterValueHelpers;
-    pub use super::map_cell::*;
+    pub use super::game_object::*;
     pub use super::map_manager::*;
-    pub use super::map_object::*;
-    pub use super::unit_value_helpers::UnitValueHelpers;
     pub use super::update_builder::*;
-    pub use super::value_fields::*;
     pub use super::World;
 }
 

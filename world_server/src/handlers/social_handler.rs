@@ -1,24 +1,14 @@
 use crate::character::*;
-use crate::constants::social::*;
-use crate::opcodes::Opcodes;
-use crate::packet::*;
+use crate::packet::ServerMessageExt;
 use crate::prelude::*;
-use podio::{LittleEndian, WritePodExt};
 
-pub async fn send_contact_list(character: &Character, relation_types: &[RelationType]) -> Result<()> {
-    let mut mask: u32 = 0;
-    for relation_type in relation_types.iter() {
-        mask |= *relation_type as u32;
+use wow_world_messages::wrath::{RelationType, SMSG_CONTACT_LIST};
+
+pub async fn send_contact_list(character: &Character, relation_mask: RelationType) -> Result<()> {
+    SMSG_CONTACT_LIST {
+        list_mask: relation_mask,
+        relations: vec![],
     }
-    let (header, mut writer) = create_packet(Opcodes::SMSG_CONTACT_LIST, 8);
-
-    if mask == 0 {
-        return Err(anyhow!("No relation types specified for sending contact list"));
-    }
-
-    writer.write_u32::<LittleEndian>(mask)?;
-    writer.write_u32::<LittleEndian>(0)?; //zero friends, ignores, mutes, etc
-
-    send_packet_to_character(character, &header, &writer).await?;
-    Ok(())
+    .astd_send_to_character(character)
+    .await
 }
