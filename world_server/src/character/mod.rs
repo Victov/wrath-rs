@@ -15,7 +15,6 @@ use wow_world_messages::wrath::{
 };
 use wrath_realm_db::RealmDatabase;
 
-//mod character_equipment;
 mod character_logout;
 mod character_movement;
 mod character_rested;
@@ -53,7 +52,6 @@ pub struct Character {
     pub teleportation_state: TeleportationState,
     pub logout_state: LogoutState,
     rested_state: character_rested::RestedState,
-    //equipped_items: Vec<Arc<RwLock<Item>>>,
 }
 
 impl Character {
@@ -80,7 +78,6 @@ impl Character {
             teleportation_state: TeleportationState::None,
             logout_state: LogoutState::None,
             rested_state: character_rested::RestedState::NotRested,
-            //equipped_items: vec![],
         }
     }
 
@@ -157,8 +154,6 @@ impl Character {
         self.gameplay_data.set_unit_LEVEL(1);
         self.gameplay_data.set_unit_FACTIONTEMPLATE(1);
         self.gameplay_data.set_object_SCALE_X(1.0f32);
-
-        //self.load_equipment_from_database(world).await?;
 
         Ok(())
     }
@@ -299,7 +294,6 @@ impl GameObject for Character {
     }
 
     async fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
-        //self.push_create_blocks_for_items(map_manager).await?;
         let update_block = build_create_update_block_for_player(self, self)?;
         self.push_object_update(update_block);
         Ok(())
@@ -377,7 +371,7 @@ impl ReceiveUpdates for Character {
 
     async fn process_pending_updates(&mut self) -> Result<()> {
         let updates = self.get_object_updates();
-        if updates.len() > 0 {
+        if !updates.is_empty() {
             info!("sent {} pending updates to {}", updates.len(), self.name);
             handlers::send_smsg_update_objects(self, updates.clone()).await?;
             self.clear_object_updates();
