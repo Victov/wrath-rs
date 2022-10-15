@@ -36,13 +36,13 @@ mod faction_handler;
 pub use faction_handler::send_faction_list;
 
 mod world_handler;
-//pub use world_handler::handle_cmsg_time_sync_resp;
+pub use world_handler::handle_cmsg_time_sync_resp;
 pub use world_handler::handle_cmsg_zoneupdate;
-//pub use world_handler::send_destroy_object;
-//pub use world_handler::send_initial_world_states;
+pub use world_handler::send_destroy_object;
+pub use world_handler::send_initial_world_states;
 pub use world_handler::send_smsg_update_objects;
 pub use world_handler::send_time_sync;
-//pub use world_handler::send_world_state_update;
+pub use world_handler::send_world_state_update;
 
 mod social_handler;
 pub use social_handler::send_contact_list;
@@ -64,4 +64,3 @@ pub use movement_handler::send_smsg_force_move_unroot;
 pub use movement_handler::send_smsg_new_world;
 pub use movement_handler::send_smsg_stand_state_update;
 pub use movement_handler::send_smsg_transfer_pending;
-

@@ -209,7 +209,7 @@ impl MapManager {
 
                 if let Some(character) = object_lock.read().await.as_character() {
                     for guid in destroyed_guids {
-                        //handlers::send_destroy_object(character, &guid, true).await?;
+                        handlers::send_destroy_object(character, guid, true).await?;
                     }
                 }
             }
@@ -317,7 +317,7 @@ impl MapManager {
                 {
                     let mut in_range_object = in_range_object_lock.write().await;
                     if let Some(character) = in_range_object.as_character() {
-                        //handlers::send_destroy_object(character, guid, true).await?;
+                        handlers::send_destroy_object(character, guid, true).await?;
                     }
                     trace!("removed {} from range of {}", removed_object.get_guid(), in_range_object.get_guid());
                     in_range_object.remove_in_range_object(guid)?;

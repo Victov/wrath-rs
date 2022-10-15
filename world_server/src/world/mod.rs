@@ -3,9 +3,8 @@ use instance_manager::InstanceManager;
 use std::sync::Arc;
 use wrath_realm_db::RealmDatabase;
 
-mod instance_manager;
-//pub mod item_value_helpers;//Disabled because main::item is disabled
 pub mod game_object;
+mod instance_manager;
 mod map_manager;
 mod update_builder;
 
