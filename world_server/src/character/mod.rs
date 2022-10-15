@@ -290,13 +290,13 @@ impl GameObject for Character {
     }
 
     fn clear_update_mask_header(&mut self) {
-        self.gameplay_data.header_reset();
+        self.gameplay_data.dirty_reset();
     }
 
     async fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
-        let update_block = build_create_update_block_for_player(self, self)?;
-        self.push_object_update(update_block);
-        Ok(())
+        let create_block = build_create_update_block_for_player(self, self)?;
+        self.push_object_update(create_block);
+        self.process_pending_updates().await
     }
 
     fn as_character(&self) -> Option<&Character> {

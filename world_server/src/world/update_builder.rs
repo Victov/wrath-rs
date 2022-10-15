@@ -47,10 +47,17 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
         update_flag = update_flag.set_SELF()
     }
 
+    //Copy the update mask and mark every field dirty, so that we send everything we need to know
+    let mut all_dirty_update_mask = object.get_update_mask();
+    match all_dirty_update_mask {
+        wow_world_messages::wrath::UpdateMask::Player(ref mut inner) => inner.mark_fully_dirty(),
+        _ => unimplemented!(),
+    }
+
     Ok(Object {
         update_type: Object_UpdateType::CreateObject2 {
             guid3: object_guid,
-            mask2: object.get_update_mask(),
+            mask2: all_dirty_update_mask,
             movement2: MovementBlock { update_flag },
             object_type: object.get_type(),
         },

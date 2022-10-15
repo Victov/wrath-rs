@@ -87,7 +87,7 @@ impl MapManager {
 
                 if wants_to_receive_update_blocks {
                     let has_any_update_bit = if let UpdateMask::Player(update_mask) = map_object.get_update_mask() {
-                        update_mask.has_any_header_set()
+                        update_mask.has_any_dirty_fields()
                     } else {
                         bail!("any other type not supported");
                     };
@@ -164,8 +164,8 @@ impl MapManager {
                     self.query_tree.write().await.insert(query_item);
                 }
             }
-            self.update_in_range_set(object_ref).await?;
             object_lock.write().await.on_pushed_to_map(self).await?;
+            //Updating in-range-sets is taken care of during tick
         } else {
             bail!("Recieved a weak ref to a character that no longer exists");
         }
@@ -230,23 +230,23 @@ impl MapManager {
                 }
 
                 if let Some(lock_from_guid) = objects_on_map.get(&guid).and_then(|weak| weak.upgrade()) {
-                    let wants_updates = { lock_from_guid.read().await.as_update_receiver().is_some() };
+                    let wants_updates = lock_from_guid.read().await.as_update_receiver().is_some();
                     {
                         let mut write_obj = lock_from_guid.write().await;
 
                         write_obj.add_in_range_object(object_lock.read().await.get_guid(), weak_object_lock.clone())?;
 
                         if wants_updates {
-                            let update_block = build_create_update_block_for_player(&*write_obj, &*object_lock.read().await)?;
-                            write_obj.as_update_receiver_mut().unwrap().push_object_update(update_block);
+                            let create_block = build_create_update_block_for_player(&*write_obj, &*object_lock.read().await)?;
+                            write_obj.as_update_receiver_mut().unwrap().push_object_update(create_block);
                         }
                     }
                     let mut object = object_lock.write().await;
                     object.add_in_range_object(guid, weak_object_lock.clone())?;
                     let wants_updates = object.as_update_receiver().is_some();
                     if wants_updates {
-                        let update_block = build_create_update_block_for_player(&*object, &*lock_from_guid.read().await)?;
-                        object.as_update_receiver_mut().unwrap().push_object_update(update_block);
+                        let create_block = build_create_update_block_for_player(&*object, &*lock_from_guid.read().await)?;
+                        object.as_update_receiver_mut().unwrap().push_object_update(create_block);
                     }
                 } else {
                     error!("Map manager had a GUID in its spacial querying tree that wasn't known in the objects on the map");
