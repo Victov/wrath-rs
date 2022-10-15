@@ -1,13 +1,12 @@
 use super::character::*;
 use super::client_manager::ClientManager;
 use crate::handlers::handle_cmsg_auth_session;
-//use crate::handlers::login_handler::LogoutState;
+use crate::handlers::login_handler::LogoutState;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::World;
 use async_std::net::TcpStream;
 use async_std::sync::{Mutex, RwLock};
-use async_std::task;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use wow_srp::wrath_header::ProofSeed;
@@ -62,7 +61,6 @@ impl Client {
     }
 
     pub async fn tick(&self, delta_time: f32, world: Arc<World>) -> Result<()> {
-        /*
         let mut should_return_to_character_select: bool = false;
         if let Some(character_lock) = &self.data.read().await.active_character {
             let mut character = character_lock.write().await;
@@ -76,7 +74,6 @@ impl Client {
             data.active_character = None;
             data.client_state = ClientState::CharacterSelection;
         }
-        */
         Ok(())
     }
 

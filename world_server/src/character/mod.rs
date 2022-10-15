@@ -4,7 +4,6 @@ use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags,
 use crate::handlers::login_handler::LogoutState;
 use crate::handlers::movement_handler::TeleportationState;
 //use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
-//use crate::item::Item;
 use crate::prelude::*;
 use async_std::sync::RwLock;
 use std::collections::HashMap;
@@ -163,7 +162,7 @@ impl Character {
         handlers::send_bind_update(self).await?;
         handlers::send_dungeon_difficulty(self).await?;
         handlers::send_action_buttons(self).await?;
-        //handlers::send_initial_world_states(self).await?;
+        handlers::send_initial_world_states(self).await?;
         handlers::send_login_set_time_speed(self).await
     }
 
@@ -174,8 +173,6 @@ impl Character {
         handlers::send_tutorial_flags(self).await?;
         handlers::send_faction_list(self).await?;
         handlers::send_time_sync(self).await?;
-        //handlers::send_world_state_update(&self, 0xF3D, 0).await?;
-        //handlers::send_world_state_update(&self, 0xC77, 0).await?;
         Ok(())
     }
 
@@ -186,14 +183,14 @@ impl Character {
 
         trace!("Received zone update for character {} into zone {}", self.name, area);
         self.area = area;
-        //handlers::send_initial_world_states(self).await
-        Ok(())
+        handlers::send_initial_world_states(self).await
     }
 
     pub fn reset_time_sync(&mut self) {
         self.time_sync_cooldown = 0.0;
         self.time_sync_counter = 0;
     }
+
     pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
         self.tick_time_sync(delta_time).await?;
         self.tick_logout_state(delta_time, world.clone()).await?;
@@ -208,8 +205,8 @@ impl Character {
         self.time_sync_cooldown -= delta_time;
         if self.time_sync_cooldown < 0f32 {
             self.time_sync_cooldown += 10f32;
-            self.time_sync_counter += 1;
-            //handlers::send_time_sync(self).await?;
+            self.time_sync_counter = self.time_sync_counter.wrapping_add(1);
+            handlers::send_time_sync(self).await?;
         }
         Ok(())
     }
@@ -372,7 +369,6 @@ impl ReceiveUpdates for Character {
     async fn process_pending_updates(&mut self) -> Result<()> {
         let updates = self.get_object_updates();
         if !updates.is_empty() {
-            info!("sent {} pending updates to {}", updates.len(), self.name);
             handlers::send_smsg_update_objects(self, updates.clone()).await?;
             self.clear_object_updates();
         }

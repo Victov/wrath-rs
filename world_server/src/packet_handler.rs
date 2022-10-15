@@ -90,6 +90,7 @@ impl PacketHandler {
             ClientOpcodeMessage::MSG_MOVE_FALL_LAND(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_START_SWIM(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_STOP_SWIM(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
+            ClientOpcodeMessage::MSG_MOVE_STOP_TURN(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_SET_FACING(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_HEARTBEAT(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_TELEPORT_ACK(data) => handle_msg_move_teleport_ack(client_manager, packet.client_id, data).await,
@@ -101,6 +102,7 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_WORLD_STATE_UI_TIMER_UPDATE(data) => {
                 handle_cmsg_world_state_ui_timer_update(client_manager, packet.client_id, data).await
             }
+            ClientOpcodeMessage::CMSG_TIME_SYNC_RESP(data) => handle_cmsg_time_sync_resp(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_ZONEUPDATE(data) => handle_cmsg_zoneupdate(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_AREATRIGGER(data) => handle_cmsg_areatrigger(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_FORCE_MOVE_ROOT_ACK(_) => Ok(()),
