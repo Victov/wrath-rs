@@ -93,10 +93,14 @@ pub enum TeleportationDistance {
 }
 
 pub async fn send_msg_move_teleport_ack(character: &Character, destination: &PositionAndOrientation) -> Result<()> {
+    let mut movement_info = character.get_movement_info().clone();
+    movement_info.position = destination.position;
+    movement_info.orientation = destination.orientation;
+
     MSG_MOVE_TELEPORT_ACK_Server {
         guid: character.get_guid(),
         movement_counter: 0, //TODO: Value should increment with every teleport?
-        info: character.get_movement_info().clone(),
+        info: movement_info,
     }
     .astd_send_to_character(character)
     .await

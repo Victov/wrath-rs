@@ -3,19 +3,14 @@ use super::packet_handler::PacketToHandle;
 use crate::data::DataStorage;
 use crate::prelude::*;
 use crate::world::World;
-use async_std::net::{TcpListener, TcpStream};
-use async_std::prelude::*;
+use async_std::net::TcpListener;
 use async_std::stream::StreamExt;
 use async_std::sync::{Mutex, RwLock};
 use async_std::task;
 use rand::{thread_rng, RngCore};
-use std::borrow::BorrowMut;
 use std::collections::HashMap;
-use std::ops::DerefMut;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use wow_srp::wrath_header::ServerCrypto;
-use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
 use wrath_auth_db::AuthDatabase;
 
 pub struct ClientManager {

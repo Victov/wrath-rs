@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub enum UnitFlags {
     Unk0 = 0x00000001,
     NonAttackable = 0x00000002,

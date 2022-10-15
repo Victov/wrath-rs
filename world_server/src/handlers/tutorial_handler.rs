@@ -1,11 +1,5 @@
-use crate::client_manager::ClientManager;
-use crate::opcodes::Opcodes;
-use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::{character::*, packet::ServerMessageExt};
-use bit_field::BitArray;
-use podio::{LittleEndian, ReadPodExt};
-use std::convert::TryInto;
 
 pub async fn send_tutorial_flags(character: &Character) -> Result<()> {
     wow_world_messages::wrath::SMSG_TUTORIAL_FLAGS {

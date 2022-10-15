@@ -1,7 +1,7 @@
 use super::client::Client;
 use crate::{character::*, prelude::*, world::game_object::GameObject, world::World};
 use async_std::prelude::*;
-use std::{borrow::Borrow, ops::Deref, pin::Pin};
+use std::{borrow::Borrow, pin::Pin};
 use wow_world_messages::wrath::ServerMessage;
 
 pub trait ServerMessageExt: ServerMessage {

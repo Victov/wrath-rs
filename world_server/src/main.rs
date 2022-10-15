@@ -20,7 +20,6 @@ mod console_input;
 mod constants;
 mod data;
 pub mod handlers;
-//pub mod item; //Disabled because Guids need refactor to support highGuids
 mod opcodes;
 mod packet;
 mod packet_handler;

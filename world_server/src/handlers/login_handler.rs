@@ -157,7 +157,7 @@ pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
     .await
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum LogoutState {
     None,
     Pending(std::time::Duration),
@@ -165,7 +165,7 @@ pub enum LogoutState {
     ReturnToCharSelect,
 }
 
-pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, client_id: u64, packet: &CMSG_LOGOUT_REQUEST) -> Result<()> {
+pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_LOGOUT_REQUEST) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
 
     let (result, speed) = {
@@ -177,7 +177,7 @@ pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, client_i
     SMSG_LOGOUT_RESPONSE { result, speed }.astd_send_to_client(client).await
 }
 
-pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, client_id: u64, packet: &CMSG_LOGOUT_CANCEL) -> Result<()> {
+pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_LOGOUT_CANCEL) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
     let mut character = character_lock.write().await;

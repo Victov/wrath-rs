@@ -66,7 +66,7 @@ impl InstanceManager {
         Ok(())
     }
 
-    fn is_instance(&self, map_id: Map) -> bool {
+    fn is_instance(&self, _map_id: Map) -> bool {
         //TODO: implement based on DBC storage
         false
     }
