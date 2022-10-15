@@ -110,7 +110,9 @@ impl Client {
 
     async fn handle_incoming_packets(&self, packet_channel: Sender<PacketToHandle>) -> Result<()> {
         loop {
-            assert!(self.is_authenticated().await);
+            if !self.is_authenticated().await {
+                break;
+            }
             let opcode = {
                 let decryptor_opt: &mut Option<ServerDecrypterHalf> = &mut *self.decryption.lock().await;
                 if let Some(decryption) = decryptor_opt.as_mut() {
@@ -120,17 +122,14 @@ impl Client {
                     bail!("Encryption didn't exist");
                 }
             };
-            if let Err(e) = opcode {
-                warn!(
-                    "Error in opcode: {:?}. The opcode is probably unknown in the wow_messages crate for this version",
-                    e
-                );
-                break;
+            if let Ok(op) = opcode {
+                packet_channel.send(PacketToHandle {
+                    client_id: self.id,
+                    payload: Box::new(op),
+                })?;
+            } else if let Err(e) = opcode {
+                warn!("Error in opcode: {:?}.", e);
             }
-            packet_channel.send(PacketToHandle {
-                client_id: self.id,
-                payload: Box::new(opcode.unwrap()),
-            })?;
         }
         Ok(())
     }

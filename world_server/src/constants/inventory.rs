@@ -22,8 +22,8 @@ pub enum EquipmentSlot {
 }
 
 pub const EQUIPMENT_SLOTS_START: u8 = 0;
-pub const EQUIPMENT_SLOTS_END: u8 = 18;
-pub const BAG_SLOTS_START: u8 = 19;
+pub const _EQUIPMENT_SLOTS_END: u8 = 18;
+pub const _BAG_SLOTS_START: u8 = 19;
 pub const BAG_SLOTS_END: u8 = 22;
 
 #[allow(dead_code)]

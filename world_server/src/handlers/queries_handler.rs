@@ -89,7 +89,7 @@ async fn send_name_query_response(receiver: &Client, target_character: &Characte
         race: target_character.get_race(),
         class: target_character.get_class(),
         gender: target_character.get_gender(),
-        has_declined_names: wow_world_messages::wrath::SMSG_NAME_QUERY_RESPONSE_HasDeclinedNames::No,
+        has_declined_names: wow_world_messages::wrath::SMSG_NAME_QUERY_RESPONSE_DeclinedNames::No,
     }
     .astd_send_to_client(receiver)
     .await
