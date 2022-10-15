@@ -87,13 +87,25 @@ async fn main() -> Result<()> {
 
     let desired_timestep_sec: f32 = 1.0 / 10.0;
     let mut previous_loop_total: f32 = desired_timestep_sec;
+
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let before = std::time::Instant::now();
         client_manager.tick(previous_loop_total, world.clone()).await.unwrap_or_else(|e| {
             error!("Error while ticking clients: {}", e);
         });
         realm_packet_handler.handle_queue(client_manager.clone(), world.clone()).await?;
-        world.tick(previous_loop_total).await?;
+        #[cfg(debug_assertions)]
+        {
+            use async_std::future;
+            let res = future::timeout(Duration::from_secs_f32(10.0f32), world.tick(previous_loop_total)).await?;
+            if res.is_err() {
+                panic!("deadlock: {:?}", res);
+            }
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            world.tick(previous_loop_total).await?;
+        }
         let after = std::time::Instant::now();
         let update_duration = after.duration_since(before);
         if update_duration.as_secs_f32() < desired_timestep_sec {
