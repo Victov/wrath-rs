@@ -69,7 +69,6 @@ impl MapManager {
 
     pub async fn tick(&self, _delta_time: f32) -> Result<()> {
         self.rebuild_object_querying_tree().await?;
-
         let any_removed = self.process_remove_queue().await?;
         let any_added = self.process_add_queue().await?;
 
@@ -101,22 +100,23 @@ impl MapManager {
                             map_object.as_update_receiver_mut().unwrap().push_object_update(out_of_range_update);
                         }
 
-                        let values_update = build_values_update_block(&*map_object)?;
+                        if has_any_update_bit {
+                            let values_update = build_values_update_block(&*map_object)?;
+                            map_object.as_update_receiver_mut().unwrap().push_object_update(values_update.clone());
 
-                        map_object.as_update_receiver_mut().unwrap().push_object_update(values_update.clone());
-
-                        let in_range_guids = map_object.get_in_range_guids();
-                        for in_range_object_lock in in_range_guids
-                            .iter()
-                            .filter_map(|guid| map_objects.get(guid))
-                            .filter_map(|weak| weak.upgrade())
-                        {
-                            let mut in_range_object = in_range_object_lock.write().await;
-                            if let Some(update_receiver) = in_range_object.as_update_receiver_mut() {
-                                update_receiver.push_object_update(values_update.clone());
+                            let in_range_guids = map_object.get_in_range_guids();
+                            for in_range_object_lock in in_range_guids
+                                .iter()
+                                .filter_map(|guid| map_objects.get(guid))
+                                .filter_map(|weak| weak.upgrade())
+                            {
+                                let mut in_range_object = in_range_object_lock.write().await;
+                                if let Some(update_receiver) = in_range_object.as_update_receiver_mut() {
+                                    update_receiver.push_object_update(values_update.clone());
+                                }
                             }
+                            map_object.clear_update_mask_header();
                         }
-                        map_object.clear_update_mask_header();
                     }
 
                     map_object.as_update_receiver_mut().unwrap().process_pending_updates().await?;
@@ -164,9 +164,7 @@ impl MapManager {
                     self.query_tree.write().await.insert(query_item);
                 }
             }
-
             self.update_in_range_set(object_ref).await?;
-
             object_lock.write().await.on_pushed_to_map(self).await?;
         } else {
             bail!("Recieved a weak ref to a character that no longer exists");
@@ -247,7 +245,7 @@ impl MapManager {
                     object.add_in_range_object(guid, weak_object_lock.clone())?;
                     let wants_updates = object.as_update_receiver().is_some();
                     if wants_updates {
-                        let update_block = build_create_update_block_for_player(&*object, &*object_lock.read().await)?;
+                        let update_block = build_create_update_block_for_player(&*object, &*lock_from_guid.read().await)?;
                         object.as_update_receiver_mut().unwrap().push_object_update(update_block);
                     }
                 } else {
