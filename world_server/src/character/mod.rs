@@ -219,6 +219,15 @@ impl Character {
         client.get_active_character().await
     }
 
+    pub fn set_selection(&mut self, new_selection: Option<Guid>) {
+        let guid = new_selection.unwrap_or_else(Guid::zero);
+        self.gameplay_data.set_unit_TARGET(guid);
+    }
+
+    pub fn get_selection(&self) -> Option<Guid> {
+        self.gameplay_data.unit_TARGET().and_then(|g| if g.is_zero() { None } else { Some(g) })
+    }
+
     //-------------------
     //BEGIN STUFF THAT NEEDS TO MOVE TO UpdateMaskExt
     //-------------------

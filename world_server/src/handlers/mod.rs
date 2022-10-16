@@ -46,6 +46,7 @@ pub use world_handler::send_time_sync;
 pub use world_handler::send_world_state_update;
 
 mod social_handler;
+pub use social_handler::handle_csmg_set_selection;
 pub use social_handler::send_contact_list;
 
 mod queries_handler;
