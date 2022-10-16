@@ -21,7 +21,7 @@ use wow_world_messages::wrath::SMSG_AUTH_CHALLENGE;
 use wow_world_messages::Guid;
 use wrath_auth_db::AuthDatabase;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum ClientState {
     PreLogin,
     CharacterSelection,
@@ -130,7 +130,7 @@ impl Client {
                     error!("IO error during parsing, there is no recovery from this, disconnect client");
                     break;
                 }
-                warn!("Error in opcode: {:?}.", e);
+                warn!("Error in opcode: {}.", e);
             }
         }
         Ok(())
