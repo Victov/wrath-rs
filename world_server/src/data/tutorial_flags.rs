@@ -83,4 +83,8 @@ impl TutorialFlags {
             Ok(res)
         }
     }
+
+    pub fn reset(&mut self) {
+        self.flag_data = [0; 8];
+    }
 }

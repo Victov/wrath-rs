@@ -29,7 +29,8 @@ mod voice_chat_handler;
 pub use voice_chat_handler::send_voice_chat_status;
 
 mod tutorial_handler;
-//pub use tutorial_handler::handle_cmsg_tutorial_flag;
+pub use tutorial_handler::handle_cmsg_tutorial_flag;
+pub use tutorial_handler::handle_cmsg_tutorial_reset;
 pub use tutorial_handler::send_tutorial_flags;
 
 mod faction_handler;
