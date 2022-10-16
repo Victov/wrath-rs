@@ -9,6 +9,9 @@ use async_std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
+use wow_dbc::wrath_tables::chr_classes::ChrClassesKey;
+use wow_dbc::wrath_tables::chr_races::ChrRacesKey;
+use wow_dbc::Indexable;
 use wow_world_messages::wrath::{
     Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UnitStandState, UpdateMask, UpdatePlayer, Vector3d,
 };
@@ -132,21 +135,22 @@ impl Character {
         let race = Race::try_from(db_entry.race)?;
         let class = Class::try_from(db_entry.class)?;
 
-        if let Some(race_info) = data_storage.get_char_races().get_entry(race.as_int() as u32) {
+        if let Some(race_info) = data_storage.get_dbc_chr_races()?.get(&ChrRacesKey::new(race.as_int() as i32)) {
             let display_id = match gender {
-                Gender::Male => race_info.male_model_id,
-                _ => race_info.female_model_id,
-            } as i32;
+                Gender::Male => race_info.male_display_id,
+                _ => race_info.female_display_id,
+            }
+            .id;
             self.gameplay_data.set_unit_DISPLAYID(display_id);
             self.gameplay_data.set_unit_NATIVEDISPLAYID(display_id);
         }
 
         let class_info = data_storage
-            .get_char_classes()
-            .get_entry(class.as_int() as u32)
+            .get_dbc_chr_classes()?
+            .get(&ChrClassesKey::new(class.as_int() as i32))
             .ok_or_else(|| anyhow!("No classinfo for this class"))?;
 
-        let power = Power::try_from(class_info.power_type as u8)?;
+        let power = Power::try_from(class_info.display_power as u8)?;
         self.gameplay_data.set_unit_BYTES_0(race, class, gender, power);
         self.gameplay_data.set_unit_HEALTH(100);
         self.gameplay_data.set_unit_MAXHEALTH(100);
