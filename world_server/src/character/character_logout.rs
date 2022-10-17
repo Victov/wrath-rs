@@ -30,7 +30,7 @@ impl super::Character {
         Ok(match self.logout_state {
             LogoutState::None if delayed => {
                 self.logout_state = LogoutState::Pending(std::time::Duration::from_secs(20));
-                self.set_stunned(true)?;
+                self.set_stunned(true);
                 self.set_rooted(true).await?;
                 self.set_stand_state(UnitStandState::Sit).await?;
                 (LogoutResult::Success, LogoutSpeed::Delayed)
@@ -45,7 +45,7 @@ impl super::Character {
 
     pub async fn cancel_logout(&mut self) -> Result<()> {
         if let LogoutState::Pending(_) = self.logout_state {
-            self.set_stunned(false)?;
+            self.set_stunned(false);
             self.set_rooted(false).await?;
             self.set_stand_state(UnitStandState::Stand).await?;
             self.logout_state = LogoutState::None;
