@@ -191,7 +191,7 @@ pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, client_id: 
 
     let trigger_data = client_manager
         .data_storage
-        .get_area_trigger(area_trigger_id)
+        .get_area_trigger(area_trigger_id as i32)
         .ok_or_else(|| anyhow!("Character entered area trigger that isn't known to the server"))?;
 
     if let AreaTriggerPurpose::Teleport(teleport_data) = &trigger_data.purpose {
