@@ -76,7 +76,7 @@ impl super::DataStorage {
                     purpose,
                 };
 
-                self.area_triggers.insert(areatrigger_final.id.id as u32, areatrigger_final);
+                self.area_triggers.insert(areatrigger_final.id, areatrigger_final);
             }
         }
 

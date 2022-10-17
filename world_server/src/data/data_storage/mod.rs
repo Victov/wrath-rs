@@ -4,7 +4,7 @@ use async_std::{
     path::PathBuf,
 };
 use std::sync::Arc;
-use wow_dbc::wrath_tables::{chr_classes::ChrClasses, chr_races::ChrRaces};
+use wow_dbc::wrath_tables::{area_trigger::AreaTriggerKey, chr_classes::ChrClasses, chr_races::ChrRaces};
 use wrath_realm_db::RealmDatabase;
 
 mod area_triggers;
@@ -15,10 +15,7 @@ pub struct DataStorage {
     dbc_chr_races: Option<ChrRaces>,
     dbc_chr_classes: Option<ChrClasses>,
     dbc_chr_map: Option<wow_dbc::wrath_tables::map::Map>,
-    //TODO refactor key type to be AreaTriggerKey instead of u32,
-    //currently blocked by https://github.com/gtker/wow_dbc/issues/1
-    //since AreaTriggerKey does not derive Hash
-    area_triggers: std::collections::hash_map::HashMap<u32, AreaTrigger>,
+    area_triggers: std::collections::hash_map::HashMap<AreaTriggerKey, AreaTrigger>,
 }
 
 async fn load_standard_dbc<T: wow_dbc::DbcTable>(folder_path: impl Into<&str>, table: &mut Option<T>) -> Result<()> {
@@ -73,7 +70,7 @@ impl DataStorage {
 
     //Area triggers need special treatment from joint DBC and Mysql data sources, so they don't use
     //forward_dbc_getter
-    pub fn get_area_trigger(&self, area_trigger_id: u32) -> Option<&AreaTrigger> {
-        self.area_triggers.get(&area_trigger_id)
+    pub fn get_area_trigger(&self, key: impl Into<AreaTriggerKey>) -> Option<&AreaTrigger> {
+        self.area_triggers.get(&key.into())
     }
 }
