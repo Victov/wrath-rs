@@ -4,7 +4,9 @@ use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags,
 use crate::handlers::login_handler::LogoutState;
 use crate::handlers::movement_handler::TeleportationState;
 use crate::prelude::*;
+use crate::world::prelude::unit_flags::{UnitFlagIndex, UnitFlags};
 use async_std::sync::RwLock;
+use bit_field::BitField;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -233,9 +235,15 @@ impl Character {
     //BEGIN STUFF THAT NEEDS TO MOVE TO UpdateMaskExt
     //-------------------
     async fn set_stand_state(&mut self, state: UnitStandState) -> Result<()> {
-        //TODO: stand state is one of the unit bytes, figure out which
-        //self.gameplay_data.set_unit_BYTES_1(a, b, c, d)
+        let (_, b, c, d) = self.gameplay_data.unit_BYTES_1().unwrap_or_default();
+        self.gameplay_data.set_unit_BYTES_1(state, b, c, d);
         handlers::send_smsg_stand_state_update(self, state).await
+    }
+
+    fn set_unit_flag_byte(&mut self, unit_flag: UnitFlagIndex, value: bool) {
+        let mut unit_flags: i32 = self.gameplay_data.unit_FLAGS().unwrap_or(0);
+        unit_flags.set_bit(unit_flag as usize, value);
+        self.gameplay_data.set_unit_FLAGS(unit_flags);
     }
 
     async fn set_rooted(&self, rooted: bool) -> Result<()> {
@@ -246,10 +254,8 @@ impl Character {
         }
     }
 
-    fn set_stunned(&mut self, _stunned: bool) -> Result<()> {
-        //TODO: modify 1 bit in self.gameplay_data.unit_FLAGS
-        //see UnitFlags for index
-        Ok(())
+    fn set_stunned(&mut self, stunned: bool) {
+        self.set_unit_flag_byte(UnitFlagIndex::Stunned, stunned)
     }
 
     fn set_rested_bytes(&mut self, rested: bool) -> Result<()> {

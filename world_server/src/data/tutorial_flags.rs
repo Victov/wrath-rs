@@ -77,7 +77,7 @@ impl TutorialFlags {
         let db_tutorial_data: &[u8] = database_character_info.tutorial_data.as_slice();
 
         if db_tutorial_data.len() != 32 {
-            bail!("Incorrect database array size")
+            Ok(Default::default())
         } else {
             let res: TutorialFlags = db_tutorial_data.try_into()?;
             Ok(res)
