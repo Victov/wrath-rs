@@ -235,7 +235,7 @@ impl Character {
     //BEGIN STUFF THAT NEEDS TO MOVE TO UpdateMaskExt
     //-------------------
     async fn set_stand_state(&mut self, state: UnitStandState) -> Result<()> {
-        let (_, b, c, d) = self.gameplay_data.unit_BYTES_1().unwrap_or_else(|| Default::default());
+        let (_, b, c, d) = self.gameplay_data.unit_BYTES_1().unwrap_or_default();
         self.gameplay_data.set_unit_BYTES_1(state, b, c, d);
         handlers::send_smsg_stand_state_update(self, state).await
     }

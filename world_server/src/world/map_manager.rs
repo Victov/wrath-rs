@@ -293,7 +293,7 @@ impl MapManager {
         };
         let any_to_remove = !cloned_remove_queue.is_empty();
 
-        for &to_remove in cloned_remove_queue.iter() {
+        for to_remove in cloned_remove_queue {
             self.remove_object_by_guid_internal(to_remove).await?;
         }
 

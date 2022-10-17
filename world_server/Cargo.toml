@@ -31,7 +31,7 @@ wow_srp = { version = "0.5" }
 #use specific git rev until release 0.1.1 arrivse on crates
 wow_dbc = { git = "https://github.com/gtker/wow_dbc.git", rev = "aac5da774d4861008120f18e0f5b74087f1bba45", features = ["wrath"] }
 
-wow_world_messages = { git="https://github.com/gtker/wow_messages.git", rev="d79d46f5ab5d6575287222809ab1ad77de4351eb", features=["wrath", "async-std", "chrono"] }
+wow_world_messages = { git="https://github.com/gtker/wow_messages.git", rev="3f81f16be42a4d516fa799984b64104f560c5717", features=["wrath", "async-std", "chrono"] }
 #For local testing purposes, one may want to switch to this local path version of wow_world_messages. Do not commit with this though
 #wow_world_messages = { path = "../../wow_messages/wow_world_messages", features=["wrath", "async-std", "chrono"] }
 
