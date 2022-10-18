@@ -47,6 +47,10 @@ impl super::RealmDatabase {
             //Cannot already have starting equipment
             assert_eq!(self.get_all_character_equipment(character_id).await?.len(), 0);
         }
+        //TODO refactor: inventory_type IS NOT slot_id
+        //https://github.com/mangostwo/server/blob/13d56bd1b7f7289596bf3ebf0b6aec83f36e8398/src/game/Object/Player.cpp#L10160
+        //Remap from inventory_type to slot_id before inserting.
+        //The below zip of (inventory_type) and then calling it slot_id is WRONG
 
         //Have to use slightly more complicated query builder syntax to bulk-insert.
         //Bulk insert is vastly faster than for-looping each item and "regular" inserting the items
