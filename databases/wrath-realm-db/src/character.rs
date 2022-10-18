@@ -80,8 +80,8 @@ impl super::RealmDatabase {
         }
     }
 
-    pub async fn create_character(&self, params: &DBCharacterCreateParameters) -> Result<()> {
-        sqlx::query!("INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`, `map`, `x`, `y`, `z`, `o`) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?,?);",
+    pub async fn create_character(&self, params: &DBCharacterCreateParameters) -> Result<u64> {
+        let result = sqlx::query!("INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`, `map`, `x`, `y`, `z`, `o`) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?,?);",
         params.account_id,
         params.name,
         params.race,
@@ -99,7 +99,8 @@ impl super::RealmDatabase {
         params.o)
             .execute(&self.connection_pool)
             .await?;
-        Ok(())
+
+        Ok(result.last_insert_id())
     }
 
     pub async fn get_character(&self, character_id: u32) -> Result<DBCharacter> {

@@ -1,6 +1,7 @@
 use crate::character::Character;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
+use crate::data::DataStorage;
 use crate::packet::*;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
@@ -8,6 +9,7 @@ use crate::world::World;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
+use wow_dbc::DbcTable;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
@@ -17,6 +19,7 @@ use wow_world_messages::wrath::SMSG_CHAR_CREATE;
 use wow_world_messages::wrath::SMSG_LOGIN_VERIFY_WORLD;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
+use wrath_realm_db::RealmDatabase;
 
 pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
@@ -147,8 +150,8 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
         return Ok(());
     }
 
-    let result = realm_db.create_character(&create_params).await;
-    if result.is_err() {
+    let insert_result = realm_db.create_character(&create_params).await;
+    if insert_result.is_err() {
         SMSG_CHAR_CREATE {
             result: WorldResult::CharCreateFailed,
         }
@@ -158,6 +161,9 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
         return Err(anyhow!("Failed to insert character into database"));
     }
 
+    //Safe to unwrap since we caught is_err() just above
+    let inserted_character_id = insert_result.unwrap();
+
     let realm_id = std::env::var("REALM_ID")?.parse()?;
     let num_chars = realm_db.get_num_characters_for_account(account_id).await?;
     client_manager
@@ -165,11 +171,44 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
         .set_num_characters_on_realm(account_id, realm_id, num_chars)
         .await?;
 
+    give_character_start_equipment(
+        inserted_character_id as u32,
+        data.race,
+        data.class,
+        data.gender,
+        &client_manager.data_storage,
+        &realm_db,
+    )
+    .await?;
+
     SMSG_CHAR_CREATE {
         result: WorldResult::CharCreateSuccess,
     }
     .astd_send_to_client(client)
     .await
+}
+
+async fn give_character_start_equipment(
+    character_id: u32,
+    race: Race,
+    class: Class,
+    gender: Gender,
+    data_storage: &DataStorage,
+    realm_db: &RealmDatabase,
+) -> Result<()> {
+    let start_outfit_info = data_storage
+        .get_dbc_char_start_outfit()?
+        .rows()
+        .iter()
+        .find(|row| row.class_id.id == class.as_int() as i32 && row.race_id.id == race.as_int() as i32 && row.sex_id == gender.as_int() as i8)
+        .ok_or_else(|| anyhow!("Class/Race/Gender combination not found for starting outfit"))?;
+
+    info!("Start equipment: {:?}", start_outfit_info);
+    realm_db
+        .give_character_start_equipment(character_id, start_outfit_info.item_id, start_outfit_info.inventory_type)
+        .await?;
+
+    Ok(())
 }
 
 pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &World, client_id: u64, data: &CMSG_PLAYER_LOGIN) -> Result<()> {
