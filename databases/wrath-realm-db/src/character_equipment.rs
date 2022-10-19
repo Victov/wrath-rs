@@ -1,5 +1,5 @@
 use anyhow::Result;
-use sqlx::{query, query_builder, MySql, QueryBuilder};
+use sqlx::{MySql, QueryBuilder};
 
 pub struct DBCharacterEquipment {
     pub character_id: u32,
@@ -41,21 +41,23 @@ impl super::RealmDatabase {
         Ok(res)
     }
 
-    pub async fn give_character_start_equipment(&self, character_id: u32, item_ids: [i32; 24], inventory_type: [i32; 24]) -> Result<()> {
+    pub async fn give_character_start_equipment(
+        &self,
+        character_id: u32,
+        item_ids: [i32; 24],
+        slot_ids: impl IntoIterator<Item = i32> + Clone,
+    ) -> Result<()> {
         #[cfg(debug_assertions)]
         {
             //Cannot already have starting equipment
             assert_eq!(self.get_all_character_equipment(character_id).await?.len(), 0);
+            assert_eq!(slot_ids.clone().into_iter().count(), 24);
         }
-        //TODO refactor: inventory_type IS NOT slot_id
-        //https://github.com/mangostwo/server/blob/13d56bd1b7f7289596bf3ebf0b6aec83f36e8398/src/game/Object/Player.cpp#L10160
-        //Remap from inventory_type to slot_id before inserting.
-        //The below zip of (inventory_type) and then calling it slot_id is WRONG
 
         //Have to use slightly more complicated query builder syntax to bulk-insert.
         //Bulk insert is vastly faster than for-looping each item and "regular" inserting the items
         //one by one.
-        let insert_iter = item_ids.iter().zip(inventory_type).filter_map(|(&item, slot_id)| {
+        let insert_iter = item_ids.iter().zip(slot_ids).filter_map(|(&item, slot_id)| {
             if item != -1 && slot_id != -1 {
                 Some(DBCharacterEquipment {
                     character_id,

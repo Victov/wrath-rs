@@ -203,9 +203,25 @@ async fn give_character_start_equipment(
         .find(|row| row.class_id.id == class.as_int() as i32 && row.race_id.id == race.as_int() as i32 && row.sex_id == gender.as_int() as i8)
         .ok_or_else(|| anyhow!("Class/Race/Gender combination not found for starting outfit"))?;
 
-    info!("Start equipment: {:?}", start_outfit_info);
+    let slot_ids = start_outfit_info
+        .inventory_type
+        .iter()
+        .map(|&inv_type| {
+            let inventory_type: InventoryType = (inv_type as u8).try_into()?;
+            let slots_vec = get_compatible_equipment_slots_for_inventory_type(&inventory_type);
+            if slots_vec.len() == 1 {
+                slots_vec.get(0).copied().ok_or_else(|| anyhow!("Not an item that can be equipped"))
+            } else {
+                //TODO: for example DKs start with 4 bags, but in order to spread items over the
+                //bagslots we would have to refactor this to actually give the items to the
+                //character or keeping track of occupied slots.
+                bail!("Spreading items over slots is not implemented right now");
+            }
+        })
+        .map(|res: anyhow::Result<EquipmentSlot, anyhow::Error>| if let Ok(s) = res { s as i32 } else { -1 });
+
     realm_db
-        .give_character_start_equipment(character_id, start_outfit_info.item_id, start_outfit_info.inventory_type)
+        .give_character_start_equipment(character_id, start_outfit_info.item_id, slot_ids)
         .await?;
 
     Ok(())
