@@ -1,7 +1,10 @@
 use crate::character::Character;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
+use crate::data::CharacterInventory;
 use crate::data::DataStorage;
+use crate::data::SimpleCharacterInventory;
+use crate::data::SimpleItemDescription;
 use crate::packet::*;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
@@ -203,22 +206,23 @@ async fn give_character_start_equipment(
         .find(|row| row.class_id.id == class.as_int() as i32 && row.race_id.id == race.as_int() as i32 && row.sex_id == gender.as_int() as i8)
         .ok_or_else(|| anyhow!("Class/Race/Gender combination not found for starting outfit"))?;
 
-    let slot_ids = start_outfit_info
+    let mut dummy_inventory = SimpleCharacterInventory::new();
+    let slot_ids: Vec<i32> = start_outfit_info
         .inventory_type
         .iter()
-        .map(|&inv_type| {
+        .zip(start_outfit_info.item_id)
+        .map(|(&inv_type, item_id)| {
             let inventory_type: InventoryType = (inv_type as u8).try_into()?;
-            let slots_vec = get_compatible_equipment_slots_for_inventory_type(&inventory_type);
-            if slots_vec.len() == 1 {
-                slots_vec.get(0).copied().ok_or_else(|| anyhow!("Not an item that can be equipped"))
-            } else {
-                //TODO: for example DKs start with 4 bags, but in order to spread items over the
-                //bagslots we would have to refactor this to actually give the items to the
-                //character or keeping track of occupied slots.
-                bail!("Spreading items over slots is not implemented right now");
-            }
+
+            let sid = SimpleItemDescription {
+                item_id: item_id as u32,
+                inventory_type,
+            };
+
+            dummy_inventory.try_insert_item(sid).map(|res| res.to_owned())
         })
-        .map(|res: anyhow::Result<EquipmentSlot, anyhow::Error>| if let Ok(s) = res { s as i32 } else { -1 });
+        .map(|res: anyhow::Result<EquipmentSlot, anyhow::Error>| if let Ok(s) = res { s as i32 } else { -1 })
+        .collect();
 
     realm_db
         .give_character_start_equipment(character_id, start_outfit_info.item_id, slot_ids)

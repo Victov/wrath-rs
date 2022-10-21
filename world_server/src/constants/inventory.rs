@@ -5,7 +5,7 @@ pub const _EQUIPMENT_SLOTS_END: u8 = 18;
 pub const _BAG_SLOTS_START: u8 = 19;
 pub const BAG_SLOTS_END: u8 = 22;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
 pub enum EquipmentSlot {
     Head = 0,
     Neck = 1,
