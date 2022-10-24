@@ -200,21 +200,11 @@ pub async fn handle_cmsg_char_delete(client_manager: &ClientManager, client_id: 
     let realm_db = world.get_realm_database();
 
     let character_id = data.guid.guid() as u32;
-    let character_is_on_client_account = if let Ok(character) = realm_db.get_character(character_id).await {
-        character.account_id == account_id
-    } else {
-        false
-    };
 
-    let result = if character_is_on_client_account {
-        match realm_db.delete_character(character_id).await {
-            Ok(_) => WorldResult::CharDeleteSuccess,
-            // TODO: Handle guild leader and arena captain failure cases.
-            Err(_) => WorldResult::CharDeleteFailed,
-        }
-    } else {
-        warn!("Client {} tried to delete a character that wasn't on their account!", client_id);
-        WorldResult::CharDeleteFailed
+    let result = match realm_db.delete_character(character_id, account_id).await {
+        Ok(_) => WorldResult::CharDeleteSuccess,
+        // TODO: Handle guild leader and arena captain failure cases.
+        Err(_) => WorldResult::CharDeleteFailed,
     };
 
     SMSG_CHAR_DELETE { result }
