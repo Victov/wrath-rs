@@ -16,6 +16,7 @@ use wow_dbc::DbcTable;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
+use wow_world_messages::wrath::CMSG_STANDSTATECHANGE;
 use wow_world_messages::wrath::SMSG_ACTION_BUTTONS;
 use wow_world_messages::wrath::SMSG_BINDPOINTUPDATE;
 use wow_world_messages::wrath::SMSG_CHAR_CREATE;
@@ -237,6 +238,16 @@ pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &Wo
 
     client.load_and_set_active_character(client_manager, world, guid).await?;
     client.login_active_character(world).await?;
+
+    Ok(())
+}
+
+pub async fn handle_cmsg_standstate_change(client_manager: &ClientManager, client_id: u64, data: &CMSG_STANDSTATECHANGE) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let character_lock = client.get_active_character().await?;
+    let mut character = character_lock.write().await;
+
+    character.set_stand_state(data.animation_state).await?;
 
     Ok(())
 }
