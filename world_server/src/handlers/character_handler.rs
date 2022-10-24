@@ -13,6 +13,8 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 use wow_dbc::DbcTable;
+use wow_world_messages::wrath::CMSG_CHAR_DELETE;
+use wow_world_messages::wrath::SMSG_CHAR_DELETE;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
@@ -190,6 +192,24 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
     }
     .astd_send_to_client(client)
     .await
+}
+
+pub async fn handle_cmsg_char_delete(client_manager: &ClientManager, client_id: u64, world: &World, data: &CMSG_CHAR_DELETE) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let account_id = client.data.read().await.account_id.unwrap();
+    let realm_db = world.get_realm_database();
+
+    let character_id = data.guid.guid() as u32;
+
+    let result = match realm_db.delete_character(character_id, account_id).await {
+        Ok(_) => WorldResult::CharDeleteSuccess,
+        // TODO: Handle guild leader and arena captain failure cases.
+        Err(_) => WorldResult::CharDeleteFailed,
+    };
+
+    SMSG_CHAR_DELETE { result }
+        .astd_send_to_client(client)
+        .await
 }
 
 async fn give_character_start_equipment(
