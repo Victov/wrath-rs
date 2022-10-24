@@ -48,6 +48,7 @@ CREATE TABLE `character_equipment` (
   `slot_id` tinyint(2) unsigned NOT NULL DEFAULT '0' COMMENT 'Equipped Slot index.',
   `item` int(10) unsigned NOT NULL DEFAULT '0' COMMENT 'Equipped item',
   `enchant` int(10) unsigned DEFAULT NULL COMMENT 'Enchantment',
+  CONSTRAINT `FK_CHARACTER_EQUIPMENT_CHARACTER` FOREIGN KEY (`character_id`) REFERENCES `characters` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   PRIMARY KEY (`character_id`, `slot_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Trigger System';
 
