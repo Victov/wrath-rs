@@ -110,4 +110,12 @@ impl super::RealmDatabase {
 
         Ok(res)
     }
+
+    pub async fn delete_character(&self, character_id: u32) -> Result<bool> {
+        let res = sqlx::query_as!(DBCharacter, "DELETE FROM characters WHERE id = ?", character_id)
+            .execute(&self.connection_pool)
+            .await?;
+
+        Ok(res.rows_affected() > 0)
+    }
 }

@@ -58,6 +58,7 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_PING(data) => handle_cmsg_ping(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_CHAR_ENUM(_) => handle_cmsg_char_enum(client_manager, world, packet.client_id).await,
             ClientOpcodeMessage::CMSG_CHAR_CREATE(data) => handle_cmsg_char_create(client_manager, packet.client_id, world, data).await,
+            ClientOpcodeMessage::CMSG_CHAR_DELETE(data) => handle_cmsg_char_delete(client_manager, packet.client_id, world, data).await,
             ClientOpcodeMessage::CMSG_PLAYER_LOGIN(data) => handle_cmsg_player_login(client_manager, world, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_STANDSTATECHANGE(data) => handle_cmsg_standstate_change(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::MSG_MOVE_START_FORWARD(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,

@@ -16,6 +16,7 @@ pub use account_data_handler::send_character_account_data_times;
 
 mod character_handler;
 pub use character_handler::handle_cmsg_char_create;
+pub use character_handler::handle_cmsg_char_delete;
 pub use character_handler::handle_cmsg_char_enum;
 pub use character_handler::handle_cmsg_player_login;
 pub use character_handler::handle_cmsg_standstate_change;
