@@ -1,5 +1,5 @@
 [package]
-name = "wrath"
+name = "wrath-authserver"
 version = "0.1.0"
 authors = ["victov <victor.veldstra@gmail.com>"]
 edition = "2021"
@@ -20,4 +20,5 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 async-trait = "0.1"
 byte = "0.2"
 cmdparse = { version = "0.1" }
+# Temporarily pointing at the git repo, until a new  wow_login_messages version is published with async support.
 wow_login_messages = { git="https://github.com/gtker/wow_messages.git", package="wow_login_messages", rev="82d98f82fcd46dc1618873d9550eddfc8dc57dac", features=["async-std"] }

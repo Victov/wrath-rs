@@ -23,8 +23,6 @@ pub async fn handle_logon_proof_srp(
     clients: ActiveClients,
     auth_database: std::sync::Arc<AuthDatabase>,
 ) -> Result<ClientState> {
-    info!("Handle_logon_proof_srp");
-
     let client_public_key = match PublicKey::from_le_bytes(&logon_proof.client_public_key) {
         Ok(key) => key,
         Err(_) => {
@@ -66,8 +64,6 @@ pub async fn handle_logon_proof_srp(
     }
     .astd_write(stream)
     .await?;
-
-    info!("Sent CMD_REALM_LIST_Server");
 
     Ok(ClientState::LogOnProof { username })
 }

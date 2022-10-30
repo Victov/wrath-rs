@@ -65,7 +65,8 @@ async fn reconnect_clients_cleaner(clients: ActiveClients, timeout: Duration) ->
 }
 
 async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClients, auth_database: std::sync::Arc<AuthDatabase>) -> Result<()> {
-    info!("incoming on address {}", stream.local_addr()?.to_string());
+    let ip = stream.local_addr()?.to_string();
+    info!("Incoming connection on address {}", ip);
     let mut client_state = Some(ClientState::Connected);
 
     let mut buf = [0u8; 1024];
@@ -78,6 +79,8 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
         }
 
         let packet = ClientOpcodeMessage::astd_read(&mut stream).await?;
+
+        info!("Handling auth packet {} for client {}", packet, ip);
 
         let result = match (client_state.take(), packet) {
             (_, ClientOpcodeMessage::CMD_AUTH_LOGON_CHALLENGE(challenge)) => {
