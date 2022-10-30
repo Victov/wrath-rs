@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::sync::RwLock;
 use async_std::task;
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use time::macros::format_description;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use tracing_subscriber::{fmt::time::UtcTime, EnvFilter};
 
 use wow_login_messages::version_8::opcodes::ClientOpcodeMessage;

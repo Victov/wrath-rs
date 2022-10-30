@@ -67,12 +67,9 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
 
 async fn get_realm_list(auth_database: std::sync::Arc<AuthDatabase>, account_id: u32) -> Result<Vec<Realm>> {
     //TODO(wmxd): it will be good idea to cache the database stuff
-    //TODO(wmxd): for now it will be better select realms and number_of_chars in one database trip (eg: left join)
-    let db_realms = auth_database.get_all_realms().await?;
+    let db_realms = auth_database.get_all_realms_with_num_characters(account_id).await?;
     let mut realms = Vec::with_capacity(db_realms.len());
     for realm in db_realms {
-        let num_characters = auth_database.get_num_characters_on_realm(account_id, realm.id).await?;
-
         // TODO: Use flags from DB.
         let mut flag = Realm_RealmFlag::empty();
 
@@ -88,8 +85,9 @@ async fn get_realm_list(auth_database: std::sync::Arc<AuthDatabase>, account_id:
             flag,
             name: realm.name,
             address: realm.ip,
-            population: Population::from(realm.population as u32),
-            number_of_characters_on_realm: num_characters,
+            // Population is represented as a u32 in wow_messages, so we convert our f32 to a u32 representation.
+            population: Population::from(u32::from_le_bytes(realm.population.to_le_bytes())),
+            number_of_characters_on_realm: realm.num_characters.unwrap_or(0),
             realm_id: 0,
             category: RealmCategory::One,
         });
