@@ -88,7 +88,7 @@ async fn get_realm_list(auth_database: std::sync::Arc<AuthDatabase>, account_id:
             flag,
             name: realm.name,
             address: realm.ip,
-            population: Population::GreenRecommended,
+            population: Population::from(realm.population as u32),
             number_of_characters_on_realm: num_characters,
             realm_id: 0,
             category: RealmCategory::One,
