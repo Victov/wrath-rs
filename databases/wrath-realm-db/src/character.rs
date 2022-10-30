@@ -46,6 +46,7 @@ pub struct DBCharacterCreateParameters {
     pub facial_style: u8,
     pub outfit: u8,
     pub map: u16,
+    pub zone: u16,
     pub x: f32,
     pub y: f32,
     pub z: f32,
@@ -81,7 +82,7 @@ impl super::RealmDatabase {
     }
 
     pub async fn create_character(&self, params: &DBCharacterCreateParameters) -> Result<u64> {
-        let result = sqlx::query!("INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`, `map`, `x`, `y`, `z`, `o`) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?,?);",
+        let result = sqlx::query!("INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`, `zone`, `map`, `x`, `y`, `z`, `o`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?,?);",
         params.account_id,
         params.name,
         params.race,
@@ -92,6 +93,7 @@ impl super::RealmDatabase {
         params.hair_style,
         params.hair_color,
         params.facial_style,
+        params.zone,
         params.map,
         params.x,
         params.y,
