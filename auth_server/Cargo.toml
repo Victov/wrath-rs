@@ -20,4 +20,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 async-trait = "0.1"
 byte = "0.2"
 cmdparse = { version = "0.1" }
-wow_login_messages = { path = "../../wow_messages/wow_login_messages", features = ["async-std"] }
+wow_login_messages = { git="https://github.com/gtker/wow_messages.git", package="wow_login_messages", rev="82d98f82fcd46dc1618873d9550eddfc8dc57dac", features=["async-std"] }
