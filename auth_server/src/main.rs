@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use async_std::io::ReadExt;
 use async_std::net::{TcpListener, TcpStream};
 use async_std::sync::RwLock;
 use async_std::task;
@@ -9,18 +8,17 @@ use std::time::Duration;
 use time::macros::format_description;
 use tracing::{error, info, warn};
 use tracing_subscriber::{fmt::time::UtcTime, EnvFilter};
+
+use wow_login_messages::version_8::opcodes::ClientOpcodeMessage;
 use wrath_auth_db::AuthDatabase;
 
 mod auth;
 mod console_input;
 mod constants;
-mod packet;
 mod realms;
 mod state;
 
 use crate::auth::{handle_logon_challenge_srp, handle_logon_proof_srp, handle_reconnect_challenge_srp, handle_reconnect_proof_srp};
-use crate::packet::client::ClientPacket;
-use crate::packet::{AsyncPacketWriterExt, PacketReader};
 use crate::realms::handle_realm_list_request;
 use crate::state::{ActiveClients, ClientState};
 
@@ -35,7 +33,7 @@ async fn main() -> Result<()> {
         .with_timer(timer)
         .init();
 
-    info!("Auth serer starting");
+    info!("Auth server starting");
     info!("Connecting to auth database");
     let db_connect_timeout = Duration::from_secs(std::env::var("DB_CONNECT_TIMEOUT_SECONDS")?.parse()?);
     let connect_string = std::env::var("AUTH_DATABASE_URL")?;
@@ -72,44 +70,45 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
 
     let mut buf = [0u8; 1024];
     loop {
-        let read_len = stream.read(&mut buf).await?;
+        let read_len = stream.peek(&mut buf).await?;
         if read_len < 1 {
             info!("disconnect");
             stream.shutdown(async_std::net::Shutdown::Both)?;
             break;
         }
-        let packet = ClientPacket::read_packet(&buf)?;
+
+        let packet = ClientOpcodeMessage::astd_read(&mut stream).await?;
 
         let result = match (client_state.take(), packet) {
-            (_, ClientPacket::LogonChallenge(challenge)) => handle_logon_challenge_srp(&mut stream, &challenge, auth_database.clone()).await,
-            (Some(ClientState::ChallengeProof { srp_proof, username }), ClientPacket::LogonProof(logon_proof)) => {
+            (_, ClientOpcodeMessage::CMD_AUTH_LOGON_CHALLENGE(challenge)) => {
+                handle_logon_challenge_srp(&mut stream, &challenge, auth_database.clone()).await
+            }
+            (Some(ClientState::ChallengeProof { srp_proof, username }), ClientOpcodeMessage::CMD_AUTH_LOGON_PROOF(logon_proof)) => {
                 handle_logon_proof_srp(&mut stream, &logon_proof, srp_proof, username, clients.clone(), auth_database.clone()).await
             }
-            (_, ClientPacket::LogonProof(_)) => {
+            (_, ClientOpcodeMessage::CMD_AUTH_LOGON_PROOF(_)) => {
                 info!("LogOnProof disconnect");
                 stream.shutdown(async_std::net::Shutdown::Both)?;
                 break;
             }
-            (Some(ClientState::LogOnProof { username }), ClientPacket::RealmListRequest) => {
+            (Some(ClientState::LogOnProof { username }), ClientOpcodeMessage::CMD_REALM_LIST(_)) => {
                 handle_realm_list_request(&mut stream, username, auth_database.clone()).await
             }
-            (_, ClientPacket::RealmListRequest) => {
+            (_, ClientOpcodeMessage::CMD_REALM_LIST(_)) => {
                 info!("RealmListRequest disconnect");
                 stream.shutdown(async_std::net::Shutdown::Both)?;
                 break;
             }
-            (_, ClientPacket::ReconnectChallenge(challenge)) => handle_reconnect_challenge_srp(&mut stream, &challenge, clients.clone()).await,
-            (Some(ClientState::ReconnectProof { username }), ClientPacket::ReconnectProof(proof)) => {
+            (_, ClientOpcodeMessage::CMD_AUTH_RECONNECT_CHALLENGE(challenge)) => {
+                handle_reconnect_challenge_srp(&mut stream, &challenge, clients.clone()).await
+            }
+            (Some(ClientState::ReconnectProof { username }), ClientOpcodeMessage::CMD_AUTH_RECONNECT_PROOF(proof)) => {
                 handle_reconnect_proof_srp(&mut stream, &proof, username, clients.clone()).await
             }
-            (_, ClientPacket::ReconnectProof(_)) => {
+            (_, ClientOpcodeMessage::CMD_AUTH_RECONNECT_PROOF(_)) => {
                 info!("ReconnectProof disconnect");
                 stream.shutdown(async_std::net::Shutdown::Both)?;
                 break;
-            }
-            (_, ClientPacket::NotImplemented) => {
-                warn!("Unhandled {}", buf[0]);
-                return Err(anyhow!("Unhandled command header"));
             }
         };
 
