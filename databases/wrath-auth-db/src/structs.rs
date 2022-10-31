@@ -9,6 +9,18 @@ pub struct DBRealm {
     pub online: u8,
 }
 
+pub struct DBRealmWithNumCharacters {
+    pub id: u32,
+    pub name: String,
+    pub realm_type: u8,
+    pub flags: u8,
+    pub ip: String,
+    pub population: f32,
+    pub timezone: u8,
+    pub online: u8,
+    pub num_characters: Option<u8>,
+}
+
 pub struct DBAccount {
     pub id: u32,
     pub username: String,

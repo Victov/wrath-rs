@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use sqlx::Row;
 mod structs;
-pub use structs::{DBAccount, DBAccountData, DBRealm};
+pub use structs::{DBAccount, DBAccountData, DBRealm, DBRealmWithNumCharacters};
 
 pub struct AuthDatabase {
     connection_pool: sqlx::MySqlPool,
@@ -28,6 +28,17 @@ impl AuthDatabase {
             .try_get("ip")?;
 
         Ok(bind_ip)
+    }
+
+    pub async fn get_all_realms_with_num_characters(&self, account_id: u32) -> Result<Vec<DBRealmWithNumCharacters>> {
+        Ok(sqlx::query_as!(
+            DBRealmWithNumCharacters,
+            "SELECT r.*, rc.num_characters as num_characters FROM realms r
+            LEFT JOIN realm_characters rc ON rc.account_id = ? AND rc.realm_id = r.id",
+            account_id
+        )
+        .fetch_all(&self.connection_pool)
+        .await?)
     }
 
     pub async fn get_all_realms(&self) -> Result<Vec<DBRealm>> {

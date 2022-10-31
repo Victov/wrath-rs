@@ -1,10 +1,14 @@
-use crate::packet::server::{Realm, ServerPacket};
-use crate::{AsyncPacketWriterExt, ClientState};
+use crate::ClientState;
+
 use anyhow::{anyhow, Result};
 use async_std::stream::StreamExt;
 use byteorder::{BigEndian, ReadBytesExt};
 use std::time::Instant;
 use tracing::warn;
+
+use wow_login_messages::{
+    version_8::{Population, Realm, RealmCategory, RealmType, Realm_RealmFlag, CMD_REALM_LIST_Server}, ServerMessage,
+};
 use wrath_auth_db::AuthDatabase;
 
 const HEARTBEAT_TIMEOUT_SECONDS: u64 = 15;
@@ -61,6 +65,37 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
     }
 }
 
+async fn get_realm_list(auth_database: std::sync::Arc<AuthDatabase>, account_id: u32) -> Result<Vec<Realm>> {
+    //TODO(wmxd): it will be good idea to cache the database stuff
+    let db_realms = auth_database.get_all_realms_with_num_characters(account_id).await?;
+    let mut realms = Vec::with_capacity(db_realms.len());
+    for realm in db_realms {
+        // TODO: Use flags from DB, see https://github.com/gtker/wow_messages/issues/44
+        let mut flag = Realm_RealmFlag::empty();
+
+        if realm.online == 0 {
+            flag = flag.set_OFFLINE();
+        }
+
+        let realm_type: RealmType = RealmType::try_from(realm.realm_type).unwrap_or_default();
+
+        realms.push(Realm {
+            realm_type,
+            locked: 0,
+            flag,
+            name: realm.name,
+            address: realm.ip,
+            // Population is represented as a u32 in wow_messages, so we convert our f32 to a u32 representation.
+            population: Population::from(u32::from_le_bytes(realm.population.to_le_bytes())),
+            number_of_characters_on_realm: realm.num_characters.unwrap_or(0),
+            realm_id: 0,
+            category: RealmCategory::One,
+        });
+    }
+
+    Ok(realms)
+}
+
 pub async fn handle_realm_list_request(
     stream: &mut async_std::net::TcpStream,
     username: String,
@@ -70,7 +105,10 @@ pub async fn handle_realm_list_request(
         Some(acc) => acc,
         None => return Err(anyhow!("Username is not in database")),
     };
-    let realms = Realm::from_db(auth_database, account.id).await?;
-    stream.write_packet(ServerPacket::RealmListRequest(realms)).await?;
+    let realms = get_realm_list(auth_database, account.id).await?;
+    CMD_REALM_LIST_Server {
+        realms,
+    }.astd_write(stream).await?;
+
     Ok(ClientState::LogOnProof { username })
 }
