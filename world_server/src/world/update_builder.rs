@@ -18,6 +18,8 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
 
     let object_guid = object.get_guid();
     let player_guid = player.get_guid();
+    let creating_self = player_guid == object_guid;
+
     let movement_info = object.get_movement_info();
 
     //TODO: convert movement_info.flags into movement_flags.
@@ -25,25 +27,32 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
     //I can't just pass them along so easily. Maybe write From traits for conversion?
     let movement_flags = MovementBlock_MovementFlags::empty();
 
-    let mut update_flag = MovementBlock_UpdateFlag::empty().set_LIVING(MovementBlock_UpdateFlag_Living::Living {
-        backwards_running_speed: 4.5,
-        backwards_swimming_speed: 0.0,
-        extra_flags: movement_info.extra_flags,
-        fall_time: movement_info.fall_time,
-        flags: movement_flags,
-        flight_speed: 0.0,
-        backwards_flight_speed: 0.0,
-        living_orientation: movement_info.orientation,
-        living_position: movement_info.position,
-        pitch_rate: 0.0,
-        running_speed: 7.0,
-        swimming_speed: 0.0,
-        timestamp: movement_info.timestamp,
-        turn_rate: std::f32::consts::PI,
-        walking_speed: 1.0,
-    });
+    let mut update_flag = MovementBlock_UpdateFlag::empty()
+        .set_LIVING(MovementBlock_UpdateFlag_Living::Living {
+            backwards_running_speed: 4.5,
+            backwards_swimming_speed: 0.0,
+            extra_flags: movement_info.extra_flags,
+            fall_time: movement_info.fall_time,
+            flags: movement_flags,
+            flight_speed: 0.0,
+            backwards_flight_speed: 0.0,
+            living_orientation: movement_info.orientation,
+            living_position: movement_info.position,
+            pitch_rate: 0.0,
+            running_speed: 7.0,
+            swimming_speed: 0.0,
+            timestamp: movement_info.timestamp,
+            turn_rate: std::f32::consts::PI,
+            walking_speed: 1.0,
+        })
+        .set_HIGH_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_HighGuid {
+            unknown0: if creating_self { 0x2F } else { 0x08 },
+        })/*
+        .set_LOW_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_LowGuid {
+            unknown1: object_guid.guid() as u32,
+        })*/;
 
-    if player_guid == object_guid {
+    if creating_self {
         update_flag = update_flag.set_SELF()
     }
 
@@ -54,14 +63,23 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
         _ => unimplemented!(),
     }
 
-    Ok(Object {
-        update_type: Object_UpdateType::CreateObject2 {
+    let update_type = if creating_self {
+        Object_UpdateType::CreateObject2 {
             guid3: object_guid,
             mask2: all_dirty_update_mask,
             movement2: MovementBlock { update_flag },
             object_type: object.get_type(),
-        },
-    })
+        }
+    } else {
+        Object_UpdateType::CreateObject {
+            guid3: object_guid,
+            mask2: all_dirty_update_mask,
+            movement2: MovementBlock { update_flag },
+            object_type: object.get_type(),
+        }
+    };
+
+    Ok(Object { update_type })
 }
 
 pub fn build_out_of_range_update_block_for_player(player: &dyn GameObject) -> Option<wow_world_messages::wrath::Object> {
