@@ -125,6 +125,7 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
         let z = player_create_info.position_z;
         let o = player_create_info.orientation;
         let map = player_create_info.map;
+        let zone = player_create_info.zone;
 
         DBCharacterCreateParameters {
             account_id,
@@ -139,6 +140,7 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
             facial_style: data.facial_hair,
             outfit: CMSG_CHAR_CREATE::OUTFIT_ID_VALUE,
             map,
+            zone,
             x,
             y,
             z,
