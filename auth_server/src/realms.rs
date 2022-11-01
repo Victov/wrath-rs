@@ -7,7 +7,7 @@ use std::time::Instant;
 use tracing::warn;
 
 use wow_login_messages::{
-    version_8::{Population, Realm, RealmCategory, RealmType, Realm_RealmFlag, CMD_REALM_LIST_Server}, ServerMessage,
+    version_8::{Population, Realm, RealmCategory, RealmType, Realm_RealmFlag, CMD_REALM_LIST_Server, RealmFlag}, ServerMessage,
 };
 use wrath_auth_db::AuthDatabase;
 
@@ -70,8 +70,7 @@ async fn get_realm_list(auth_database: std::sync::Arc<AuthDatabase>, account_id:
     let db_realms = auth_database.get_all_realms_with_num_characters(account_id).await?;
     let mut realms = Vec::with_capacity(db_realms.len());
     for realm in db_realms {
-        // TODO: Use flags from DB, see https://github.com/gtker/wow_messages/issues/44
-        let mut flag = Realm_RealmFlag::empty();
+        let mut flag = Realm_RealmFlag::new(realm.flags, None);
 
         if realm.online == 0 {
             flag = flag.set_OFFLINE();
