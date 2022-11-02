@@ -1,7 +1,6 @@
 use crate::character::Character;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
-use crate::data::CharacterInventory;
 use crate::data::DataStorage;
 use crate::data::SimpleCharacterInventory;
 use crate::data::SimpleItemDescription;
@@ -13,15 +12,15 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 use wow_dbc::DbcTable;
-use wow_world_messages::wrath::CMSG_CHAR_DELETE;
-use wow_world_messages::wrath::SMSG_CHAR_DELETE;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
+use wow_world_messages::wrath::CMSG_CHAR_DELETE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
 use wow_world_messages::wrath::CMSG_STANDSTATECHANGE;
 use wow_world_messages::wrath::SMSG_ACTION_BUTTONS;
 use wow_world_messages::wrath::SMSG_BINDPOINTUPDATE;
 use wow_world_messages::wrath::SMSG_CHAR_CREATE;
+use wow_world_messages::wrath::SMSG_CHAR_DELETE;
 use wow_world_messages::wrath::SMSG_LOGIN_VERIFY_WORLD;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
@@ -65,7 +64,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
         }
 
         let character_flags = 0; //todo: stuff like being ghost, hide cloak, hide helmet, etc
-        let first_login = false; //todo
+        let first_login = character.playtime_total == 0;
 
         assert_eq!(equipped_items_to_send.len(), 23);
 
@@ -209,9 +208,7 @@ pub async fn handle_cmsg_char_delete(client_manager: &ClientManager, client_id: 
         Err(_) => WorldResult::CharDeleteFailed,
     };
 
-    SMSG_CHAR_DELETE { result }
-        .astd_send_to_client(client)
-        .await
+    SMSG_CHAR_DELETE { result }.astd_send_to_client(client).await
 }
 
 async fn give_character_start_equipment(

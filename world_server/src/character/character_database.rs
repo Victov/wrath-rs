@@ -81,6 +81,9 @@ impl super::Character {
         self.gameplay_data.set_unit_FACTIONTEMPLATE(1);
         self.gameplay_data.set_object_SCALE_X(1.0f32);
 
+        //No playtime means it's our very first login
+        self.needs_first_login = self.seconds_played_total == 0;
+
         Ok(())
     }
 }
