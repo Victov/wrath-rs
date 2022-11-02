@@ -13,7 +13,7 @@ use wow_world_messages::wrath::{
     MSG_MOVE_START_BACKWARD, MSG_MOVE_START_FORWARD, MSG_MOVE_START_PITCH_DOWN, MSG_MOVE_START_PITCH_UP, MSG_MOVE_START_STRAFE_LEFT,
     MSG_MOVE_START_STRAFE_RIGHT, MSG_MOVE_START_SWIM, MSG_MOVE_START_TURN_LEFT, MSG_MOVE_START_TURN_RIGHT, MSG_MOVE_STOP, MSG_MOVE_STOP_PITCH,
     MSG_MOVE_STOP_STRAFE, MSG_MOVE_STOP_SWIM, MSG_MOVE_STOP_TURN, MSG_MOVE_WORLDPORT_ACK, SMSG_FORCE_MOVE_ROOT, SMSG_FORCE_MOVE_UNROOT,
-    SMSG_NEW_WORLD, SMSG_STANDSTATE_UPDATE, SMSG_TRANSFER_PENDING,
+    SMSG_NEW_WORLD, SMSG_STANDSTATE_UPDATE, SMSG_TRANSFER_PENDING, CMSG_WORLD_TELEPORT,
 };
 
 pub trait MovementMessage: Sync + ServerMessage + ClientMessage {
@@ -157,6 +157,28 @@ pub async fn handle_msg_move_worldport_ack(
 
         character.teleportation_state = TeleportationState::None;
     }
+
+    Ok(())
+}
+
+pub async fn handle_msg_world_teleport(
+    client_manager: &ClientManager,
+    client_id: u64,
+    packet: &CMSG_WORLD_TELEPORT,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let character_lock = client.get_active_character().await?;
+    let mut character = character_lock.write().await;
+
+    info!("Teleporting character {} to {} ({:?})", character.name, packet.map, packet.position);
+
+    let destination = WorldZoneLocation {
+        position: packet.position,
+        orientation: packet.orientation,
+        map: packet.map,
+        area: Area::NorthshireValley, // TODO: Work out area from position + map.
+    };
+    character.teleport_to(TeleportationDistance::Far(destination));
 
     Ok(())
 }

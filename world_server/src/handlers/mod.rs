@@ -62,6 +62,7 @@ pub use movement_handler::handle_cmsg_areatrigger;
 pub use movement_handler::handle_movement_generic;
 pub use movement_handler::handle_msg_move_teleport_ack;
 pub use movement_handler::handle_msg_move_worldport_ack;
+pub use movement_handler::handle_msg_world_teleport;
 pub use movement_handler::send_msg_move_teleport_ack;
 pub use movement_handler::send_smsg_force_move_root;
 pub use movement_handler::send_smsg_force_move_unroot;
