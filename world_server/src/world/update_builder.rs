@@ -30,7 +30,7 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
     let mut update_flag = MovementBlock_UpdateFlag::empty()
         .set_LIVING(MovementBlock_UpdateFlag_Living::Living {
             backwards_running_speed: 4.5,
-            backwards_swimming_speed: 0.0,
+            backwards_swimming_speed: 1.0,
             extra_flags: movement_info.extra_flags,
             fall_time: movement_info.fall_time,
             flags: movement_flags,
@@ -38,17 +38,17 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
             backwards_flight_speed: 0.0,
             living_orientation: movement_info.orientation,
             living_position: movement_info.position,
-            pitch_rate: 0.0,
-            running_speed: 7.0,
-            swimming_speed: 0.0,
+            pitch_rate: 7.0,
+            running_speed: 8.0,
+            swimming_speed: 1.0,
             timestamp: movement_info.timestamp,
             turn_rate: std::f32::consts::PI,
             walking_speed: 1.0,
         })
         .set_HIGH_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_HighGuid {
             unknown0: if creating_self { 0x2F } else { 0x08 },
-        })/*
-        .set_LOW_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_LowGuid {
+        })
+        /*.set_LOW_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_LowGuid {
             unknown1: object_guid.guid() as u32,
         })*/;
 

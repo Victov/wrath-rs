@@ -236,7 +236,7 @@ impl GameObject for Character {
     async fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
         let create_block = build_create_update_block_for_player(self, self)?;
         self.push_object_update(create_block);
-        self.process_pending_updates().await
+        Ok(())
     }
 
     fn as_character(&self) -> Option<&Character> {
