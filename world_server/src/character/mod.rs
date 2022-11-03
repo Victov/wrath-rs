@@ -15,6 +15,7 @@ use wow_world_messages::wrath::{
 use wrath_realm_db::RealmDatabase;
 
 mod character_database;
+mod character_first_login;
 mod character_logout;
 mod character_movement;
 mod character_rested;
@@ -52,6 +53,9 @@ pub struct Character {
     pub teleportation_state: TeleportationState,
     pub logout_state: LogoutState,
     rested_state: character_rested::RestedState,
+
+    //Very first login
+    needs_first_login: bool,
 }
 
 impl Character {
@@ -78,6 +82,7 @@ impl Character {
             teleportation_state: TeleportationState::None,
             logout_state: LogoutState::None,
             rested_state: character_rested::RestedState::NotRested,
+            needs_first_login: false,
         }
     }
 
@@ -122,6 +127,7 @@ impl Character {
     }
 
     pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
+        self.try_perform_first_time_login_if_required().await?;
         self.tick_time_sync(delta_time).await?;
         self.tick_logout_state(delta_time, world.clone()).await?;
 

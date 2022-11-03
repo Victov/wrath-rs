@@ -24,6 +24,9 @@ pub use character_handler::send_action_buttons;
 pub use character_handler::send_bind_update;
 pub use character_handler::send_verify_world;
 
+mod cinematics_handler;
+pub use cinematics_handler::send_trigger_cinematic;
+
 mod instance_handler;
 pub use instance_handler::send_dungeon_difficulty;
 
