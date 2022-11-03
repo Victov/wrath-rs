@@ -1,5 +1,7 @@
 use crate::{client_manager::ClientManager, packet::ServerMessageExt, prelude::*};
-use wow_world_messages::wrath::{CMSG_GMTICKET_CREATE, CMSG_GMTICKET_GETTICKET, SMSG_GMTICKET_GETTICKET};
+use wow_world_messages::wrath::{
+    CMSG_GMTICKET_CREATE, CMSG_GMTICKET_GETTICKET, CMSG_GMTICKET_SYSTEMSTATUS, SMSG_GMTICKET_GETTICKET, SMSG_GMTICKET_SYSTEMSTATUS,
+};
 
 pub async fn handle_cmsg_gmticket_getticket(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_GMTICKET_GETTICKET) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
@@ -30,4 +32,14 @@ pub async fn handle_cmsg_gmticket_create(client_manager: &ClientManager, client_
     //Creating GM tickets is unhandled, there is no system in place. This function exists to
     //prevent warning spam until a GM ticketing system is made
     Ok(())
+}
+
+pub async fn handle_cmsg_gmticket_system_status(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_GMTICKET_SYSTEMSTATUS) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
+
+    SMSG_GMTICKET_SYSTEMSTATUS {
+        will_accept_tickets: wow_world_messages::wrath::GmTicketQueueStatus::Disabled,
+    }
+    .astd_send_to_client(client)
+    .await
 }

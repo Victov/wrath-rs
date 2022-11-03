@@ -30,6 +30,7 @@ pub use cinematics_handler::send_trigger_cinematic;
 mod gm_handler;
 pub use gm_handler::handle_cmsg_gmticket_create;
 pub use gm_handler::handle_cmsg_gmticket_getticket;
+pub use gm_handler::handle_cmsg_gmticket_system_status;
 
 mod instance_handler;
 pub use instance_handler::send_dungeon_difficulty;
