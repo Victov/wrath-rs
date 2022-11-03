@@ -119,6 +119,10 @@ impl PacketHandler {
                 //Voice chat is explicitly not implemented, discard message to silence warning spam
                 Ok(())
             }
+            ClientOpcodeMessage::CMSG_VOICE_SESSION_ENABLE(_) => {
+                //Voice chat is explicitly not implemented, discard message to silence warning spam
+                Ok(())
+            }
             ClientOpcodeMessage::CMSG_GMTICKET_GETTICKET(data) => handle_cmsg_gmticket_getticket(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_GMTICKET_CREATE(data) => handle_cmsg_gmticket_create(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_GMTICKET_SYSTEMSTATUS(data) => handle_cmsg_gmticket_system_status(client_manager, packet.client_id, data).await,

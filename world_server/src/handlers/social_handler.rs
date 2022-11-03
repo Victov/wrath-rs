@@ -23,7 +23,7 @@ pub async fn handle_csmg_set_selection(client_manager: &ClientManager, client_id
     Ok(())
 }
 
-pub async fn handle_cmsg_join_channel(client_manager: &ClientManager, client_id: u64, packet: &CMSG_JOIN_CHANNEL) -> Result<()> {
+pub async fn handle_cmsg_join_channel(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_JOIN_CHANNEL) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let _character_lock = client.get_active_character().await?;
 
