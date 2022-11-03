@@ -114,6 +114,7 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_TUTORIAL_FLAG(data) => handle_cmsg_tutorial_flag(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_TUTORIAL_RESET(data) => handle_cmsg_tutorial_reset(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_SET_SELECTION(data) => handle_csmg_set_selection(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_JOIN_CHANNEL(data) => handle_cmsg_join_channel(client_manager, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }
