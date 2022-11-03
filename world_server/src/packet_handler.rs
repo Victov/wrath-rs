@@ -119,6 +119,7 @@ impl PacketHandler {
                 //Voice chat is explicitly not implemented, discard message to silence warning spam
                 Ok(())
             }
+            ClientOpcodeMessage::CMSG_GMTICKET_GETTICKET(data) => handle_cmsg_gmticket_getticket(client_manager, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }

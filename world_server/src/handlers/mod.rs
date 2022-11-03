@@ -27,6 +27,9 @@ pub use character_handler::send_verify_world;
 mod cinematics_handler;
 pub use cinematics_handler::send_trigger_cinematic;
 
+mod gm_handler;
+pub use gm_handler::handle_cmsg_gmticket_getticket;
+
 mod instance_handler;
 pub use instance_handler::send_dungeon_difficulty;
 
