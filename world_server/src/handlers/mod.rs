@@ -28,6 +28,7 @@ mod cinematics_handler;
 pub use cinematics_handler::send_trigger_cinematic;
 
 mod gm_handler;
+pub use gm_handler::handle_cmsg_gmticket_create;
 pub use gm_handler::handle_cmsg_gmticket_getticket;
 
 mod instance_handler;

@@ -120,6 +120,7 @@ impl PacketHandler {
                 Ok(())
             }
             ClientOpcodeMessage::CMSG_GMTICKET_GETTICKET(data) => handle_cmsg_gmticket_getticket(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_GMTICKET_CREATE(data) => handle_cmsg_gmticket_create(client_manager, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }
