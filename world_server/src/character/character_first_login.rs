@@ -1,6 +1,4 @@
-use wow_world_messages::wrath::CinematicSequenceId;
-
-use crate::prelude::*;
+use crate::{prelude::*, world::prelude::cinematic::get_opening_cinematic_for_race_class};
 
 impl super::Character {
     pub(super) async fn try_perform_first_time_login_if_required(&mut self) -> Result<()> {
@@ -13,6 +11,9 @@ impl super::Character {
 
     pub async fn perform_first_login(&mut self) -> Result<()> {
         assert!(self.needs_first_login);
-        handlers::send_trigger_cinematic(self, CinematicSequenceId::BloodElf).await
+        if let Some(cinematic_id) = get_opening_cinematic_for_race_class(&self.get_race(), &self.get_class()) {
+            handlers::send_trigger_cinematic(self, cinematic_id).await?;
+        }
+        Ok(())
     }
 }
