@@ -97,6 +97,7 @@ impl PacketHandler {
             ClientOpcodeMessage::MSG_MOVE_HEARTBEAT(data) => handle_movement_generic(client_manager, packet.client_id, world, data.clone()).await,
             ClientOpcodeMessage::MSG_MOVE_TELEPORT_ACK(data) => handle_msg_move_teleport_ack(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::MSG_MOVE_WORLDPORT_ACK(data) => handle_msg_move_worldport_ack(client_manager, packet.client_id, world, data).await,
+            ClientOpcodeMessage::CMSG_WORLD_TELEPORT(data) => handle_msg_world_teleport(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_LOGOUT_REQUEST(data) => handle_cmsg_logout_request(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_LOGOUT_CANCEL(data) => handle_cmsg_logout_cancel(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_PLAYED_TIME(data) => handle_cmsg_played_time(client_manager, packet.client_id, data).await,
