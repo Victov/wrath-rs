@@ -27,6 +27,11 @@ pub use character_handler::send_verify_world;
 mod cinematics_handler;
 pub use cinematics_handler::send_trigger_cinematic;
 
+mod gm_handler;
+pub use gm_handler::handle_cmsg_gmticket_create;
+pub use gm_handler::handle_cmsg_gmticket_getticket;
+pub use gm_handler::handle_cmsg_gmticket_system_status;
+
 mod instance_handler;
 pub use instance_handler::send_dungeon_difficulty;
 
@@ -51,6 +56,7 @@ pub use world_handler::send_time_sync;
 pub use world_handler::send_world_state_update;
 
 mod social_handler;
+pub use social_handler::handle_cmsg_join_channel;
 pub use social_handler::handle_csmg_set_selection;
 pub use social_handler::send_contact_list;
 
