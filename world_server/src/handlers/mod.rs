@@ -25,6 +25,8 @@ pub use character_handler::send_bind_update;
 pub use character_handler::send_verify_world;
 
 mod cinematics_handler;
+pub use cinematics_handler::handle_csmg_complete_cinematic;
+pub use cinematics_handler::handle_csmg_next_cinematic_camera;
 pub use cinematics_handler::send_trigger_cinematic;
 
 mod gm_handler;
