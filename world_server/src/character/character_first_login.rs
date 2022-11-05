@@ -12,7 +12,7 @@ impl super::Character {
     pub async fn perform_first_login(&mut self) -> Result<()> {
         assert!(self.needs_first_login);
         if let Some(cinematic_id) = get_opening_cinematic_for_race_class(&self.get_race(), &self.get_class()) {
-            handlers::send_trigger_cinematic(self, cinematic_id).await?;
+            self.start_cinematic(cinematic_id).await?;
         }
         Ok(())
     }
