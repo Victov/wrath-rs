@@ -130,6 +130,9 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_COMPLETE_CINEMATIC(data) => handle_csmg_complete_cinematic(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_REQUEST_RAID_INFO(data) => handle_cmsg_request_raid_info(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_CONTACT_LIST(data) => handle_cmsg_contact_list(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_CALENDAR_GET_NUM_PENDING(data) => {
+                handle_cmsg_calendar_get_num_pending(client_manager, packet.client_id, data).await
+            }
             _ => bail!("Unhandled opcode"),
         }
     }

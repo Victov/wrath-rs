@@ -2,7 +2,10 @@ use crate::packet::ServerMessageExt;
 use crate::prelude::*;
 use crate::{character::*, client_manager::ClientManager};
 
-use wow_world_messages::wrath::{RelationType, CMSG_CONTACT_LIST, CMSG_JOIN_CHANNEL, CMSG_SET_SELECTION, SMSG_CONTACT_LIST};
+use wow_world_messages::wrath::{
+    RelationType, CMSG_CALENDAR_GET_NUM_PENDING, CMSG_CONTACT_LIST, CMSG_JOIN_CHANNEL, CMSG_SET_SELECTION, SMSG_CALENDAR_SEND_NUM_PENDING,
+    SMSG_CONTACT_LIST,
+};
 
 pub async fn handle_cmsg_contact_list(client_manager: &ClientManager, client_id: u64, packet: &CMSG_CONTACT_LIST) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
@@ -11,6 +14,15 @@ pub async fn handle_cmsg_contact_list(client_manager: &ClientManager, client_id:
     let requested_social_mask = RelationType::new(packet.flags);
     let character = character_lock.write().await;
     send_contact_list(&*character, requested_social_mask).await
+}
+
+pub async fn handle_cmsg_calendar_get_num_pending(
+    client_manager: &ClientManager,
+    client_id: u64,
+    packet: &CMSG_CALENDAR_GET_NUM_PENDING,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    SMSG_CALENDAR_SEND_NUM_PENDING { pending_events: 0 }.astd_send_to_client(client).await
 }
 
 pub async fn send_contact_list(character: &Character, relation_mask: RelationType) -> Result<()> {

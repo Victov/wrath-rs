@@ -61,6 +61,7 @@ pub use world_handler::send_time_sync;
 pub use world_handler::send_world_state_update;
 
 mod social_handler;
+pub use social_handler::handle_cmsg_calendar_get_num_pending;
 pub use social_handler::handle_cmsg_contact_list;
 pub use social_handler::handle_cmsg_join_channel;
 pub use social_handler::handle_csmg_set_selection;
