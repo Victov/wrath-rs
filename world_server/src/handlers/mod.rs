@@ -29,6 +29,9 @@ pub use cinematics_handler::handle_csmg_complete_cinematic;
 pub use cinematics_handler::handle_csmg_next_cinematic_camera;
 pub use cinematics_handler::send_trigger_cinematic;
 
+mod group_handler;
+pub use group_handler::handle_cmsg_request_raid_info;
+
 mod gm_handler;
 pub use gm_handler::handle_cmsg_gmticket_create;
 pub use gm_handler::handle_cmsg_gmticket_getticket;

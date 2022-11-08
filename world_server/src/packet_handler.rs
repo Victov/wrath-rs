@@ -128,6 +128,7 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_GMTICKET_SYSTEMSTATUS(data) => handle_cmsg_gmticket_system_status(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_NEXT_CINEMATIC_CAMERA(data) => handle_csmg_next_cinematic_camera(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_COMPLETE_CINEMATIC(data) => handle_csmg_complete_cinematic(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_REQUEST_RAID_INFO(data) => handle_cmsg_request_raid_info(client_manager, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }
