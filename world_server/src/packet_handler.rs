@@ -110,6 +110,7 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_AREATRIGGER(data) => handle_cmsg_areatrigger(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_FORCE_MOVE_ROOT_ACK(_) => Ok(()),
             ClientOpcodeMessage::CMSG_FORCE_MOVE_UNROOT_ACK(_) => Ok(()),
+            ClientOpcodeMessage::CMSG_SET_ACTIVE_MOVER(data) => handle_cmsg_set_active_mover(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_NAME_QUERY(data) => handle_cmsg_name_query(client_manager, packet.client_id, world, data).await,
             ClientOpcodeMessage::CMSG_TUTORIAL_FLAG(data) => handle_cmsg_tutorial_flag(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_TUTORIAL_RESET(data) => handle_cmsg_tutorial_reset(client_manager, packet.client_id, data).await,
