@@ -110,6 +110,7 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_AREATRIGGER(data) => handle_cmsg_areatrigger(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_FORCE_MOVE_ROOT_ACK(_) => Ok(()),
             ClientOpcodeMessage::CMSG_FORCE_MOVE_UNROOT_ACK(_) => Ok(()),
+            ClientOpcodeMessage::CMSG_SET_ACTIVE_MOVER(data) => handle_cmsg_set_active_mover(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_NAME_QUERY(data) => handle_cmsg_name_query(client_manager, packet.client_id, world, data).await,
             ClientOpcodeMessage::CMSG_TUTORIAL_FLAG(data) => handle_cmsg_tutorial_flag(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_TUTORIAL_RESET(data) => handle_cmsg_tutorial_reset(client_manager, packet.client_id, data).await,
@@ -128,6 +129,12 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_GMTICKET_SYSTEMSTATUS(data) => handle_cmsg_gmticket_system_status(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_NEXT_CINEMATIC_CAMERA(data) => handle_csmg_next_cinematic_camera(client_manager, packet.client_id, data).await,
             ClientOpcodeMessage::CMSG_COMPLETE_CINEMATIC(data) => handle_csmg_complete_cinematic(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_REQUEST_RAID_INFO(data) => handle_cmsg_request_raid_info(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_CONTACT_LIST(data) => handle_cmsg_contact_list(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_CALENDAR_GET_NUM_PENDING(data) => {
+                handle_cmsg_calendar_get_num_pending(client_manager, packet.client_id, data).await
+            }
+            ClientOpcodeMessage::CMSG_SET_ACTIONBAR_TOGGLES(data) => handle_csmg_set_actionbar_toggles(client_manager, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }

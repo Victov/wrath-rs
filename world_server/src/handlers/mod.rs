@@ -14,6 +14,9 @@ pub use account_data_handler::handle_csmg_ready_for_account_data_times;
 pub use account_data_handler::handle_csmg_update_account_data;
 pub use account_data_handler::send_character_account_data_times;
 
+mod bars_buttons_handler;
+pub use bars_buttons_handler::handle_csmg_set_actionbar_toggles;
+
 mod character_handler;
 pub use character_handler::handle_cmsg_char_create;
 pub use character_handler::handle_cmsg_char_delete;
@@ -28,6 +31,9 @@ mod cinematics_handler;
 pub use cinematics_handler::handle_csmg_complete_cinematic;
 pub use cinematics_handler::handle_csmg_next_cinematic_camera;
 pub use cinematics_handler::send_trigger_cinematic;
+
+mod group_handler;
+pub use group_handler::handle_cmsg_request_raid_info;
 
 mod gm_handler;
 pub use gm_handler::handle_cmsg_gmticket_create;
@@ -58,6 +64,8 @@ pub use world_handler::send_time_sync;
 pub use world_handler::send_world_state_update;
 
 mod social_handler;
+pub use social_handler::handle_cmsg_calendar_get_num_pending;
+pub use social_handler::handle_cmsg_contact_list;
 pub use social_handler::handle_cmsg_join_channel;
 pub use social_handler::handle_csmg_set_selection;
 pub use social_handler::send_contact_list;
@@ -70,6 +78,7 @@ pub use queries_handler::handle_cmsg_world_state_ui_timer_update;
 
 pub mod movement_handler;
 pub use movement_handler::handle_cmsg_areatrigger;
+pub use movement_handler::handle_cmsg_set_active_mover;
 pub use movement_handler::handle_movement_generic;
 pub use movement_handler::handle_msg_move_teleport_ack;
 pub use movement_handler::handle_msg_move_worldport_ack;

@@ -9,11 +9,11 @@ use async_std::sync::RwLockUpgradableReadGuard;
 use std::sync::Arc;
 use wow_world_messages::wrath::{
     Area, ClientMessage, MSG_MOVE_TELEPORT_ACK_Client, MSG_MOVE_TELEPORT_ACK_Server, Map, MovementInfo, ServerMessage, UnitStandState, Vector3d,
-    CMSG_AREATRIGGER, MSG_MOVE_FALL_LAND, MSG_MOVE_HEARTBEAT, MSG_MOVE_JUMP, MSG_MOVE_SET_FACING, MSG_MOVE_SET_RUN_MODE, MSG_MOVE_SET_WALK_MODE,
-    MSG_MOVE_START_BACKWARD, MSG_MOVE_START_FORWARD, MSG_MOVE_START_PITCH_DOWN, MSG_MOVE_START_PITCH_UP, MSG_MOVE_START_STRAFE_LEFT,
-    MSG_MOVE_START_STRAFE_RIGHT, MSG_MOVE_START_SWIM, MSG_MOVE_START_TURN_LEFT, MSG_MOVE_START_TURN_RIGHT, MSG_MOVE_STOP, MSG_MOVE_STOP_PITCH,
-    MSG_MOVE_STOP_STRAFE, MSG_MOVE_STOP_SWIM, MSG_MOVE_STOP_TURN, MSG_MOVE_WORLDPORT_ACK, SMSG_FORCE_MOVE_ROOT, SMSG_FORCE_MOVE_UNROOT,
-    SMSG_NEW_WORLD, SMSG_STANDSTATE_UPDATE, SMSG_TRANSFER_PENDING, CMSG_WORLD_TELEPORT,
+    CMSG_AREATRIGGER, CMSG_SET_ACTIVE_MOVER, CMSG_WORLD_TELEPORT, MSG_MOVE_FALL_LAND, MSG_MOVE_HEARTBEAT, MSG_MOVE_JUMP, MSG_MOVE_SET_FACING,
+    MSG_MOVE_SET_RUN_MODE, MSG_MOVE_SET_WALK_MODE, MSG_MOVE_START_BACKWARD, MSG_MOVE_START_FORWARD, MSG_MOVE_START_PITCH_DOWN,
+    MSG_MOVE_START_PITCH_UP, MSG_MOVE_START_STRAFE_LEFT, MSG_MOVE_START_STRAFE_RIGHT, MSG_MOVE_START_SWIM, MSG_MOVE_START_TURN_LEFT,
+    MSG_MOVE_START_TURN_RIGHT, MSG_MOVE_STOP, MSG_MOVE_STOP_PITCH, MSG_MOVE_STOP_STRAFE, MSG_MOVE_STOP_SWIM, MSG_MOVE_STOP_TURN,
+    MSG_MOVE_WORLDPORT_ACK, SMSG_FORCE_MOVE_ROOT, SMSG_FORCE_MOVE_UNROOT, SMSG_NEW_WORLD, SMSG_STANDSTATE_UPDATE, SMSG_TRANSFER_PENDING,
 };
 
 pub trait MovementMessage: Sync + ServerMessage + ClientMessage {
@@ -161,11 +161,7 @@ pub async fn handle_msg_move_worldport_ack(
     Ok(())
 }
 
-pub async fn handle_msg_world_teleport(
-    client_manager: &ClientManager,
-    client_id: u64,
-    packet: &CMSG_WORLD_TELEPORT,
-) -> Result<()> {
+pub async fn handle_msg_world_teleport(client_manager: &ClientManager, client_id: u64, packet: &CMSG_WORLD_TELEPORT) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
     let mut character = character_lock.write().await;
@@ -203,6 +199,26 @@ pub async fn send_smsg_force_move_unroot(character: &Character) -> Result<()> {
     }
     .astd_send_to_character(character)
     .await
+}
+
+pub async fn handle_cmsg_set_active_mover(client_manager: &ClientManager, client_id: u64, packet: &CMSG_SET_ACTIVE_MOVER) -> Result<()> {
+    //Many other emulators only do some verification upon receiving this packet.
+    //Maybe it doesn't serve any other purpose but to have the server check it's content
+    //but I have a feeling the actual server does more with this...
+
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let character_lock = client.get_active_character().await?;
+    let character = character_lock.read().await;
+
+    let mover_guid = packet.guid;
+    //TODO: check against the character->mover, but since moving anything other than the character
+    //itself (e.g. mind control) isn't implemented yet, we expect the character guid.
+    //This warning will be false negative once stuff like mindcontrol is implemented, and must be
+    //fixed then.
+    if character.get_guid() != mover_guid {
+        warn!("Unexpected mover guid sent by the client");
+    }
+    Ok(())
 }
 
 pub async fn handle_cmsg_areatrigger(client_manager: &ClientManager, client_id: u64, packet: &CMSG_AREATRIGGER) -> Result<()> {
