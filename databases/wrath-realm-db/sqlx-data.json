@@ -77,15 +77,15 @@
     },
     "query": "SELECT * FROM character_account_data WHERE character_id = ?"
   },
-  "1e23aac66dd041c3d4504674674c148ec8d690967ed43c0046e2cc913451f3fb": {
+  "1cad4d1ce6b00beecc7bf1163925d04ce566764fef1a0b8a164b6be1ffd5c4fb": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 16
+        "Right": 17
       }
     },
-    "query": "INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`, `zone`, `map`, `x`, `y`, `z`, `o`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?,?);"
+    "query": "INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`, `zone`, `map`, `x`, `y`, `z`, `o`, `tutorial_data`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?);"
   },
   "331c2482e6fa4016998b49314baa164cbe2d9e065fd95d66ec551695a62f82a3": {
     "describe": {

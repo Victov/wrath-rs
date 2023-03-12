@@ -82,7 +82,9 @@ impl super::RealmDatabase {
     }
 
     pub async fn create_character(&self, params: &DBCharacterCreateParameters) -> Result<u64> {
-        let result = sqlx::query!("INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`, `zone`, `map`, `x`, `y`, `z`, `o`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?,?);",
+        let empty_tutorial_data: Vec<u8> = Vec::new();
+
+        let result = sqlx::query!("INSERT INTO characters (`account_id`, `name`, `race`, `class`, `gender`, `skin_color`, `face`, `hair_style`, `hair_color`, `facial_style`, `zone`, `map`, `x`, `y`, `z`, `o`, `tutorial_data`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?);",
         params.account_id,
         params.name,
         params.race,
@@ -98,7 +100,9 @@ impl super::RealmDatabase {
         params.x,
         params.y,
         params.z,
-        params.o)
+        params.o,
+        empty_tutorial_data,
+        )
             .execute(&self.connection_pool)
             .await?;
 
@@ -114,9 +118,14 @@ impl super::RealmDatabase {
     }
 
     pub async fn delete_character(&self, character_id: u32, account_id: u32) -> Result<bool> {
-        let res = sqlx::query_as!(DBCharacter, "DELETE FROM characters WHERE id = ? AND account_id = ?", character_id, account_id)
-            .execute(&self.connection_pool)
-            .await?;
+        let res = sqlx::query_as!(
+            DBCharacter,
+            "DELETE FROM characters WHERE id = ? AND account_id = ?",
+            character_id,
+            account_id
+        )
+        .execute(&self.connection_pool)
+        .await?;
 
         Ok(res.rows_affected() > 0)
     }
