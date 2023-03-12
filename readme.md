@@ -9,9 +9,9 @@ This is an educational project to create  a server emulator for World of Warcraf
 - [ ] Creatures
 
 ## Getting Started
-Install Rust and clone the repo. Set up a MySQL server. wrath-rs requires a MySQL connection to manage its data. Queries in code are checked at compile-time with a live database connection, so a fully set-up database is required in order to compile the project. An optional docker setup for the database is available, see [Dockersised Setup](#dockerised-setup). Wrath-rs uses [wow_messages](https://github.com/gtker/wow_messages) for its type-safe message serde. When any messages are missing, we aim to add them to `wow_messages` and PR the changes upstream so everybody can benefit from them. 
+Install Rust and clone the repo. In order to run the servers, wrath-rs requires a MySQL connection to manage its data. An optional docker setup for the database is available, see [Dockersised Setup](#dockerised-setup). Wrath-rs uses [wow_messages](https://github.com/gtker/wow_messages) for its type-safe message serde. When any messages are missing, we aim to add them to `wow_messages` and PR the changes upstream so everybody can benefit from them. 
 
-### Database Setup
+### Manual Database Setup
 Get a MySQL server up and running. Install `cargo sqlx` by following [these instructions](https://github.com/launchbadge/sqlx/tree/master/sqlx-cli)
 
 Navigate into the `databases/wrath-auth-db` folder, copy the `.env.template` file into `.env` and open the `.env` file with your favourite text editor. Change the connection data to match your local MySQL server. Create the database and run migrations through `sqlx-cli` commands. 
