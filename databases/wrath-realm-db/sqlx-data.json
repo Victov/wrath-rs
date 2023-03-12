@@ -2501,10 +2501,10 @@
           "type_info": {
             "char_set": 63,
             "flags": {
-              "bits": 129
+              "bits": 4241
             },
-            "max_size": 8,
-            "type": "String"
+            "max_size": 255,
+            "type": "Blob"
           }
         },
         {
@@ -2903,10 +2903,10 @@
           "type_info": {
             "char_set": 63,
             "flags": {
-              "bits": 129
+              "bits": 4241
             },
-            "max_size": 8,
-            "type": "String"
+            "max_size": 255,
+            "type": "Blob"
           }
         },
         {
