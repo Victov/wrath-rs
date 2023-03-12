@@ -83,7 +83,7 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
             hair_style: character.hair_style,
             hair_color: character.hair_color,
             facial_hair: character.facial_style,
-            level: character.level as u8,
+            level: character.level.into(),
             area: Area::try_from(character.zone as u32).unwrap_or(Area::NorthshireValley),
             map: Map::try_from(character.map as u32).unwrap_or(Map::EasternKingdoms),
             position: wow_world_messages::wrath::Vector3d {
@@ -96,8 +96,8 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
             recustomization_flags: 0,
             first_login,
             pet_display_id: 0,
-            pet_level: 0,
-            pet_family: 0,
+            pet_level: 0.into(),
+            pet_family: wow_world_messages::wrath::CreatureFamily::None,
             equipment: equipped_items_to_send.try_into().unwrap(),
         });
     }

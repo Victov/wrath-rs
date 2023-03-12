@@ -20,5 +20,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 async-trait = "0.1"
 byte = "0.2"
 cmdparse = { version = "0.1" }
-# Temporarily pointing at the git repo, until a new  wow_login_messages version is published with async support.
 wow_login_messages = { version="0.2", features=["async-std"] }

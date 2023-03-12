@@ -11,7 +11,7 @@ async-std = {version="*", features=["attributes"] }
 async-trait = {version="0.1"}
 anyhow = { version = "1.0" }
 podio = { version = "0.2" } 
-dotenv = { version="*" }
+dotenvy = { version="*" }
 rand = { version = "0.8" } 
 num-traits = { version = "0.2" } 
 num_enum = { version="0.5" } 
@@ -26,12 +26,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 rstar = { version = "0.9" }
 hex = { version = "0.4" }
 cmdparse = { version = "0.1" }
+
 wow_srp = { version = "0.5" }
+wow_dbc = { version = "0.2", features = ["wrath"] }
+wow_world_messages = { git="https://github.com/gtker/wow_messages.git", rev="6002cfe5074c042f1560b2171a9e64b6cdf56e03", features=["wrath", "async-std", "chrono"] }
 
-#use specific git rev until release 0.1.1 arrivse on crates
-wow_dbc = { git = "https://github.com/gtker/wow_dbc.git", rev = "aac5da774d4861008120f18e0f5b74087f1bba45", features = ["wrath"] }
-
-wow_world_messages = { git="https://github.com/gtker/wow_messages.git", rev="8c070bf7da3b0bf35bc255face5cfbdf6e610c94", features=["wrath", "async-std", "chrono"] }
 #For local testing purposes, one may want to switch to this local path version of wow_world_messages. Do not commit with this though
 #wow_world_messages = { path = "../../wow_messages/wow_world_messages", features=["wrath", "async-std", "chrono"] }
 
