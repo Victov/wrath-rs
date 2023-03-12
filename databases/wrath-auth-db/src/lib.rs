@@ -13,7 +13,7 @@ impl AuthDatabase {
     pub async fn new(conn_string: &String, timeout: Duration) -> Result<Self> {
         let pool = sqlx::mysql::MySqlPoolOptions::new()
             .max_connections(5)
-            .connect_timeout(timeout)
+            .acquire_timeout(timeout)
             .connect(conn_string.as_str())
             .await?;
 

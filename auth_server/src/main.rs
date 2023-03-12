@@ -24,7 +24,7 @@ use crate::state::{ActiveClients, ClientState};
 
 #[async_std::main]
 async fn main() -> Result<()> {
-    dotenv::dotenv().ok();
+    dotenvy::dotenv().ok();
 
     let timer = UtcTime::new(format_description!("[day]-[month]-[year] [hour]:[minute]:[second]"));
     tracing_subscriber::FmtSubscriber::builder()
