@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use async_std::net::TcpStream;
-use tracing::info;
 use std::time::Instant;
 
 use wrath_auth_db::AuthDatabase;
@@ -13,7 +12,7 @@ use wow_login_messages::version_8::*;
 use wow_login_messages::{all::*, ServerMessage};
 
 use crate::state::{ActiveClients, SrpServerTime};
-use crate::{ClientState};
+use crate::ClientState;
 
 pub async fn handle_logon_proof_srp(
     stream: &mut TcpStream,

@@ -7,7 +7,8 @@ use std::time::Instant;
 use tracing::warn;
 
 use wow_login_messages::{
-    version_8::{Population, Realm, RealmCategory, RealmType, Realm_RealmFlag, CMD_REALM_LIST_Server, RealmFlag}, ServerMessage,
+    version_8::{CMD_REALM_LIST_Server, Population, Realm, RealmCategory, RealmType, Realm_RealmFlag},
+    ServerMessage,
 };
 use wrath_auth_db::AuthDatabase;
 
@@ -105,9 +106,7 @@ pub async fn handle_realm_list_request(
         None => return Err(anyhow!("Username is not in database")),
     };
     let realms = get_realm_list(auth_database, account.id).await?;
-    CMD_REALM_LIST_Server {
-        realms,
-    }.astd_write(stream).await?;
+    CMD_REALM_LIST_Server { realms }.astd_write(stream).await?;
 
     Ok(ClientState::LogOnProof { username })
 }
