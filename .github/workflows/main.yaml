@@ -22,4 +22,4 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
       - name: Build
-        run: cargo build
+        run: cargo build --all
