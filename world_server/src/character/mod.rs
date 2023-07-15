@@ -200,7 +200,7 @@ impl Character {
         let (a, b, _, d) = self.gameplay_data.player_FIELD_BYTES().unwrap_or_default();
         //action_bars is a flags, no extra actionbars = 0, all bars (2 above default bar, 2 side
         //bars) is 15 when they are set visible in the Interface settings menu
-        self.gameplay_data.set_player_FIELD_BYTES(a, b, action_bars, d);
+        self.gameplay_data.set_player_FEATURES(a, b, action_bars, d);
     }
 
     fn set_rested_bytes(&mut self, rested: bool) -> Result<()> {
