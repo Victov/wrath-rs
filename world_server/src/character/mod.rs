@@ -133,7 +133,6 @@ impl Character {
     pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
         self.try_perform_first_time_login_if_required().await?;
         self.tick_time_sync(delta_time).await?;
-        self.tick_cinematic().await?;
         self.tick_logout_state(delta_time, world.clone()).await?;
 
         self.handle_queued_teleport(world)
