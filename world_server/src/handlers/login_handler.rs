@@ -147,7 +147,7 @@ pub async fn handle_cmsg_ping(client_manager: &ClientManager, client_id: u64, pa
 
 pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
     SMSG_LOGIN_SETTIMESPEED {
-        //TODO: Use chrono for this, removed because of trait not satisfied error
+        //TODO: Use chrono for this, removed because of trait not satisfied
         datetime: wow_world_messages::DateTime::new(23, wow_world_messages::Month::July, 15, wow_world_messages::Weekday::Saturday, 12, 12),
         timescale: 0.01667f32,
         unknown1: 0,
