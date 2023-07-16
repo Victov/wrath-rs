@@ -126,10 +126,11 @@ impl Client {
                     payload: Box::new(op),
                 })?;
             } else if let Err(e) = opcode {
-                if let ExpectedOpcodeError::Parse(ParseError::Io(_)) = e {
-                    error!("IO error during parsing, there is no recovery from this, disconnect client");
-                    break;
-                }
+                //TOOD: Make this work again
+                // if let ExpectedOpcodeError::Parse(ParseError::Io(_)) = e {
+                //     error!("IO error during parsing, there is no recovery from this, disconnect client");
+                //     break;
+                // }
                 warn!("Error in opcode: {}.", e);
             }
         }

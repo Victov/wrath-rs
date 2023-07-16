@@ -5,7 +5,7 @@ use async_std::{
 };
 use std::sync::Arc;
 use wow_dbc::wrath_tables::{area_trigger::AreaTriggerKey, chr_classes::ChrClasses, chr_races::ChrRaces};
-use wrath_realm_db::RealmDatabase;
+use wrath_realm_db::{RealmDatabase, item_template::DBItemTemplate};
 
 mod area_triggers;
 pub use area_triggers::*;
@@ -17,6 +17,7 @@ pub struct DataStorage {
     dbc_chr_map: Option<wow_dbc::wrath_tables::map::Map>,
     dbc_char_start_outfit: Option<wow_dbc::wrath_tables::char_start_outfit::CharStartOutfit>,
     area_triggers: std::collections::hash_map::HashMap<AreaTriggerKey, AreaTrigger>,
+    db_item_template: Option<DBItemTemplate>,
 }
 
 async fn load_standard_dbc<T: wow_dbc::DbcTable>(folder_path: impl Into<&str>, table: &mut Option<T>) -> Result<()> {
@@ -62,7 +63,8 @@ impl DataStorage {
         load_standard_dbc(dbc_path, &mut self.dbc_char_start_outfit).await?;
         self.load_area_triggers(dbc_path, realm_db).await?;
         info!("Finished loading DBC files");
-
+        info!("Loading SQL data");
+        info!("Loading item templates");
         Ok(())
     }
 

@@ -11,7 +11,7 @@ pub async fn send_trigger_cinematic(character: &Character, cinematic_id: Cinemat
     .await
 }
 
-pub async fn handle_csmg_next_cinematic_camera(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_NEXT_CINEMATIC_CAMERA) -> Result<()> {
+pub async fn handle_csmg_next_cinematic_camera(client_manager: &ClientManager, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
 
@@ -19,7 +19,7 @@ pub async fn handle_csmg_next_cinematic_camera(client_manager: &ClientManager, c
     character.handle_cinematic_next_camera()
 }
 
-pub async fn handle_csmg_complete_cinematic(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_COMPLETE_CINEMATIC) -> Result<()> {
+pub async fn handle_csmg_complete_cinematic(client_manager: &ClientManager, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
 

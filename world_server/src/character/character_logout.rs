@@ -22,7 +22,7 @@ impl super::Character {
     pub async fn try_logout(&mut self) -> Result<(LogoutResult, LogoutSpeed)> {
         //TODO: add checks about being in combat (refuse), etc
 
-        if self.movement_info.flags.get_FALLING_FAR() || self.movement_info.flags.get_FALLING_SLOW() {
+        if self.movement_info.flags.get_falling_far() || self.movement_info.flags.get_falling_slow() {
             return Ok((LogoutResult::FailureJumpingOrFalling, LogoutSpeed::Delayed));
         }
 

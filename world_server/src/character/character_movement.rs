@@ -3,7 +3,7 @@ use crate::handlers::movement_handler::{TeleportationDistance, TeleportationStat
 use crate::prelude::*;
 use crate::world::{game_object::GameObject, World};
 use std::sync::Arc;
-use wow_world_messages::wrath::{ExtraMovementFlags, MovementInfo, MovementInfo_MovementFlags};
+use wow_world_messages::wrath::{MovementInfo, MovementInfo_MovementFlags};
 
 impl super::Character {
     pub fn process_movement(&mut self, movement_info: MovementInfo) {
@@ -17,7 +17,6 @@ impl super::Character {
 
     fn reset_move_flags(&mut self) {
         self.movement_info.flags = MovementInfo_MovementFlags::empty();
-        self.movement_info.extra_flags = ExtraMovementFlags::empty();
     }
 
     pub fn teleport_to(&mut self, destination: TeleportationDistance) {

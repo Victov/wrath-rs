@@ -64,8 +64,8 @@ impl super::Character {
                 _ => race_info.female_display_id,
             }
             .id;
-            self.gameplay_data.set_unit_DISPLAYID(display_id);
-            self.gameplay_data.set_unit_NATIVEDISPLAYID(display_id);
+            self.gameplay_data.set_unit_displayid(display_id);
+            self.gameplay_data.set_unit_nativedisplayid(display_id);
         }
 
         let class_info = data_storage
@@ -74,12 +74,12 @@ impl super::Character {
             .ok_or_else(|| anyhow!("No classinfo for this class"))?;
 
         let power = Power::try_from(class_info.display_power as u8)?;
-        self.gameplay_data.set_unit_BYTES_0(race, class, gender, power);
-        self.gameplay_data.set_unit_HEALTH(100);
-        self.gameplay_data.set_unit_MAXHEALTH(100);
-        self.gameplay_data.set_unit_LEVEL(1);
-        self.gameplay_data.set_unit_FACTIONTEMPLATE(1);
-        self.gameplay_data.set_object_SCALE_X(1.0f32);
+        self.gameplay_data.set_unit_bytes_0(race, class, gender, power);
+        self.gameplay_data.set_unit_health(100);
+        self.gameplay_data.set_unit_maxhealth(100);
+        self.gameplay_data.set_unit_level(1);
+        self.gameplay_data.set_unit_factiontemplate(1);
+        self.gameplay_data.set_object_scale_x(1.0f32);
 
         //No playtime means it's our very first login
         self.needs_first_login = self.seconds_played_total == 0;

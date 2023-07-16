@@ -3,7 +3,7 @@ use wow_world_messages::wrath::{
     CMSG_GMTICKET_CREATE, CMSG_GMTICKET_GETTICKET, CMSG_GMTICKET_SYSTEMSTATUS, SMSG_GMTICKET_GETTICKET, SMSG_GMTICKET_SYSTEMSTATUS,
 };
 
-pub async fn handle_cmsg_gmticket_getticket(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_GMTICKET_GETTICKET) -> Result<()> {
+pub async fn handle_cmsg_gmticket_getticket(client_manager: &ClientManager, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
 
     /*
@@ -34,7 +34,7 @@ pub async fn handle_cmsg_gmticket_create(client_manager: &ClientManager, client_
     Ok(())
 }
 
-pub async fn handle_cmsg_gmticket_system_status(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_GMTICKET_SYSTEMSTATUS) -> Result<()> {
+pub async fn handle_cmsg_gmticket_system_status(client_manager: &ClientManager, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
 
     SMSG_GMTICKET_SYSTEMSTATUS {

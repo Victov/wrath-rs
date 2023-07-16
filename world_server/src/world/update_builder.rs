@@ -28,16 +28,15 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
     let movement_flags = MovementBlock_MovementFlags::empty();
 
     let mut update_flag = MovementBlock_UpdateFlag::empty()
-        .set_LIVING(MovementBlock_UpdateFlag_Living::Living {
+        .set_living(MovementBlock_UpdateFlag_Living::Living {
             backwards_running_speed: 4.5,
             backwards_swimming_speed: 1.0,
-            extra_flags: movement_info.extra_flags,
             fall_time: movement_info.fall_time,
             flags: movement_flags,
             flight_speed: 0.0,
             backwards_flight_speed: 0.0,
-            living_orientation: movement_info.orientation,
-            living_position: movement_info.position,
+            orientation: movement_info.orientation,
+            position: movement_info.position,
             pitch_rate: 7.0,
             running_speed: 8.0,
             swimming_speed: 1.0,
@@ -45,7 +44,7 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
             turn_rate: std::f32::consts::PI,
             walking_speed: 1.0,
         })
-        .set_HIGH_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_HighGuid {
+        .set_high_guid(wow_world_messages::wrath::MovementBlock_UpdateFlag_HighGuid {
             unknown0: if creating_self { 0x2F } else { 0x08 },
         })
         /*.set_LOW_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_LowGuid {
@@ -53,7 +52,7 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
         })*/;
 
     if creating_self {
-        update_flag = update_flag.set_SELF()
+        update_flag = update_flag.set_self()
     }
 
     //Copy the update mask and mark every field dirty, so that we send everything we need to know
