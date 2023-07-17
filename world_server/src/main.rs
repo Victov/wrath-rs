@@ -20,7 +20,6 @@ mod console_input;
 mod constants;
 mod data;
 pub mod handlers;
-mod opcodes;
 mod packet;
 mod packet_handler;
 mod world;
