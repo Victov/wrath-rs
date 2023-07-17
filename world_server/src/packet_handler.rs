@@ -135,6 +135,8 @@ impl PacketHandler {
                 handle_cmsg_calendar_get_num_pending(client_manager, packet.client_id).await
             }
             ClientOpcodeMessage::CMSG_SET_ACTIONBAR_TOGGLES(data) => handle_csmg_set_actionbar_toggles(client_manager, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_ITEM_QUERY_SINGLE(data) => handle_cmsg_item_query_single(client_manager, packet.client_id, world,data).await,
+            ClientOpcodeMessage::CMSG_ITEM_NAME_QUERY(data) => handle_cmsg_item_name_query(client_manager, packet.client_id, world,data).await,
             _ => bail!("Unhandled opcode"),
         }
     }

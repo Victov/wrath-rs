@@ -5,6 +5,7 @@ use crate::prelude::*;
 use crate::world::World;
 use crate::{character::Character, world::prelude::GameObject};
 use std::time::{SystemTime, UNIX_EPOCH};
+use wow_world_messages::wrath::CMSG_ITEM_NAME_QUERY;
 use wow_world_messages::wrath::CMSG_ITEM_QUERY_SINGLE;
 use wow_world_messages::wrath::SMSG_ITEM_QUERY_SINGLE_RESPONSE;
 use wow_world_messages::wrath::{
@@ -94,4 +95,31 @@ async fn send_name_query_response(receiver: &Client, target_character: &Characte
     }
     .astd_send_to_client(receiver)
     .await
+}
+
+pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, client_id: u64, _world: &World, packet: &CMSG_ITEM_QUERY_SINGLE) -> Result<()> {
+    let client = client_manager.get_client(client_id).await?;
+    let item = wow_items::wrath::lookup_item(packet.item);
+    match item {
+        None => {
+            SMSG_ITEM_QUERY_SINGLE_RESPONSE {
+                item: packet.item | 0x80000000,
+                found: None,
+            }
+            .astd_send_to_client(client)
+            .await
+        }
+        Some(item) => wow_world_messages::wrath::item_to_query_response(item).astd_send_to_client(client).await
+    }
+}
+
+pub async fn handle_cmsg_item_name_query(client_manager: &ClientManager, client_id: u64, _world: &World, packet: &CMSG_ITEM_NAME_QUERY) -> Result<()>
+{
+    let item = wow_items::wrath::lookup_item(packet.item);
+    let client = client_manager.get_client(client_id).await?;
+    match item
+    {
+        Some(item) => wow_world_messages::wrath::item_to_name_query_response(item).astd_send_to_client(client).await,
+        None => Err(anyhow!("Item {} not found for client {}", packet.item,client_id)),
+    }
 }
