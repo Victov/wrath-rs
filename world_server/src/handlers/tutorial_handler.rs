@@ -2,7 +2,7 @@ use crate::client_manager::ClientManager;
 use crate::prelude::*;
 use crate::{character::*, packet::ServerMessageExt};
 use bit_field::BitArray;
-use wow_world_messages::wrath::{CMSG_TUTORIAL_FLAG, CMSG_TUTORIAL_RESET};
+use wow_world_messages::wrath::CMSG_TUTORIAL_FLAG;
 
 pub async fn send_tutorial_flags(character: &Character) -> Result<()> {
     wow_world_messages::wrath::SMSG_TUTORIAL_FLAGS {

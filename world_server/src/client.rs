@@ -12,7 +12,7 @@ use std::sync::Arc;
 use wow_srp::wrath_header::ProofSeed;
 use wow_srp::wrath_header::ServerDecrypterHalf;
 use wow_srp::wrath_header::ServerEncrypterHalf;
-use wow_world_messages::errors::{ExpectedOpcodeError, ParseError};
+use wow_world_messages::errors::ExpectedOpcodeError;
 use wow_world_messages::wrath::astd_expect_client_message;
 use wow_world_messages::wrath::opcodes::ClientOpcodeMessage;
 use wow_world_messages::wrath::ServerMessage;

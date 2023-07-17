@@ -1,4 +1,4 @@
-use wow_world_messages::wrath::{CMSG_REQUEST_RAID_INFO, SMSG_RAID_INSTANCE_INFO};
+use wow_world_messages::wrath::SMSG_RAID_INSTANCE_INFO;
 
 use crate::{client_manager::ClientManager, packet::ServerMessageExt, prelude::*};
 

@@ -1,6 +1,6 @@
 use crate::{client_manager::ClientManager, packet::ServerMessageExt, prelude::*};
 use wow_world_messages::wrath::{
-    CMSG_GMTICKET_CREATE, CMSG_GMTICKET_GETTICKET, CMSG_GMTICKET_SYSTEMSTATUS, SMSG_GMTICKET_GETTICKET, SMSG_GMTICKET_SYSTEMSTATUS,
+    CMSG_GMTICKET_CREATE, SMSG_GMTICKET_GETTICKET, SMSG_GMTICKET_SYSTEMSTATUS,
 };
 
 pub async fn handle_cmsg_gmticket_getticket(client_manager: &ClientManager, client_id: u64) -> Result<()> {

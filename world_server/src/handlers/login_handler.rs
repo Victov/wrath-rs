@@ -8,7 +8,7 @@ use std::sync::Arc;
 use wow_srp::normalized_string::NormalizedString;
 use wow_srp::wrath_header::ProofSeed;
 use wow_world_messages::wrath::{
-    Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, CMSG_LOGOUT_CANCEL, CMSG_LOGOUT_REQUEST, CMSG_PING,
+    Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION,CMSG_PING,
     CMSG_REALM_SPLIT, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION, SMSG_LOGIN_SETTIMESPEED, SMSG_LOGOUT_CANCEL_ACK,
     SMSG_LOGOUT_COMPLETE, SMSG_LOGOUT_RESPONSE, SMSG_PONG, SMSG_REALM_SPLIT, SMSG_TUTORIAL_FLAGS,
 };

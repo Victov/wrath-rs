@@ -1,7 +1,7 @@
 use crate::packet::ServerMessageExt;
 use crate::prelude::*;
 use crate::{character::Character, client_manager::ClientManager};
-use wow_world_messages::wrath::{CinematicSequenceId, CMSG_COMPLETE_CINEMATIC, CMSG_NEXT_CINEMATIC_CAMERA, SMSG_TRIGGER_CINEMATIC};
+use wow_world_messages::wrath::{CinematicSequenceId, SMSG_TRIGGER_CINEMATIC};
 
 pub async fn send_trigger_cinematic(character: &Character, cinematic_id: CinematicSequenceId) -> Result<()> {
     SMSG_TRIGGER_CINEMATIC {
