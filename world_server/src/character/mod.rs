@@ -1,6 +1,6 @@
 use super::world::prelude::*;
 use crate::client::Client;
-use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
+use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation, GameplayCharacterInventory};
 use crate::handlers::login_handler::LogoutState;
 use crate::handlers::movement_handler::TeleportationState;
 use crate::prelude::*;
@@ -13,6 +13,7 @@ use wow_world_messages::wrath::{
     Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UnitStandState, UpdateMask, UpdatePlayer,
 };
 use wrath_realm_db::RealmDatabase;
+use super::item::Item;
 
 mod character_cinematic;
 mod character_database;
@@ -20,6 +21,8 @@ mod character_first_login;
 mod character_logout;
 mod character_movement;
 mod character_rested;
+
+pub const PLAYER_SLOT_COUNT :usize = 150;
 
 pub struct Character {
     pub client: Weak<Client>,
@@ -59,6 +62,9 @@ pub struct Character {
     needs_first_login: bool,
 
     cinematic_state: character_cinematic::CharacterCinematicState,
+
+    //items
+    pub items: GameplayCharacterInventory,
 }
 
 impl Character {
@@ -87,6 +93,7 @@ impl Character {
             rested_state: character_rested::RestedState::NotRested,
             needs_first_login: false,
             cinematic_state: character_cinematic::CharacterCinematicState::None,
+            items: GameplayCharacterInventory::new(),
         }
     }
 

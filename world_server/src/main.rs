@@ -23,6 +23,7 @@ pub mod handlers;
 mod packet;
 mod packet_handler;
 mod world;
+mod item;
 
 pub mod prelude {
     pub use super::handlers;

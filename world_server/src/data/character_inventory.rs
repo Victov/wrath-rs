@@ -1,6 +1,7 @@
 use crate::{
     prelude::*,
-    world::prelude::inventory::{get_compatible_equipment_slots_for_inventory_type, EquipmentSlot},
+    world::prelude::inventory::{get_compatible_equipment_slots_for_inventory_type, EquipmentSlot, BAG_SLOTS_END},
+    item::Item,
 };
 use std::{collections::HashMap, fmt::Display};
 use wow_world_messages::wrath::InventoryType;
@@ -35,6 +36,19 @@ impl<ItemType: InventoryStorable> CharacterInventory<ItemType> {
         }
         bail!("No free slots to put item {}", item);
     }
+
+    pub fn get_item(&self, slot: EquipmentSlot) -> Option<&ItemType> {
+        self.items.get(&slot)
+    }
+    pub fn get_all_equipment(&self) -> [Option<&ItemType>;(BAG_SLOTS_END + 1) as usize]
+    {
+        let mut result = [None; (BAG_SLOTS_END + 1) as usize];
+        for (slot, item) in self.items.iter()
+        {
+            result[*slot as usize] = Some(item);
+        }
+        result
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -60,3 +74,4 @@ impl InventoryStorable for SimpleItemDescription {
 }
 
 pub type SimpleCharacterInventory = CharacterInventory<SimpleItemDescription>;
+pub type GameplayCharacterInventory = CharacterInventory<Item>;
