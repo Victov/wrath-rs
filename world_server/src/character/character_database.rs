@@ -5,7 +5,7 @@ use crate::world::prelude::*;
 use crate::item::Item;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wow_dbc::Indexable;
-use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, Power, Race, Vector3d, SkillInfoIndex,SkillInfo, SMSG_INITIAL_SPELLS, InitialSpell, SMSG_UPDATE_OBJECT, Object, Object_UpdateType, UpdateItemBuilder, UpdateMask, MovementBlock, MovementBlock_UpdateFlag, UpdatePlayerBuilder, SMSG_ITEM_PUSH_RESULT};
+use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, Power, Race, Vector3d, SkillInfoIndex,SkillInfo, SMSG_INITIAL_SPELLS, InitialSpell, SMSG_UPDATE_OBJECT, Object, Object_UpdateType, UpdateItemBuilder, UpdateMask, MovementBlock, MovementBlock_UpdateFlag, UpdatePlayerBuilder, SMSG_ITEM_PUSH_RESULT, VisibleItemIndex, VisibleItem};
 use wow_world_base::wrath::{RaceClass, ObjectType, ItemSlot, NewItemChatAlert, NewItemCreationType, NewItemSource};
 impl super::Character {
     pub(super) async fn load_from_database_internal(&mut self, world: &World, data_storage: &DataStorage) -> Result<()> {
@@ -125,13 +125,20 @@ impl super::Character {
 
         char_equipment.iter().enumerate().for_each(|(i,x)|{
             if let Some(item) = x{
+                if (i as u8) <= inventory::EQUIPMENT_SLOTS_END
+                {
+                    //TODO: add enchants
+                    self.gameplay_data.set_player_visible_item(
+                                                                VisibleItem::new(item.update_state.object_entry().unwrap() as u32,[0u16;2]),
+                                                                VisibleItemIndex::try_from(i as u8).unwrap()
+                                                            );
+                }
                 self.gameplay_data.set_player_field_inv(ItemSlot::try_from(i as u8).unwrap(),item.update_state.object_guid().unwrap());
             }
         });
         SMSG_UPDATE_OBJECT {
               objects: equiped_items,
             }.astd_send_to_character(&mut *self).await?;
-
         Ok(())
     }
 }

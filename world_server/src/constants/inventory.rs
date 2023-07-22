@@ -1,7 +1,7 @@
 use wow_world_messages::wrath::InventoryType;
 
 pub const EQUIPMENT_SLOTS_START: u8 = 0;
-pub const _EQUIPMENT_SLOTS_END: u8 = 18;
+pub const EQUIPMENT_SLOTS_END: u8 = 18;
 pub const _BAG_SLOTS_START: u8 = 19;
 pub const BAG_SLOTS_END: u8 = 22;
 #[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
