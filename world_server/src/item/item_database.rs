@@ -6,10 +6,10 @@ use super::Item;
 impl From<&DBItemInstance> for Item
    {
        fn from(value: &DBItemInstance) -> Self {
-         //TODO: this object guid is now good, but  there is no id in character_equipment table
+         //TODO: this object guid is good for now,but we need to make sure it's unique in the future
          Item{
              update_state: UpdateItemBuilder::new()
-             .set_object_guid(((value.character_id as u64) + value.slot_id as u64).into())
+             .set_object_guid(((value.character_id as u64) << 32 + value.slot_id as u64).into())
              .set_object_entry(value.item.try_into().unwrap())
              .set_object_scale_x(1.0)
              .set_item_owner(Guid::new(value.character_id as u64))
