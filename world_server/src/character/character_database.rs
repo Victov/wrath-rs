@@ -1,4 +1,4 @@
-use crate::data::{DataStorage, TutorialFlags, WorldZoneLocation};
+use crate::data::{DataStorage, TutorialFlags, WorldZoneLocation, INVENTORY_SLOT_BAG_0};
 use crate::packet::ServerMessageExt;
 use crate::prelude::*;
 use crate::world::prelude::*;
@@ -105,7 +105,7 @@ impl super::Character {
 
         //TODO: load invetory here
         realm_database.get_all_character_equipment(character_id).await?.iter().for_each(|x|{
-            self.items.try_insert_item(Item::from(x)).unwrap();
+            self.set_item(Some(Item::from(x)),(x.slot_id,INVENTORY_SLOT_BAG_0)).expect("This should never fail in this context");
         });
 
         let char_equipment = self.items.get_all_equipment();
@@ -122,20 +122,6 @@ impl super::Character {
                     object_type: ObjectType::Item,
                 },
                 }).collect::<Vec<Object>>();
-
-        char_equipment.iter().enumerate().for_each(|(i,x)|{
-            if let Some(item) = x{
-                if (i as u8) <= inventory::EQUIPMENT_SLOTS_END
-                {
-                    //TODO: add enchants
-                    self.gameplay_data.set_player_visible_item(
-                                                                VisibleItem::new(item.update_state.object_entry().unwrap() as u32,[0u16;2]),
-                                                                VisibleItemIndex::try_from(i as u8).unwrap()
-                                                            );
-                }
-                self.gameplay_data.set_player_field_inv(ItemSlot::try_from(i as u8).unwrap(),item.update_state.object_guid().unwrap());
-            }
-        });
         SMSG_UPDATE_OBJECT {
               objects: equiped_items,
             }.astd_send_to_character(&mut *self).await?;
