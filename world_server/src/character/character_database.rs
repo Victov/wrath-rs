@@ -108,7 +108,7 @@ impl super::Character {
             self.set_item(Some(Item::from(x)),(x.slot_id,INVENTORY_SLOT_BAG_0)).expect("This should never fail in this context");
         });
 
-        let char_equipment = self.items.get_all_equipment();
+        let char_equipment = self.equipped_items.get_all_equipment();
         let equiped_items = char_equipment
                 .iter()
                 .filter_map(|x| *x)

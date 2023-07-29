@@ -2,16 +2,27 @@ use crate::character::Character;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
 use crate::data::DataStorage;
+use crate::data::INVENTORY_SLOT_BAG_0;
 use crate::data::SimpleCharacterInventory;
 use crate::data::SimpleItemDescription;
 use crate::packet::*;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
+use crate::world::prelude::ReceiveUpdates;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
+use tracing::log::Level;
+use tracing::log::log;
 use wow_dbc::DbcTable;
+use wow_world_base::wrath::InventoryResult;
+use wow_world_base::wrath::UpdateType;
+use wow_world_messages::wrath::CMSG_SWAP_INV_ITEM;
+use wow_world_messages::wrath::Object;
+use wow_world_messages::wrath::Object_UpdateType;
+use wow_world_messages::wrath::SMSG_UPDATE_OBJECT;
+use wow_world_messages::wrath::UpdateMask;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_CHAR_DELETE;
@@ -25,6 +36,8 @@ use wow_world_messages::wrath::SMSG_LOGIN_VERIFY_WORLD;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
 use wrath_realm_db::RealmDatabase;
+
+use super::send_smsg_update_objects;
 
 pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
@@ -307,4 +320,21 @@ pub async fn send_action_buttons(character: &Character) -> Result<()> {
     }
     .astd_send_to_character(character)
     .await
+}
+
+pub async fn handle_cmsg_swap_inv_item(client_manager: &ClientManager,_world: &World, client_id : u64, data : &CMSG_SWAP_INV_ITEM) -> Result<()>
+{
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let character_lock = client.get_active_character().await?;
+    let mut character = character_lock.write().await;
+
+    let src = data.destination_slot.as_int();
+    let dst = data.source_slot.as_int();
+    let dst_item = character.set_item(None,(dst,INVENTORY_SLOT_BAG_0))?;
+    let src_item = character.set_item(None,(src,INVENTORY_SLOT_BAG_0))?;
+
+    character.set_item(dst_item,(src,INVENTORY_SLOT_BAG_0))?;
+    character.set_item(src_item,(dst,INVENTORY_SLOT_BAG_0))?;
+
+    Ok(())
 }

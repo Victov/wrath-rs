@@ -1,4 +1,5 @@
 mod item_database;
+pub mod item_container;
 
 use wow_world_messages::{wrath::{UpdateItem, UpdateItemBuilder}, Guid};
 use wow_items::wrath::lookup_item;

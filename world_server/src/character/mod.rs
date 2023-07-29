@@ -1,6 +1,6 @@
 use super::world::prelude::*;
 use crate::client::Client;
-use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation, GameplayCharacterInventory};
+use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation, GameplayCharacterInventory, BagInventory};
 use crate::handlers::login_handler::LogoutState;
 use crate::handlers::movement_handler::TeleportationState;
 use crate::prelude::*;
@@ -64,7 +64,8 @@ pub struct Character {
     cinematic_state: character_cinematic::CharacterCinematicState,
 
     //items
-    pub items: GameplayCharacterInventory,
+    pub equipped_items: GameplayCharacterInventory,
+    pub bag_items : BagInventory,
 }
 
 impl Character {
@@ -93,7 +94,8 @@ impl Character {
             rested_state: character_rested::RestedState::NotRested,
             needs_first_login: false,
             cinematic_state: character_cinematic::CharacterCinematicState::None,
-            items: GameplayCharacterInventory::new(),
+            equipped_items: GameplayCharacterInventory::new(),
+            bag_items : BagInventory::default(),
         }
     }
 

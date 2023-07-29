@@ -26,6 +26,7 @@ pub use character_handler::handle_cmsg_standstate_change;
 pub use character_handler::send_action_buttons;
 pub use character_handler::send_bind_update;
 pub use character_handler::send_verify_world;
+pub use character_handler::handle_cmsg_swap_inv_item;
 
 mod cinematics_handler;
 pub use cinematics_handler::handle_csmg_complete_cinematic;

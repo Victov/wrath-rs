@@ -1,11 +1,10 @@
-use crate::{
-    prelude::*,
-    world::prelude::inventory::{get_compatible_equipment_slots_for_inventory_type, EquipmentSlot, BAG_SLOTS_END, self},
-    item::Item,
+use crate::{ prelude::*, world::prelude::inventory::{get_compatible_equipment_slots_for_inventory_type, EquipmentSlot, BAG_SLOTS_END, self, BagSlot}, item::Item,
 };
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, ops::{Index, IndexMut}, f32::consts::E};
 use wow_world_base::wrath::ItemSlot;
 use wow_world_messages::wrath::{InventoryType, VisibleItem, VisibleItemIndex};
+use crate::item::item_container::ItemContainer;
+use wow_world_messages::wrath::UpdateItem;
 
 //An identifier for the player inventory (the thing ItemSlot models a cell of)
 pub const INVENTORY_SLOT_BAG_0 :u8 = 255;
@@ -84,6 +83,66 @@ impl InventoryStorable for SimpleItemDescription {
 pub type SimpleCharacterInventory = CharacterInventory<SimpleItemDescription>;
 pub type GameplayCharacterInventory = CharacterInventory<Item>;
 
+pub struct BagInventory
+{
+    items: [Option<Item>;16]
+}
+impl Default for BagInventory{
+    fn default() -> Self {
+        Self { items: Default::default() }
+    }
+}
+impl Index<BagSlot> for BagInventory
+{
+    type Output = Option<Item>;
+
+    fn index(&self, index: BagSlot) -> &Self::Output {
+        &self.items[Self::to_index(&index)]
+    }
+}
+impl IndexMut<BagSlot> for BagInventory
+{
+    fn index_mut(&mut self, index: BagSlot) -> &mut Self::Output {
+        &mut self.items[Self::to_index(&index)]
+    }
+}
+
+impl BagInventory
+{
+    fn to_index(slot: &BagSlot) -> usize
+    {
+        (*slot as usize) - (BagSlot::Item1 as usize)
+    }
+    fn take_item(&mut self, index: BagSlot) -> Option<Item>
+    {
+        let index = Self::to_index(&index);
+        if self.items[index as usize].is_some()
+        {
+            let item = self.items[index as usize].take();
+            item
+        }
+        else
+        {
+            None
+        }
+    }
+}
+
+impl ItemContainer<BagSlot> for BagInventory {
+    fn get_items_update_state(&self) -> Vec<UpdateItem> {
+        let mut updates = Vec::new();
+        for item in &self.items
+        {
+            if let Some(item) = item
+            {
+                updates.push(item.update_state.clone());
+            }
+        }
+        updates
+    }
+}
+
+
 impl crate::character::Character
 {
     //This function is meant to be used both with inventory and equipment or bags
@@ -92,14 +151,13 @@ impl crate::character::Character
     //Slot is u16 because lower 8 bits contain slot data and upper 8 bits contain bag data
     pub fn set_item(&mut self,item : Option<Item>, item_position: (u8,u8) ) -> Result<Option<Item>>
     {
-        //let (slot ,bag) = item_position;
         match item_position
         {
             (slot,INVENTORY_SLOT_BAG_0) =>
             {
                 if let Ok(equipment_slot) = EquipmentSlot::try_from(slot)
                 {
-                    let previous_item = self.items.take_item(equipment_slot);
+                    let previous_item = self.equipped_items.take_item(equipment_slot);
                     if let Some(item) = item
                     {
                         if (slot as u8) <= inventory::EQUIPMENT_SLOTS_END
@@ -111,9 +169,55 @@ impl crate::character::Character
                                                                     );
                         }
                         self.gameplay_data.set_player_field_inv(ItemSlot::try_from(slot as u8).unwrap(),item.update_state.object_guid().unwrap());
-                        self.items.try_insert_item(item)?;
+                        self.equipped_items.try_insert_item(item)?;
+                    }
+                    else
+                    {
+                        if (slot as u8) <= inventory::EQUIPMENT_SLOTS_END
+                        {
+                            self.gameplay_data.set_player_visible_item(
+                                                                        VisibleItem::new(0u32,[0u16;2]),
+                                                                        VisibleItemIndex::try_from(slot as u8).unwrap()
+                                                                    );
+                        }
+                        self.gameplay_data.set_player_field_inv(ItemSlot::try_from(slot as u8).unwrap(),Guid::zero());
                     }
                     Ok(previous_item)
+                }
+                else if let Ok(bag_slot) = inventory::BagSlot::try_from(slot)
+                {
+                    //TODO: add persistent bag for character and complete the implementation here
+                    let previous_item = self.bag_items.take_item(bag_slot);
+                    if let Some(item) = item
+                    {
+                        self.gameplay_data.set_player_field_inv(ItemSlot::try_from(slot as u8).unwrap(),item.update_state.object_guid().unwrap());
+                        self.bag_items[bag_slot] = Some(item);
+                    }
+                    else
+                    {
+                        self.gameplay_data.set_player_field_inv(ItemSlot::try_from(slot as u8).unwrap(),Guid::zero());
+                        self.bag_items[bag_slot] = None;
+                    }
+                    Ok(previous_item)
+                }
+                else
+                {
+                    todo!("Non-equipment inventory not implemented yet")
+                }
+
+            }
+            (_,_) => todo!("Bags not implemented yet")
+        }
+    }
+    fn has_item_in_slot(&self, item_position: (u8,u8)) -> bool
+    {
+        match item_position
+        {
+            (slot,INVENTORY_SLOT_BAG_0) =>
+            {
+                if let Ok(equipment_slot) = EquipmentSlot::try_from(slot)
+                {
+                    self.equipped_items.get_item(equipment_slot).is_some()
                 }
                 else if let Ok(_bag_slot) = inventory::BagSlot::try_from(slot)
                 {

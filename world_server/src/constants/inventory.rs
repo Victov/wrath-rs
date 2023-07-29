@@ -31,7 +31,7 @@ pub enum EquipmentSlot {
     Bag4 = 22,
 }
 
-#[allow(dead_code)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
 pub enum BagSlot {
     Item1 = 23,
     Item2 = 24,
@@ -142,5 +142,12 @@ impl TryFrom<u8> for BagSlot
             38 => Ok(Self::Item16),
             v => Err(wow_world_messages::errors::EnumError::new("BagSlot", v.into()),)
         }
+    }
+}
+
+impl From<BagSlot> for usize
+{
+    fn from(value: BagSlot) -> Self {
+        value as usize
     }
 }
