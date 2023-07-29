@@ -1,6 +1,6 @@
 use crate::{ prelude::*, world::prelude::inventory::{get_compatible_equipment_slots_for_inventory_type, EquipmentSlot, BAG_SLOTS_END, self, BagSlot}, item::Item,
 };
-use std::{collections::HashMap, fmt::Display, ops::{Index, IndexMut}, f32::consts::E};
+use std::{collections::HashMap, fmt::Display, ops::{Index, IndexMut}};
 use wow_world_base::wrath::ItemSlot;
 use wow_world_messages::wrath::{InventoryType, VisibleItem, VisibleItemIndex};
 use crate::item::item_container::ItemContainer;

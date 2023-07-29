@@ -15,7 +15,6 @@ use wow_world_messages::wrath::{
     Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UnitStandState, UpdateMask, UpdatePlayer,
 };
 use wrath_realm_db::RealmDatabase;
-use super::item::Item;
 
 mod character_cinematic;
 mod character_database;
@@ -24,8 +23,6 @@ mod character_logout;
 mod character_movement;
 mod character_rested;
 pub mod character_inventory;
-
-pub const PLAYER_SLOT_COUNT :usize = 150;
 
 pub struct Character {
     pub client: Weak<Client>,

@@ -1,9 +1,8 @@
 mod item_database;
 pub mod item_container;
 
-use wow_world_messages::{wrath::{UpdateItem, UpdateItemBuilder}, Guid};
+use wow_world_messages::wrath::UpdateItem;
 use wow_items::wrath::lookup_item;
-use wrath_realm_db::item_instance::DBItemInstance;
 
 use crate::character::character_inventory::InventoryStorable;
 

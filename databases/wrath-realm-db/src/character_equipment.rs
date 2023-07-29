@@ -1,6 +1,6 @@
 use anyhow::Result;
 use sqlx::{MySql, QueryBuilder};
-use crate::item_instance::{self, DBItemInstance};
+use crate::item_instance::DBItemInstance;
 #[derive(Debug)]
 pub struct DBCharacterEquipmentDisplayInfo {
     pub slot_id: u8,

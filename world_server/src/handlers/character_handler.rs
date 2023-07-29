@@ -9,20 +9,11 @@ use crate::packet::*;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
-use crate::world::prelude::ReceiveUpdates;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
-use tracing::log::Level;
-use tracing::log::log;
 use wow_dbc::DbcTable;
-use wow_world_base::wrath::InventoryResult;
-use wow_world_base::wrath::UpdateType;
 use wow_world_messages::wrath::CMSG_SWAP_INV_ITEM;
-use wow_world_messages::wrath::Object;
-use wow_world_messages::wrath::Object_UpdateType;
-use wow_world_messages::wrath::SMSG_UPDATE_OBJECT;
-use wow_world_messages::wrath::UpdateMask;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_CHAR_DELETE;
@@ -36,8 +27,6 @@ use wow_world_messages::wrath::SMSG_LOGIN_VERIFY_WORLD;
 use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryType, Map, Race, SMSG_CHAR_ENUM};
 use wrath_realm_db::character::DBCharacterCreateParameters;
 use wrath_realm_db::RealmDatabase;
-
-use super::send_smsg_update_objects;
 
 pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
