@@ -5,7 +5,8 @@ use wow_world_messages::{wrath::{UpdateItem, UpdateItemBuilder}, Guid};
 use wow_items::wrath::lookup_item;
 use wrath_realm_db::item_instance::DBItemInstance;
 
-use crate::data::InventoryStorable;
+use crate::character::character_inventory::InventoryStorable;
+
 
 #[derive(Default)]
 pub struct Item{

@@ -7,8 +7,6 @@ pub use action_bar::ActionBar;
 mod data_storage;
 pub use data_storage::*;
 
-mod character_inventory;
-pub use character_inventory::*;
 
 use wow_world_messages::wrath::{Area, Map, Vector3d};
 #[derive(Debug, Clone, Default, PartialEq)]

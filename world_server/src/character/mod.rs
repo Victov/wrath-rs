@@ -1,6 +1,8 @@
+use self::character_inventory::{GameplayCharacterInventory, BagInventory};
+
 use super::world::prelude::*;
 use crate::client::Client;
-use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation, GameplayCharacterInventory, BagInventory};
+use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::handlers::login_handler::LogoutState;
 use crate::handlers::movement_handler::TeleportationState;
 use crate::prelude::*;
@@ -21,6 +23,7 @@ mod character_first_login;
 mod character_logout;
 mod character_movement;
 mod character_rested;
+pub mod character_inventory;
 
 pub const PLAYER_SLOT_COUNT :usize = 150;
 

@@ -1,10 +1,10 @@
 use crate::character::Character;
+use crate::character::character_inventory::INVENTORY_SLOT_BAG_0;
+use crate::character::character_inventory::SimpleCharacterInventory;
+use crate::character::character_inventory::SimpleItemDescription;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
 use crate::data::DataStorage;
-use crate::data::INVENTORY_SLOT_BAG_0;
-use crate::data::SimpleCharacterInventory;
-use crate::data::SimpleItemDescription;
 use crate::packet::*;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
