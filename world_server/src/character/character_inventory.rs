@@ -219,9 +219,9 @@ impl crate::character::Character
                 {
                     self.equipped_items.get_item(equipment_slot).is_some()
                 }
-                else if let Ok(_bag_slot) = inventory::BagSlot::try_from(slot)
+                else if let Ok(bag_slot) = inventory::BagSlot::try_from(slot)
                 {
-                    todo!("Inventory bag not implemented yet")
+                    self.bag_items[bag_slot].is_some()
                 }
                 else
                 {
