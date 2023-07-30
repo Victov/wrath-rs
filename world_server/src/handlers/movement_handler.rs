@@ -13,7 +13,7 @@ use wow_world_messages::wrath::{
     MSG_MOVE_SET_RUN_MODE, MSG_MOVE_SET_WALK_MODE, MSG_MOVE_START_BACKWARD, MSG_MOVE_START_FORWARD, MSG_MOVE_START_PITCH_DOWN,
     MSG_MOVE_START_PITCH_UP, MSG_MOVE_START_STRAFE_LEFT, MSG_MOVE_START_STRAFE_RIGHT, MSG_MOVE_START_SWIM, MSG_MOVE_START_TURN_LEFT,
     MSG_MOVE_START_TURN_RIGHT, MSG_MOVE_STOP, MSG_MOVE_STOP_PITCH, MSG_MOVE_STOP_STRAFE, MSG_MOVE_STOP_SWIM, MSG_MOVE_STOP_TURN,
-    MSG_MOVE_WORLDPORT_ACK, SMSG_FORCE_MOVE_ROOT, SMSG_FORCE_MOVE_UNROOT, SMSG_NEW_WORLD, SMSG_STANDSTATE_UPDATE, SMSG_TRANSFER_PENDING,
+    SMSG_FORCE_MOVE_ROOT, SMSG_FORCE_MOVE_UNROOT, SMSG_NEW_WORLD, SMSG_STANDSTATE_UPDATE, SMSG_TRANSFER_PENDING,
 };
 
 pub trait MovementMessage: Sync + ServerMessage + ClientMessage {
@@ -137,8 +137,7 @@ pub async fn handle_msg_move_teleport_ack(client_manager: &ClientManager, client
 pub async fn handle_msg_move_worldport_ack(
     client_manager: &ClientManager,
     client_id: u64,
-    world: &World,
-    _packet: &MSG_MOVE_WORLDPORT_ACK,
+    world: &World
 ) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;

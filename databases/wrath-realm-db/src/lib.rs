@@ -7,6 +7,7 @@ pub mod character;
 pub mod character_account_data;
 pub mod character_equipment;
 pub mod item_template;
+pub mod item_instance;
 pub mod player_create_info;
 
 pub struct RealmDatabase {

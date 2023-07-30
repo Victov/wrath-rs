@@ -23,7 +23,7 @@ impl super::Character {
         self.cinematic_state = CharacterCinematicState::Queued(cinematic_id);
         handlers::send_trigger_cinematic(self, cinematic_id).await
     }
-
+    #[allow(dead_code)]
     pub(super) async fn tick_cinematic(&mut self) -> Result<()> {
         //Advance the camera position, set "far sight" mode wherever it moves
         //So that creatures are spawned and visible inside the cinematic, etc

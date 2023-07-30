@@ -8,7 +8,7 @@ use std::sync::Arc;
 use wow_srp::normalized_string::NormalizedString;
 use wow_srp::wrath_header::ProofSeed;
 use wow_world_messages::wrath::{
-    Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION, CMSG_LOGOUT_CANCEL, CMSG_LOGOUT_REQUEST, CMSG_PING,
+    Addon, BillingPlanFlags, RealmSplitState, SMSG_AUTH_RESPONSE_WorldResult, CMSG_AUTH_SESSION,CMSG_PING,
     CMSG_REALM_SPLIT, SMSG_ADDON_INFO, SMSG_AUTH_RESPONSE, SMSG_CLIENTCACHE_VERSION, SMSG_LOGIN_SETTIMESPEED, SMSG_LOGOUT_CANCEL_ACK,
     SMSG_LOGOUT_COMPLETE, SMSG_LOGOUT_RESPONSE, SMSG_PONG, SMSG_REALM_SPLIT, SMSG_TUTORIAL_FLAGS,
 };
@@ -147,9 +147,8 @@ pub async fn handle_cmsg_ping(client_manager: &ClientManager, client_id: u64, pa
 
 pub async fn send_login_set_time_speed(character: &Character) -> Result<()> {
     SMSG_LOGIN_SETTIMESPEED {
-        datetime: chrono::Local::now()
-            .try_into()
-            .expect("Current date/time cannot be converted to packed date time format: {}"),
+        //TODO: Use chrono for this, removed because of trait not satisfied
+        datetime: wow_world_messages::DateTime::new(23, wow_world_messages::Month::July, 15, wow_world_messages::Weekday::Saturday, 12, 12),
         timescale: 0.01667f32,
         unknown1: 0,
     }
@@ -165,7 +164,7 @@ pub enum LogoutState {
     ReturnToCharSelect,
 }
 
-pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_LOGOUT_REQUEST) -> Result<()> {
+pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
 
     let (result, speed) = {
@@ -177,7 +176,7 @@ pub async fn handle_cmsg_logout_request(client_manager: &ClientManager, client_i
     SMSG_LOGOUT_RESPONSE { result, speed }.astd_send_to_client(client).await
 }
 
-pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_LOGOUT_CANCEL) -> Result<()> {
+pub async fn handle_cmsg_logout_cancel(client_manager: &ClientManager, client_id: u64) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
     let mut character = character_lock.write().await;

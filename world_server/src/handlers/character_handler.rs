@@ -1,9 +1,10 @@
 use crate::character::Character;
+use crate::character::character_inventory::INVENTORY_SLOT_BAG_0;
+use crate::character::character_inventory::SimpleCharacterInventory;
+use crate::character::character_inventory::SimpleItemDescription;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
 use crate::data::DataStorage;
-use crate::data::SimpleCharacterInventory;
-use crate::data::SimpleItemDescription;
 use crate::packet::*;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
@@ -12,6 +13,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 use wow_dbc::DbcTable;
+use wow_world_messages::wrath::CMSG_SWAP_INV_ITEM;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_CHAR_DELETE;
@@ -307,4 +309,20 @@ pub async fn send_action_buttons(character: &Character) -> Result<()> {
     }
     .astd_send_to_character(character)
     .await
+}
+
+pub async fn handle_cmsg_swap_inv_item(client_manager: &ClientManager,_world: &World, client_id : u64, data : &CMSG_SWAP_INV_ITEM) -> Result<()>
+{
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let character_lock = client.get_active_character().await?;
+    let mut character = character_lock.write().await;
+
+    //TODO: Add checks here
+    let src = data.destination_slot.as_int();
+    let dst = data.source_slot.as_int();
+    let dst_item = character.set_item(None,(dst,INVENTORY_SLOT_BAG_0))?;
+    let src_item = character.set_item(dst_item,(src,INVENTORY_SLOT_BAG_0))?;
+    character.set_item(src_item,(dst,INVENTORY_SLOT_BAG_0))?;
+
+    Ok(())
 }

@@ -1,3 +1,5 @@
+use self::character_inventory::{GameplayCharacterInventory, BagInventory};
+
 use super::world::prelude::*;
 use crate::client::Client;
 use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
@@ -20,6 +22,7 @@ mod character_first_login;
 mod character_logout;
 mod character_movement;
 mod character_rested;
+pub mod character_inventory;
 
 pub struct Character {
     pub client: Weak<Client>,
@@ -59,13 +62,17 @@ pub struct Character {
     needs_first_login: bool,
 
     cinematic_state: character_cinematic::CharacterCinematicState,
+
+    //items
+    pub equipped_items: GameplayCharacterInventory,
+    pub bag_items : BagInventory,
 }
 
 impl Character {
     pub fn new(client: Weak<Client>, guid: Guid) -> Self {
         Self {
             client,
-            gameplay_data: UpdatePlayer::builder().set_object_GUID(guid).finalize(),
+            gameplay_data: UpdatePlayer::builder().set_object_guid(guid).finalize(),
             name: String::new(),
             movement_info: MovementInfo::default(),
             map: Map::EasternKingdoms,
@@ -87,6 +94,8 @@ impl Character {
             rested_state: character_rested::RestedState::NotRested,
             needs_first_login: false,
             cinematic_state: character_cinematic::CharacterCinematicState::None,
+            equipped_items: GameplayCharacterInventory::new(),
+            bag_items : BagInventory::default(),
         }
     }
 
@@ -97,7 +106,7 @@ impl Character {
     }
 
     pub async fn send_packets_before_add_to_map(&self) -> Result<()> {
-        handlers::send_contact_list(self, RelationType::empty().set_FRIEND().set_IGNORED().set_MUTED().set_RECRUITAFRIEND()).await?;
+        handlers::send_contact_list(self, RelationType::empty().set_friend().set_ignored().set_muted().set_recruitafriend()).await?;
         handlers::send_bind_update(self).await?;
         handlers::send_dungeon_difficulty(self).await?;
         handlers::send_action_buttons(self).await?;
@@ -133,7 +142,6 @@ impl Character {
     pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
         self.try_perform_first_time_login_if_required().await?;
         self.tick_time_sync(delta_time).await?;
-        self.tick_cinematic().await?;
         self.tick_logout_state(delta_time, world.clone()).await?;
 
         self.handle_queued_teleport(world)
@@ -162,26 +170,26 @@ impl Character {
 
     pub fn set_selection(&mut self, new_selection: Option<Guid>) {
         let guid = new_selection.unwrap_or_else(Guid::zero);
-        self.gameplay_data.set_unit_TARGET(guid);
+        self.gameplay_data.set_unit_target(guid);
     }
 
     pub fn get_selection(&self) -> Option<Guid> {
-        self.gameplay_data.unit_TARGET().and_then(|g| if g.is_zero() { None } else { Some(g) })
+        self.gameplay_data.unit_target().and_then(|g| if g.is_zero() { None } else { Some(g) })
     }
 
     //-------------------
     //BEGIN STUFF THAT NEEDS TO MOVE TO UpdateMaskExt
     //-------------------
     pub async fn set_stand_state(&mut self, state: UnitStandState) -> Result<()> {
-        let (_, b, c, d) = self.gameplay_data.unit_BYTES_1().unwrap_or_default();
-        self.gameplay_data.set_unit_BYTES_1(state, b, c, d);
+        let (_, b, c, d) = self.gameplay_data.unit_bytes_1().unwrap_or_default();
+        self.gameplay_data.set_unit_bytes_1(state, b, c, d);
         handlers::send_smsg_stand_state_update(self, state).await
     }
 
     fn set_unit_flag_byte(&mut self, unit_flag: UnitFlagIndex, value: bool) {
-        let mut unit_flags: i32 = self.gameplay_data.unit_FLAGS().unwrap_or(0);
+        let mut unit_flags: i32 = self.gameplay_data.unit_flags().unwrap_or(0);
         unit_flags.set_bit(unit_flag as usize, value);
-        self.gameplay_data.set_unit_FLAGS(unit_flags);
+        self.gameplay_data.set_unit_flags(unit_flags);
     }
 
     async fn set_rooted(&self, rooted: bool) -> Result<()> {
@@ -197,10 +205,10 @@ impl Character {
     }
 
     pub fn set_visible_actionbar_mask(&mut self, action_bars: u8) {
-        let (a, b, _, d) = self.gameplay_data.player_FEATURES().unwrap_or_default();
+        let (a, b, _, d) = self.gameplay_data.player_features().unwrap_or_default();
         //action_bars is a flags, no extra actionbars = 0, all bars (2 above default bar, 2 side
         //bars) is 15 when they are set visible in the Interface settings menu
-        self.gameplay_data.set_player_FEATURES(a, b, action_bars, d);
+        self.gameplay_data.set_player_features(a, b, action_bars, d);
     }
 
     fn set_rested_bytes(&mut self, rested: bool) -> Result<()> {
@@ -213,19 +221,19 @@ impl Character {
     }
 
     pub fn get_race(&self) -> Race {
-        self.gameplay_data.unit_BYTES_0().map_or(Race::Human, |(race, _, _, _)| race)
+        self.gameplay_data.unit_bytes_0().map_or(Race::Human, |(race, _, _, _)| race)
     }
 
     pub fn get_class(&self) -> Class {
-        self.gameplay_data.unit_BYTES_0().map_or(Class::Warrior, |(_, class, _, _)| class)
+        self.gameplay_data.unit_bytes_0().map_or(Class::Warrior, |(_, class, _, _)| class)
     }
 
     pub fn get_gender(&self) -> Gender {
-        self.gameplay_data.unit_BYTES_0().map_or(Gender::Male, |(_, _, gender, _)| gender)
+        self.gameplay_data.unit_bytes_0().map_or(Gender::Male, |(_, _, gender, _)| gender)
     }
 
     pub fn get_power_type(&self) -> Power {
-        self.gameplay_data.unit_BYTES_0().map_or(Power::Mana, |(_, _, _, power)| power)
+        self.gameplay_data.unit_bytes_0().map_or(Power::Mana, |(_, _, _, power)| power)
     }
 
     //-------------------
@@ -236,7 +244,7 @@ impl Character {
 #[async_trait::async_trait]
 impl GameObject for Character {
     fn get_guid(&self) -> Guid {
-        self.gameplay_data.object_GUID().unwrap()
+        self.gameplay_data.object_guid().unwrap()
     }
 
     fn get_type(&self) -> ObjectType {

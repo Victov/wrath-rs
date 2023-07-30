@@ -1,13 +1,6 @@
 use anyhow::Result;
 use sqlx::{MySql, QueryBuilder};
-
-pub struct DBCharacterEquipment {
-    pub character_id: u32,
-    pub slot_id: u8,
-    pub item: u32,
-    pub enchant: Option<u32>,
-}
-
+use crate::item_instance::DBItemInstance;
 #[derive(Debug)]
 pub struct DBCharacterEquipmentDisplayInfo {
     pub slot_id: u8,
@@ -17,17 +10,6 @@ pub struct DBCharacterEquipmentDisplayInfo {
 }
 
 impl super::RealmDatabase {
-    pub async fn get_all_character_equipment(&self, character_id: u32) -> Result<Vec<DBCharacterEquipment>> {
-        let res = sqlx::query_as!(
-            DBCharacterEquipment,
-            "SELECT * FROM character_equipment WHERE character_id = ?",
-            character_id
-        )
-        .fetch_all(&self.connection_pool)
-        .await?;
-
-        Ok(res)
-    }
 
     pub async fn get_all_character_equipment_display_info(&self, character_id: u32) -> Result<Vec<DBCharacterEquipmentDisplayInfo>> {
         let res = sqlx::query_as!(
@@ -59,7 +41,7 @@ impl super::RealmDatabase {
         //one by one.
         let insert_iter = item_ids.iter().zip(slot_ids).filter_map(|(&item, slot_id)| {
             if item != -1 && slot_id != -1 {
-                Some(DBCharacterEquipment {
+                Some(DBItemInstance {
                     character_id,
                     slot_id: slot_id as u8,
                     item: item as u32,

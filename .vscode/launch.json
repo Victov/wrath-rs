@@ -1,0 +1,52 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'wrath-authserver'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=wrath-authserver",
+                    "--package=wrath-authserver"
+                ],
+                "filter": {
+                    "name": "wrath-authserver",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/auth_server"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'wrath-worldserver'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=wrath-worldserver",
+                    "--package=wrath-worldserver"
+                ],
+                "filter": {
+                    "name": "wrath-worldserver",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/world_server"
+        },
+    ],
+    "compounds": [
+        {
+            "name": "Debug 'wrath-authserver' and 'wrath-worldserver'",
+            "configurations": [
+                "Debug executable 'wrath-authserver'",
+                "Debug executable 'wrath-worldserver'"]
+        }
+    ]
+}

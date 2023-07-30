@@ -1,10 +1,14 @@
 use crate::data::{DataStorage, TutorialFlags, WorldZoneLocation};
+use crate::packet::ServerMessageExt;
 use crate::prelude::*;
 use crate::world::prelude::*;
+use crate::item::Item;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wow_dbc::Indexable;
-use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, Power, Race, Vector3d};
+use wow_world_messages::wrath::{Area, Class, Gender, Map, MovementInfo, Power, Race, Vector3d, SkillInfoIndex,SkillInfo, SMSG_INITIAL_SPELLS, InitialSpell, SMSG_UPDATE_OBJECT, Object, Object_UpdateType, UpdateMask, MovementBlock, MovementBlock_UpdateFlag};
+use wow_world_base::wrath::{RaceClass, ObjectType};
 
+use super::character_inventory::INVENTORY_SLOT_BAG_0;
 impl super::Character {
     pub(super) async fn load_from_database_internal(&mut self, world: &World, data_storage: &DataStorage) -> Result<()> {
         let character_id = self.get_guid().guid() as u32;
@@ -64,8 +68,8 @@ impl super::Character {
                 _ => race_info.female_display_id,
             }
             .id;
-            self.gameplay_data.set_unit_DISPLAYID(display_id);
-            self.gameplay_data.set_unit_NATIVEDISPLAYID(display_id);
+            self.gameplay_data.set_unit_displayid(display_id);
+            self.gameplay_data.set_unit_nativedisplayid(display_id);
         }
 
         let class_info = data_storage
@@ -74,16 +78,55 @@ impl super::Character {
             .ok_or_else(|| anyhow!("No classinfo for this class"))?;
 
         let power = Power::try_from(class_info.display_power as u8)?;
-        self.gameplay_data.set_unit_BYTES_0(race, class, gender, power);
-        self.gameplay_data.set_unit_HEALTH(100);
-        self.gameplay_data.set_unit_MAXHEALTH(100);
-        self.gameplay_data.set_unit_LEVEL(1);
-        self.gameplay_data.set_unit_FACTIONTEMPLATE(1);
-        self.gameplay_data.set_object_SCALE_X(1.0f32);
+        self.gameplay_data.set_unit_bytes_0(race, class, gender, power);
+        self.gameplay_data.set_unit_health(100);
+        self.gameplay_data.set_unit_maxhealth(100);
+        self.gameplay_data.set_unit_level(1);
+        self.gameplay_data.set_unit_factiontemplate(1);
+        self.gameplay_data.set_object_scale_x(1.0f32);
 
         //No playtime means it's our very first login
         self.needs_first_login = self.seconds_played_total == 0;
 
+        //TODO: this should be loaded from the DB, it's a placeholder
+        let race_class = RaceClass::try_from((race,class)).unwrap();
+        for (i, skill) in race_class.starter_skills().iter().enumerate(){
+            self.gameplay_data.set_player_skill_info(
+                SkillInfo::new(*skill, 0,1, 300, 0, 0),
+                SkillInfoIndex::try_from(i as u32).unwrap(),
+            );
+        }
+        //TODO: learning some skills might learn spells, those need to be checked too?
+
+
+        //TODO: this should be loaded from the DB, it's a placeholder
+        SMSG_INITIAL_SPELLS{
+             unknown1: 0,
+             initial_spells: race_class.starter_spells().iter().map(|x| InitialSpell{spell_id: *x, unknown1: 0,}).collect(),
+             cooldowns: vec![] }.astd_send_to_character(&mut *self).await?;
+
+        //TODO: load invetory here
+        realm_database.get_all_character_equipment(character_id).await?.iter().for_each(|x|{
+            self.set_item(Some(Item::from(x)),(x.slot_id,INVENTORY_SLOT_BAG_0)).expect("This should never fail in this context");
+        });
+
+        let char_equipment = self.equipped_items.get_all_equipment();
+        let equiped_items = char_equipment
+                .iter()
+                .filter_map(|x| *x)
+                .map(|x| Object {
+                update_type: Object_UpdateType::CreateObject {
+                    guid3: x.update_state.object_guid().unwrap(),
+                    mask2: UpdateMask::Item(x.update_state.clone()),
+                    movement2: MovementBlock {
+                        update_flag: MovementBlock_UpdateFlag::empty()
+                    },
+                    object_type: ObjectType::Item,
+                },
+                }).collect::<Vec<Object>>();
+        SMSG_UPDATE_OBJECT {
+              objects: equiped_items,
+            }.astd_send_to_character(&mut *self).await?;
         Ok(())
     }
 }

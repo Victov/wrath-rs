@@ -62,7 +62,8 @@ impl DataStorage {
         load_standard_dbc(dbc_path, &mut self.dbc_char_start_outfit).await?;
         self.load_area_triggers(dbc_path, realm_db).await?;
         info!("Finished loading DBC files");
-
+        info!("Loading SQL data");
+        info!("Loading item templates");
         Ok(())
     }
 
