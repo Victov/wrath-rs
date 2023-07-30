@@ -98,6 +98,7 @@ async fn send_name_query_response(receiver: &Client, target_character: &Characte
 
 pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, client_id: u64, _world: &World, packet: &CMSG_ITEM_QUERY_SINGLE) -> Result<()> {
     let client = client_manager.get_client(client_id).await?;
+    //TODO: use DB to lookup
     let item = wow_items::wrath::lookup_item(packet.item);
     match item {
         None => {
@@ -114,6 +115,7 @@ pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, clien
 
 pub async fn handle_cmsg_item_name_query(client_manager: &ClientManager, client_id: u64, _world: &World, packet: &CMSG_ITEM_NAME_QUERY) -> Result<()>
 {
+    //TODO: use DB to lookup
     let item = wow_items::wrath::lookup_item(packet.item);
     let client = client_manager.get_client(client_id).await?;
     match item
