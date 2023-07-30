@@ -317,12 +317,11 @@ pub async fn handle_cmsg_swap_inv_item(client_manager: &ClientManager,_world: &W
     let character_lock = client.get_active_character().await?;
     let mut character = character_lock.write().await;
 
+    //TODO: Add checks here
     let src = data.destination_slot.as_int();
     let dst = data.source_slot.as_int();
     let dst_item = character.set_item(None,(dst,INVENTORY_SLOT_BAG_0))?;
-    let src_item = character.set_item(None,(src,INVENTORY_SLOT_BAG_0))?;
-
-    character.set_item(dst_item,(src,INVENTORY_SLOT_BAG_0))?;
+    let src_item = character.set_item(dst_item,(src,INVENTORY_SLOT_BAG_0))?;
     character.set_item(src_item,(dst,INVENTORY_SLOT_BAG_0))?;
 
     Ok(())

@@ -6,7 +6,8 @@ use super::Item;
 impl From<&DBItemInstance> for Item
    {
        fn from(value: &DBItemInstance) -> Self {
-         //TODO: this object guid is good for now,but we need to make sure it's unique in the future
+         //TODO: this object guid is not really correct, but guid format is not implemented yet
+         //TODO: other attributes here need to be read from DB as well
          Item{
              update_state: UpdateItemBuilder::new()
              .set_object_guid(((value.character_id as u64) << 32 + value.slot_id as u64).into())

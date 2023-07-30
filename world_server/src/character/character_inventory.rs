@@ -162,7 +162,7 @@ impl crate::character::Character
                     {
                         if (slot as u8) <= inventory::EQUIPMENT_SLOTS_END
                         {
-                            //TODO: add enchants
+                            //TODO: add display enchants
                             self.gameplay_data.set_player_visible_item(
                                                                         VisibleItem::new(item.update_state.object_entry().unwrap() as u32,[0u16;2]),
                                                                         VisibleItemIndex::try_from(slot as u8).unwrap()
@@ -209,6 +209,7 @@ impl crate::character::Character
             (_,_) => todo!("Bags not implemented yet")
         }
     }
+    #[allow(dead_code)]
     fn has_item_in_slot(&self, item_position: (u8,u8)) -> bool
     {
         match item_position
