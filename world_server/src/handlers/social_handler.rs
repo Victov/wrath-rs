@@ -74,6 +74,5 @@ pub async fn handle_cmsg_messagechat(client_manager: &ClientManager, world: &Wor
     .astd_send_to_all_in_range(&*character, true, world)
     .await?;
 
-    info!("Player {} chatted {}", character.name, packet.message);
     Ok(())
 }

@@ -95,7 +95,7 @@ impl super::Character {
         let race_class = RaceClass::try_from((race, class)).unwrap();
         for (i, skill) in race_class.starter_skills().iter().enumerate() {
             self.gameplay_data
-                .set_player_skill_info(SkillInfo::new(*skill, 0, 1, 300, 0, 0), SkillInfoIndex::try_from(i as u32).unwrap());
+                .set_player_skill_info(SkillInfo::new(*skill, 0, 299, 300, 0, 0), SkillInfoIndex::try_from(i as u32).unwrap());
         }
         //TODO: learning some skills might learn spells, those need to be checked too?
 
