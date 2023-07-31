@@ -1,9 +1,13 @@
 use crate::packet::ServerMessageExt;
 use crate::prelude::*;
+use crate::world::prelude::GameObject;
+use crate::world::World;
 use crate::{character::*, client_manager::ClientManager};
 
+use wow_world_base::wrath::PlayerChatTag;
 use wow_world_messages::wrath::{
-    RelationType, CMSG_CONTACT_LIST, CMSG_JOIN_CHANNEL, CMSG_SET_SELECTION, SMSG_CALENDAR_SEND_NUM_PENDING, SMSG_CONTACT_LIST,
+    RelationType, SMSG_MESSAGECHAT_ChatType, CMSG_CONTACT_LIST, CMSG_JOIN_CHANNEL, CMSG_MESSAGECHAT, CMSG_SET_SELECTION,
+    SMSG_CALENDAR_SEND_NUM_PENDING, SMSG_CONTACT_LIST, SMSG_MESSAGECHAT,
 };
 
 pub async fn handle_cmsg_contact_list(client_manager: &ClientManager, client_id: u64, packet: &CMSG_CONTACT_LIST) -> Result<()> {
@@ -44,5 +48,32 @@ pub async fn handle_cmsg_join_channel(client_manager: &ClientManager, client_id:
     let _character_lock = client.get_active_character().await?;
 
     //There are no chat systems yet. This packet is "handled" to silence the warning spam
+    Ok(())
+}
+
+pub async fn handle_cmsg_messagechat(client_manager: &ClientManager, world: &World, client_id: u64, packet: &CMSG_MESSAGECHAT) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let character_lock = client.get_active_character().await?;
+
+    let character = character_lock.write().await;
+
+    let chat_type = SMSG_MESSAGECHAT_ChatType::Say {
+        target6: character.get_guid(),
+    };
+
+    let tag = PlayerChatTag::None;
+
+    SMSG_MESSAGECHAT {
+        chat_type,
+        language: packet.language,
+        sender: character.get_guid(),
+        flags: 0,
+        message: packet.message.clone(),
+        tag,
+    }
+    .astd_send_to_all_in_range(&*character, true, world)
+    .await?;
+
+    info!("Player {} chatted {}", character.name, packet.message);
     Ok(())
 }
