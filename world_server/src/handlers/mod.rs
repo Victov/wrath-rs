@@ -18,15 +18,16 @@ mod bars_buttons_handler;
 pub use bars_buttons_handler::handle_csmg_set_actionbar_toggles;
 
 mod character_handler;
+pub use character_handler::handle_cmsg_autoequip_item;
 pub use character_handler::handle_cmsg_char_create;
 pub use character_handler::handle_cmsg_char_delete;
 pub use character_handler::handle_cmsg_char_enum;
 pub use character_handler::handle_cmsg_player_login;
 pub use character_handler::handle_cmsg_standstate_change;
+pub use character_handler::handle_cmsg_swap_inv_item;
 pub use character_handler::send_action_buttons;
 pub use character_handler::send_bind_update;
 pub use character_handler::send_verify_world;
-pub use character_handler::handle_cmsg_swap_inv_item;
 
 mod cinematics_handler;
 pub use cinematics_handler::handle_csmg_complete_cinematic;
@@ -72,12 +73,12 @@ pub use social_handler::handle_csmg_set_selection;
 pub use social_handler::send_contact_list;
 
 mod queries_handler;
+pub use queries_handler::handle_cmsg_item_name_query;
+pub use queries_handler::handle_cmsg_item_query_single;
 pub use queries_handler::handle_cmsg_name_query;
 pub use queries_handler::handle_cmsg_played_time;
 pub use queries_handler::handle_cmsg_query_time;
 pub use queries_handler::handle_cmsg_world_state_ui_timer_update;
-pub use queries_handler::handle_cmsg_item_query_single;
-pub use queries_handler::handle_cmsg_item_name_query;
 
 pub mod movement_handler;
 pub use movement_handler::handle_cmsg_areatrigger;

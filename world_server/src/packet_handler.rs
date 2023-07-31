@@ -134,6 +134,7 @@ impl PacketHandler {
             ClientOpcodeMessage::CMSG_ITEM_QUERY_SINGLE(data) => handle_cmsg_item_query_single(client_manager, packet.client_id, world, data).await,
             ClientOpcodeMessage::CMSG_ITEM_NAME_QUERY(data) => handle_cmsg_item_name_query(client_manager, packet.client_id, world, data).await,
             ClientOpcodeMessage::CMSG_SWAP_INV_ITEM(data) => handle_cmsg_swap_inv_item(client_manager, world, packet.client_id, data).await,
+            ClientOpcodeMessage::CMSG_AUTOEQUIP_ITEM(data) => handle_cmsg_autoequip_item(client_manager, world, packet.client_id, data).await,
             _ => bail!("Unhandled opcode"),
         }
     }

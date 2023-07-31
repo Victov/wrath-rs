@@ -1,7 +1,7 @@
-use crate::character::Character;
-use crate::character::character_inventory::INVENTORY_SLOT_BAG_0;
 use crate::character::character_inventory::SimpleCharacterInventory;
 use crate::character::character_inventory::SimpleItemDescription;
+use crate::character::character_inventory::INVENTORY_SLOT_BAG_0;
+use crate::character::Character;
 use crate::client_manager::ClientManager;
 use crate::constants::inventory::*;
 use crate::data::DataStorage;
@@ -13,12 +13,13 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 use wow_dbc::DbcTable;
-use wow_world_messages::wrath::CMSG_SWAP_INV_ITEM;
 use wow_world_messages::wrath::WorldResult;
+use wow_world_messages::wrath::CMSG_AUTOEQUIP_ITEM;
 use wow_world_messages::wrath::CMSG_CHAR_CREATE;
 use wow_world_messages::wrath::CMSG_CHAR_DELETE;
 use wow_world_messages::wrath::CMSG_PLAYER_LOGIN;
 use wow_world_messages::wrath::CMSG_STANDSTATECHANGE;
+use wow_world_messages::wrath::CMSG_SWAP_INV_ITEM;
 use wow_world_messages::wrath::SMSG_ACTION_BUTTONS;
 use wow_world_messages::wrath::SMSG_BINDPOINTUPDATE;
 use wow_world_messages::wrath::SMSG_CHAR_CREATE;
@@ -311,8 +312,7 @@ pub async fn send_action_buttons(character: &Character) -> Result<()> {
     .await
 }
 
-pub async fn handle_cmsg_swap_inv_item(client_manager: &ClientManager,_world: &World, client_id : u64, data : &CMSG_SWAP_INV_ITEM) -> Result<()>
-{
+pub async fn handle_cmsg_swap_inv_item(client_manager: &ClientManager, _world: &World, client_id: u64, data: &CMSG_SWAP_INV_ITEM) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
     let mut character = character_lock.write().await;
@@ -320,9 +320,21 @@ pub async fn handle_cmsg_swap_inv_item(client_manager: &ClientManager,_world: &W
     //TODO: Add checks here
     let src = data.destination_slot.as_int();
     let dst = data.source_slot.as_int();
-    let dst_item = character.set_item(None,(dst,INVENTORY_SLOT_BAG_0))?;
-    let src_item = character.set_item(dst_item,(src,INVENTORY_SLOT_BAG_0))?;
-    character.set_item(src_item,(dst,INVENTORY_SLOT_BAG_0))?;
+    let dst_item = character.set_item(None, (dst, INVENTORY_SLOT_BAG_0))?;
+    let src_item = character.set_item(dst_item, (src, INVENTORY_SLOT_BAG_0))?;
+    character.set_item(src_item, (dst, INVENTORY_SLOT_BAG_0))?;
 
+    Ok(())
+}
+
+pub async fn handle_cmsg_autoequip_item(client_manager: &ClientManager, _world: &World, client_id: u64, data: &CMSG_AUTOEQUIP_ITEM) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id).await?;
+    let character_lock = client.get_active_character().await?;
+    let mut character = character_lock.write().await;
+
+    let previously_equipped_item = character.auto_equip_item_from_bag((data.source_slot, data.source_bag))?;
+
+    //The item that we had equipped (may be None) now goes into that slot
+    character.set_item(previously_equipped_item, (data.source_slot, data.source_bag))?;
     Ok(())
 }
