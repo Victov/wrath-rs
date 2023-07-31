@@ -6,10 +6,8 @@ use crate::world::World;
 use crate::{character::Character, world::prelude::GameObject};
 use std::time::{SystemTime, UNIX_EPOCH};
 use wow_world_messages::wrath::{
-    CMSG_NAME_QUERY, CMSG_PLAYED_TIME , SMSG_PLAYED_TIME,
-    SMSG_QUERY_TIME_RESPONSE, SMSG_WORLD_STATE_UI_TIMER_UPDATE,
-    SMSG_NAME_QUERY_RESPONSE, SMSG_ITEM_QUERY_SINGLE_RESPONSE,
-    CMSG_ITEM_QUERY_SINGLE, CMSG_ITEM_NAME_QUERY
+    CMSG_ITEM_NAME_QUERY, CMSG_ITEM_QUERY_SINGLE, CMSG_NAME_QUERY, CMSG_PLAYED_TIME, SMSG_ITEM_QUERY_SINGLE_RESPONSE, SMSG_NAME_QUERY_RESPONSE,
+    SMSG_PLAYED_TIME, SMSG_QUERY_TIME_RESPONSE, SMSG_WORLD_STATE_UI_TIMER_UPDATE,
 };
 
 pub async fn handle_cmsg_played_time(client_manager: &ClientManager, client_id: u64, packet: &CMSG_PLAYED_TIME) -> Result<()> {
@@ -46,10 +44,7 @@ pub async fn handle_cmsg_query_time(client_manager: &ClientManager, client_id: u
     .await
 }
 
-pub async fn handle_cmsg_world_state_ui_timer_update(
-    client_manager: &ClientManager,
-    client_id: u64,
-) -> Result<()> {
+pub async fn handle_cmsg_world_state_ui_timer_update(client_manager: &ClientManager, client_id: u64) -> Result<()> {
     let client = client_manager.get_client(client_id).await?;
     let unix_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32;
     SMSG_WORLD_STATE_UI_TIMER_UPDATE { time: unix_time }.astd_send_to_client(client).await
@@ -96,7 +91,12 @@ async fn send_name_query_response(receiver: &Client, target_character: &Characte
     .await
 }
 
-pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, client_id: u64, _world: &World, packet: &CMSG_ITEM_QUERY_SINGLE) -> Result<()> {
+pub async fn handle_cmsg_item_query_single(
+    client_manager: &ClientManager,
+    client_id: u64,
+    _world: &World,
+    packet: &CMSG_ITEM_QUERY_SINGLE,
+) -> Result<()> {
     let client = client_manager.get_client(client_id).await?;
     //TODO: use DB to lookup
     let item = wow_items::wrath::lookup_item(packet.item);
@@ -109,18 +109,25 @@ pub async fn handle_cmsg_item_query_single(client_manager: &ClientManager, clien
             .astd_send_to_client(client)
             .await
         }
-        Some(item) => wow_world_messages::wrath::item_to_query_response(item).astd_send_to_client(client).await
+        Some(item) => wow_world_messages::wrath::item_to_query_response(item).astd_send_to_client(client).await,
     }
 }
 
-pub async fn handle_cmsg_item_name_query(client_manager: &ClientManager, client_id: u64, _world: &World, packet: &CMSG_ITEM_NAME_QUERY) -> Result<()>
-{
+pub async fn handle_cmsg_item_name_query(
+    client_manager: &ClientManager,
+    client_id: u64,
+    _world: &World,
+    packet: &CMSG_ITEM_NAME_QUERY,
+) -> Result<()> {
     //TODO: use DB to lookup
     let item = wow_items::wrath::lookup_item(packet.item);
     let client = client_manager.get_client(client_id).await?;
-    match item
-    {
-        Some(item) => wow_world_messages::wrath::item_to_name_query_response(item).astd_send_to_client(client).await,
-        None => Err(anyhow!("Item {} not found for client {}", packet.item,client_id)),
+    match item {
+        Some(item) => {
+            wow_world_messages::wrath::item_to_name_query_response(item)
+                .astd_send_to_client(client)
+                .await
+        }
+        None => Err(anyhow!("Item {} not found for client {}", packet.item, client_id)),
     }
 }

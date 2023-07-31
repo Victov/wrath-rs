@@ -20,10 +20,10 @@ mod console_input;
 mod constants;
 mod data;
 pub mod handlers;
+mod item;
 mod packet;
 mod packet_handler;
 mod world;
-mod item;
 
 pub mod prelude {
     pub use super::handlers;

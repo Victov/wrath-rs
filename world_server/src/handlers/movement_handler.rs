@@ -134,11 +134,7 @@ pub async fn handle_msg_move_teleport_ack(client_manager: &ClientManager, client
     Ok(())
 }
 
-pub async fn handle_msg_move_worldport_ack(
-    client_manager: &ClientManager,
-    client_id: u64,
-    world: &World
-) -> Result<()> {
+pub async fn handle_msg_move_worldport_ack(client_manager: &ClientManager, client_id: u64, world: &World) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
     let character = character_lock.upgradable_read().await;

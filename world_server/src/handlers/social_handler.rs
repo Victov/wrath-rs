@@ -3,8 +3,7 @@ use crate::prelude::*;
 use crate::{character::*, client_manager::ClientManager};
 
 use wow_world_messages::wrath::{
-    RelationType, CMSG_CONTACT_LIST, CMSG_JOIN_CHANNEL, CMSG_SET_SELECTION, SMSG_CALENDAR_SEND_NUM_PENDING,
-    SMSG_CONTACT_LIST,
+    RelationType, CMSG_CONTACT_LIST, CMSG_JOIN_CHANNEL, CMSG_SET_SELECTION, SMSG_CALENDAR_SEND_NUM_PENDING, SMSG_CONTACT_LIST,
 };
 
 pub async fn handle_cmsg_contact_list(client_manager: &ClientManager, client_id: u64, packet: &CMSG_CONTACT_LIST) -> Result<()> {
