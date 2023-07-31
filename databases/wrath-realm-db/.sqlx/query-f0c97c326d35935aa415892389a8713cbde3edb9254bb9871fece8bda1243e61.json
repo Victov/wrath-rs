@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE character_account_data SET decompressed_size = ?, data = ?, time = ? WHERE character_id = ? AND data_type = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "f0c97c326d35935aa415892389a8713cbde3edb9254bb9871fece8bda1243e61"
+}

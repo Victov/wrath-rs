@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE accounts SET sessionkey = ? WHERE username = ?;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "9e7d2ce3d1f4c9ca794f992200928bfb314647c406163e352293b65a30023068"
+}

@@ -9,4 +9,4 @@ edition = "2021"
 [dependencies]
 async-std = {version="*", features=["attributes"] }
 anyhow = { version = "1.0.32" }
-sqlx = { version = "0.7.0-alpha.1", features=["mysql", "runtime-async-std", "tls-rustls"] }
+sqlx = { version = "0.7", features=["mysql", "runtime-async-std", "tls-rustls"] }

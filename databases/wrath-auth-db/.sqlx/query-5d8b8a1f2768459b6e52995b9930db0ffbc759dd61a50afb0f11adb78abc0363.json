@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "REPLACE INTO realm_characters VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "5d8b8a1f2768459b6e52995b9930db0ffbc759dd61a50afb0f11adb78abc0363"
+}

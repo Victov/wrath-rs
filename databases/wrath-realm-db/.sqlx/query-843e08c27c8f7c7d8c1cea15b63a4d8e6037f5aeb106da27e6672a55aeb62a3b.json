@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO character_account_data (character_id, data_type, time, decompressed_size, data) VALUES (?,?, 0, 0, NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "843e08c27c8f7c7d8c1cea15b63a4d8e6037f5aeb106da27e6672a55aeb62a3b"
+}

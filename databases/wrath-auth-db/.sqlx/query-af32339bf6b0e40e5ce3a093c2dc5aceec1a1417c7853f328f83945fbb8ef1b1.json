@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE account_data SET decompressed_size = ?, data = ?, time = ? WHERE account_id = ? AND data_type = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "af32339bf6b0e40e5ce3a093c2dc5aceec1a1417c7853f328f83945fbb8ef1b1"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT num_characters FROM realm_characters WHERE account_id = ? AND realm_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "num_characters",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d20b46e2103e8dbf8e12650d438bfe6b181b638d0e7e804b806f1018609b92f9"
+}
