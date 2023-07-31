@@ -1,0 +1,168 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT * FROM areatrigger_teleport WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": {
+          "type": "Blob",
+          "flags": "MULTIPLE_KEY | BLOB",
+          "char_set": 224,
+          "max_size": 262140
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "required_level",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "required_item",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "required_item2",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "heroic_key",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "heroic_key2",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "required_quest_done",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "required_quest_done_heroic",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "target_map",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "target_position_x",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "target_position_y",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "target_position_z",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "target_orientation",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d7ef417a34c2cb4edf8687f4ae7533add988b347a5f8d23c05c4252e82af5170"
+}

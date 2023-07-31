@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE realms SET population = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "334ab8051b3cf07b209ec4e25dc90ca1808440d098fe8d2b2e6a863c9c70b68c"
+}

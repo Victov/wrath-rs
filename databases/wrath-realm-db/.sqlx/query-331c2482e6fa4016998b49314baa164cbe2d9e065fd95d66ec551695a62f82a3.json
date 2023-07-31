@@ -1,0 +1,58 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT character_equipment.slot_id, character_equipment.enchant, item_template.inventory_type, item_template.displayid FROM character_equipment LEFT JOIN item_template ON character_equipment.item = item_template.id WHERE character_equipment.character_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slot_id",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED",
+          "char_set": 63,
+          "max_size": 2
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "enchant",
+        "type_info": {
+          "type": "Long",
+          "flags": "UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "inventory_type",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "displayid",
+        "type_info": {
+          "type": "Long",
+          "flags": "UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "331c2482e6fa4016998b49314baa164cbe2d9e065fd95d66ec551695a62f82a3"
+}

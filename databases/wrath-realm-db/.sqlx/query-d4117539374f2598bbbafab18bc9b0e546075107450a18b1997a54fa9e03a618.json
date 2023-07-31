@@ -1,0 +1,58 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT * FROM character_equipment WHERE character_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "character_id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "slot_id",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED",
+          "char_set": 63,
+          "max_size": 2
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "item",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "enchant",
+        "type_info": {
+          "type": "Long",
+          "flags": "UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "d4117539374f2598bbbafab18bc9b0e546075107450a18b1997a54fa9e03a618"
+}

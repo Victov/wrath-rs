@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE realms SET online = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "81783d8ebc02b344f98f17e8c40ac2da111cdeb3fbec2dbebd7ba6225e07f679"
+}

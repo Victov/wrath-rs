@@ -1,0 +1,1521 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT * FROM item_template WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "class",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | MULTIPLE_KEY | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "subclass",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "unk0",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | MULTIPLE_KEY",
+          "char_set": 224,
+          "max_size": 1020
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "displayid",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "Quality",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "Flags",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "Flags2",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "BuyCount",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "BuyPrice",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "SellPrice",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "inventory_type",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "AllowableClass",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "AllowableRace",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "ItemLevel",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "RequiredLevel",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "RequiredSkill",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "RequiredSkillRank",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "requiredspell",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "requiredhonorrank",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "RequiredCityRank",
+        "type_info": {
+          "type": "Int24",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "RequiredReputationFaction",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "RequiredReputationRank",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "maxcount",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "stackable",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "ContainerSlots",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "StatsCount",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "stat_type1",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "stat_value1",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 30,
+        "name": "stat_type2",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 31,
+        "name": "stat_value2",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 32,
+        "name": "stat_type3",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 33,
+        "name": "stat_value3",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 34,
+        "name": "stat_type4",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 35,
+        "name": "stat_value4",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 36,
+        "name": "stat_type5",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 37,
+        "name": "stat_value5",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 38,
+        "name": "stat_type6",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 39,
+        "name": "stat_value6",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 40,
+        "name": "stat_type7",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 41,
+        "name": "stat_value7",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 42,
+        "name": "stat_type8",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 43,
+        "name": "stat_value8",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 44,
+        "name": "stat_type9",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 45,
+        "name": "stat_value9",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 46,
+        "name": "stat_type10",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 47,
+        "name": "stat_value10",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 48,
+        "name": "ScalingStatDistribution",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 49,
+        "name": "ScalingStatValue",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 50,
+        "name": "dmg_min1",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 51,
+        "name": "dmg_max1",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 52,
+        "name": "dmg_type1",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 53,
+        "name": "dmg_min2",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 54,
+        "name": "dmg_max2",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 55,
+        "name": "dmg_type2",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 56,
+        "name": "armor",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 57,
+        "name": "holy_res",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 58,
+        "name": "fire_res",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 59,
+        "name": "nature_res",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 60,
+        "name": "frost_res",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 61,
+        "name": "shadow_res",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 62,
+        "name": "arcane_res",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 63,
+        "name": "delay",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 64,
+        "name": "ammo_type",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 65,
+        "name": "RangedModRange",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 66,
+        "name": "spellid_1",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 67,
+        "name": "spelltrigger_1",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 68,
+        "name": "spellcharges_1",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 69,
+        "name": "spellppmRate_1",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 70,
+        "name": "spellcooldown_1",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 71,
+        "name": "spellcategory_1",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 72,
+        "name": "spellcategorycooldown_1",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 73,
+        "name": "spellid_2",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 74,
+        "name": "spelltrigger_2",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 75,
+        "name": "spellcharges_2",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 76,
+        "name": "spellppmRate_2",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 77,
+        "name": "spellcooldown_2",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 78,
+        "name": "spellcategory_2",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 79,
+        "name": "spellcategorycooldown_2",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 80,
+        "name": "spellid_3",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 81,
+        "name": "spelltrigger_3",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 82,
+        "name": "spellcharges_3",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 83,
+        "name": "spellppmRate_3",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 84,
+        "name": "spellcooldown_3",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 85,
+        "name": "spellcategory_3",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 86,
+        "name": "spellcategorycooldown_3",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 87,
+        "name": "spellid_4",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 88,
+        "name": "spelltrigger_4",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 89,
+        "name": "spellcharges_4",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 90,
+        "name": "spellppmRate_4",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 91,
+        "name": "spellcooldown_4",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 92,
+        "name": "spellcategory_4",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 93,
+        "name": "spellcategorycooldown_4",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 94,
+        "name": "spellid_5",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 95,
+        "name": "spelltrigger_5",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 96,
+        "name": "spellcharges_5",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 97,
+        "name": "spellppmRate_5",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 98,
+        "name": "spellcooldown_5",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 99,
+        "name": "spellcategory_5",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 100,
+        "name": "spellcategorycooldown_5",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 101,
+        "name": "bonding",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 102,
+        "name": "description",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL",
+          "char_set": 224,
+          "max_size": 1020
+        }
+      },
+      {
+        "ordinal": 103,
+        "name": "PageText",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 104,
+        "name": "LanguageID",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 105,
+        "name": "PageMaterial",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 106,
+        "name": "startquest",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 107,
+        "name": "lockid",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 108,
+        "name": "Material",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 4
+        }
+      },
+      {
+        "ordinal": 109,
+        "name": "sheath",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 110,
+        "name": "RandomProperty",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 111,
+        "name": "RandomSuffix",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 112,
+        "name": "block",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 113,
+        "name": "itemset",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 114,
+        "name": "MaxDurability",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 115,
+        "name": "area",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 116,
+        "name": "Map",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 117,
+        "name": "BagFamily",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 118,
+        "name": "TotemCategory",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 119,
+        "name": "socketColor_1",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 4
+        }
+      },
+      {
+        "ordinal": 120,
+        "name": "socketContent_1",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 121,
+        "name": "socketColor_2",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 4
+        }
+      },
+      {
+        "ordinal": 122,
+        "name": "socketContent_2",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 123,
+        "name": "socketColor_3",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 4
+        }
+      },
+      {
+        "ordinal": 124,
+        "name": "socketContent_3",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 125,
+        "name": "socketBonus",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 126,
+        "name": "GemProperties",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 9
+        }
+      },
+      {
+        "ordinal": 127,
+        "name": "RequiredDisenchantSkill",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 128,
+        "name": "ArmorDamageModifier",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 129,
+        "name": "Duration",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 130,
+        "name": "ItemLimitCategory",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 6
+        }
+      },
+      {
+        "ordinal": 131,
+        "name": "HolidayId",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 11
+        }
+      },
+      {
+        "ordinal": 132,
+        "name": "DisenchantID",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 8
+        }
+      },
+      {
+        "ordinal": 133,
+        "name": "FoodType",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 134,
+        "name": "minMoneyLoot",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 135,
+        "name": "maxMoneyLoot",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 136,
+        "name": "ExtraFlags",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 1
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7ef3f0af294f0fc628d0f54277c7405497e27187f2e94d1eb903d0d948635a52"
+}

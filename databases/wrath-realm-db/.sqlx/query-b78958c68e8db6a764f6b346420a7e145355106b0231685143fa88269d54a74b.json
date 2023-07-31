@@ -1,0 +1,344 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT * FROM characters WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED | AUTO_INCREMENT",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "account_id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL",
+          "char_set": 224,
+          "max_size": 100
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "race",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "class",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "gender",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "skin_color",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "face",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "hair_style",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "hair_color",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "facial_style",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "player_flags",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "at_login_flags",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "zone",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "level",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 3
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "map",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "x",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "y",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "z",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "o",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "instance_id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "bind_zone",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "bind_map",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 5
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "bind_x",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "bind_y",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "bind_z",
+        "type_info": {
+          "type": "Float",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 12
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "guild_id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "tutorial_data",
+        "type_info": {
+          "type": "Blob",
+          "flags": "NOT_NULL | BLOB | BINARY | NO_DEFAULT_VALUE",
+          "char_set": 63,
+          "max_size": 255
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "playtime_total",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "playtime_level",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b78958c68e8db6a764f6b346420a7e145355106b0231685143fa88269d54a74b"
+}

@@ -3,4 +3,3 @@
 .env
 Cargo.lock
 .idea/
-.sqlx

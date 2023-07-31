@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT count(*) AS cnt FROM characters WHERE name = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cnt",
+        "type_info": {
+          "type": "LongLong",
+          "flags": "NOT_NULL | BINARY",
+          "char_set": 63,
+          "max_size": 21
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5543764e4fd526c7b31a6b745283a004c953bb58922a06e359985b74d5745737"
+}
