@@ -6,7 +6,7 @@ use crate::{character::*, client_manager::ClientManager};
 
 use wow_world_base::wrath::PlayerChatTag;
 use wow_world_messages::wrath::{
-    RelationType, SMSG_MESSAGECHAT_ChatType, CMSG_CONTACT_LIST, CMSG_JOIN_CHANNEL, CMSG_MESSAGECHAT, CMSG_SET_SELECTION,
+    CMSG_MESSAGECHAT_ChatType, RelationType, SMSG_MESSAGECHAT_ChatType, CMSG_CONTACT_LIST, CMSG_JOIN_CHANNEL, CMSG_MESSAGECHAT, CMSG_SET_SELECTION,
     SMSG_CALENDAR_SEND_NUM_PENDING, SMSG_CONTACT_LIST, SMSG_MESSAGECHAT,
 };
 
@@ -57,8 +57,26 @@ pub async fn handle_cmsg_messagechat(client_manager: &ClientManager, world: &Wor
 
     let character = character_lock.write().await;
 
-    let chat_type = SMSG_MESSAGECHAT_ChatType::Say {
-        target6: character.get_guid(),
+    let (send_to_self, chat_type) = match packet.chat_type {
+        CMSG_MESSAGECHAT_ChatType::Say => (
+            true,
+            SMSG_MESSAGECHAT_ChatType::Say {
+                target6: character.get_guid(),
+            },
+        ),
+        CMSG_MESSAGECHAT_ChatType::Yell => (
+            true,
+            SMSG_MESSAGECHAT_ChatType::Yell {
+                target6: character.get_guid(),
+            },
+        ),
+        CMSG_MESSAGECHAT_ChatType::Emote => (
+            true,
+            SMSG_MESSAGECHAT_ChatType::Emote {
+                target6: character.get_guid(),
+            },
+        ),
+        _ => todo!("Unimplemented"),
     };
 
     let tag = PlayerChatTag::None;
@@ -71,7 +89,7 @@ pub async fn handle_cmsg_messagechat(client_manager: &ClientManager, world: &Wor
         message: packet.message.clone(),
         tag,
     }
-    .astd_send_to_all_in_range(&*character, true, world)
+    .astd_send_to_all_in_range(&*character, send_to_self, world)
     .await?;
 
     Ok(())
