@@ -2,6 +2,7 @@ use super::client::*;
 use super::packet_handler::PacketToHandle;
 use crate::data::DataStorage;
 use crate::prelude::*;
+use crate::world::prelude::GameObject;
 use crate::world::World;
 use async_std::net::TcpListener;
 use async_std::stream::StreamExt;
@@ -119,5 +120,37 @@ impl ClientManager {
         let hashmap = self.clients.read().await;
         let clientlock = hashmap.get(&id).ok_or_else(|| anyhow!("Failed to get client for client id: {}", id))?;
         Ok(clientlock.clone())
+    }
+
+    //Attempts to find a client based on the character's name that they are currently playing.
+    pub async fn find_client_from_active_character_name(&self, character_name: &String) -> Result<Option<Arc<Client>>> {
+        let clients = self.clients.read().await;
+        for (_, client) in clients.iter() {
+            let client_data = client.data.read().await;
+            if let Some(active_character_lock) = &client_data.active_character {
+                let active_character = active_character_lock.read().await;
+                if active_character.name.to_uppercase().trim() == character_name.to_uppercase().trim() {
+                    return Ok(Some(client.clone()));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    //Attempts to find a client based on the character's guid that they are currently playing.
+    pub async fn find_client_from_active_character_guid(&self, character_guid: &Guid) -> Result<Option<Arc<Client>>> {
+        let clients = self.clients.read().await;
+        for (_, client) in clients.iter() {
+            let client_data = client.data.read().await;
+            if let Some(active_character_lock) = &client_data.active_character {
+                let active_character = active_character_lock.read().await;
+                if active_character.get_guid() == *character_guid {
+                    return Ok(Some(client.clone()));
+                }
+            }
+        }
+
+        Ok(None)
     }
 }

@@ -112,18 +112,16 @@ impl TryFrom<u8> for EquipmentSlot {
             20 => Ok(Self::Bag2),
             21 => Ok(Self::Bag3),
             22 => Ok(Self::Bag4),
-            v => Err(wow_world_messages::errors::EnumError::new("EquipmentSlot", v.into()),)
+            v => Err(wow_world_messages::errors::EnumError::new("EquipmentSlot", v.into())),
         }
     }
 }
 
-impl TryFrom<u8> for BagSlot
-{
+impl TryFrom<u8> for BagSlot {
     type Error = wow_world_messages::errors::EnumError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value
-        {
+        match value {
             23 => Ok(Self::Item1),
             24 => Ok(Self::Item2),
             25 => Ok(Self::Item3),
@@ -140,13 +138,12 @@ impl TryFrom<u8> for BagSlot
             36 => Ok(Self::Item14),
             37 => Ok(Self::Item15),
             38 => Ok(Self::Item16),
-            v => Err(wow_world_messages::errors::EnumError::new("BagSlot", v.into()),)
+            v => Err(wow_world_messages::errors::EnumError::new("BagSlot", v.into())),
         }
     }
 }
 
-impl From<BagSlot> for usize
-{
+impl From<BagSlot> for usize {
     fn from(value: BagSlot) -> Self {
         value as usize
     }

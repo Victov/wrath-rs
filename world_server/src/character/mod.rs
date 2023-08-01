@@ -1,4 +1,4 @@
-use self::character_inventory::{GameplayCharacterInventory, BagInventory};
+use self::character_inventory::{BagInventory, GameplayCharacterInventory};
 
 use super::world::prelude::*;
 use crate::client::Client;
@@ -19,10 +19,10 @@ use wrath_realm_db::RealmDatabase;
 mod character_cinematic;
 mod character_database;
 mod character_first_login;
+pub mod character_inventory;
 mod character_logout;
 mod character_movement;
 mod character_rested;
-pub mod character_inventory;
 
 pub struct Character {
     pub client: Weak<Client>,
@@ -65,7 +65,7 @@ pub struct Character {
 
     //items
     pub equipped_items: GameplayCharacterInventory,
-    pub bag_items : BagInventory,
+    pub bag_items: BagInventory,
 }
 
 impl Character {
@@ -95,7 +95,7 @@ impl Character {
             needs_first_login: false,
             cinematic_state: character_cinematic::CharacterCinematicState::None,
             equipped_items: GameplayCharacterInventory::new(),
-            bag_items : BagInventory::default(),
+            bag_items: BagInventory::default(),
         }
     }
 

@@ -10,9 +10,7 @@ pub trait ReceiveUpdates {
 }
 
 pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dyn GameObject) -> Result<wow_world_messages::wrath::Object> {
-    use wow_world_messages::wrath::{
-        MovementBlock, MovementBlock_MovementFlags, MovementBlock_UpdateFlag, MovementBlock_UpdateFlag_Living, Object, Object_UpdateType,
-    };
+    use wow_world_messages::wrath::{MovementBlock, MovementBlock_UpdateFlag, Object, Object_UpdateType};
 
     assert!(object.as_character().is_some(), "Only characters currently supported");
 
@@ -22,34 +20,27 @@ pub fn build_create_update_block_for_player(player: &dyn GameObject, object: &dy
 
     let movement_info = object.get_movement_info();
 
-    //TODO: convert movement_info.flags into movement_flags.
-    //They should be identical but since they are different types,
-    //I can't just pass them along so easily. Maybe write From traits for conversion?
-    let movement_flags = MovementBlock_MovementFlags::empty();
-
     let mut update_flag = MovementBlock_UpdateFlag::empty()
-        .set_living(MovementBlock_UpdateFlag_Living::Living {
-            backwards_running_speed: 4.5,
-            backwards_swimming_speed: 1.0,
-            fall_time: movement_info.fall_time,
-            flags: movement_flags,
-            flight_speed: 0.0,
-            backwards_flight_speed: 0.0,
-            orientation: movement_info.orientation,
-            position: movement_info.position,
-            pitch_rate: 7.0,
-            running_speed: 8.0,
-            swimming_speed: 1.0,
-            timestamp: movement_info.timestamp,
-            turn_rate: std::f32::consts::PI,
-            walking_speed: 1.0,
-        })
+        .set_living(
+            movement_info.to_movement_block_update_flag_living(
+                0.0, /* backwards_flight_speed */
+                4.5, /* backwards_running_speed */
+                0.0, /* backwards_swimming_speed */
+                0.0, /* flight_speed */
+                0.0, /* pitch_rate */
+                7.0, /* running_speed */
+                0.0, /* swimming_speed */
+                std::f32::consts::PI, /* turn_rate */
+                1.0, /* walking_speed */
+                None, /* spline_enabled */
+                )
+            )
         .set_high_guid(wow_world_messages::wrath::MovementBlock_UpdateFlag_HighGuid {
             unknown0: if creating_self { 0x2F } else { 0x08 },
         })
-        /*.set_LOW_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_LowGuid {
-            unknown1: object_guid.guid() as u32,
-        })*/;
+    /*.set_LOW_GUID(wow_world_messages::wrath::MovementBlock_UpdateFlag_LowGuid {
+      unknown1: object_guid.guid() as u32,
+      })*/;
 
     if creating_self {
         update_flag = update_flag.set_self()
