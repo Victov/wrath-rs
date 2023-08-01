@@ -54,29 +54,26 @@ pub async fn handle_cmsg_join_channel(client_manager: &ClientManager, client_id:
 pub async fn handle_cmsg_messagechat(client_manager: &ClientManager, world: &World, client_id: u64, packet: &CMSG_MESSAGECHAT) -> Result<()> {
     let client = client_manager.get_authenticated_client(client_id).await?;
     let character_lock = client.get_active_character().await?;
+    let character = character_lock.read().await;
 
-    let character = character_lock.write().await;
+    match &packet.chat_type {
+        CMSG_MESSAGECHAT_ChatType::Say | CMSG_MESSAGECHAT_ChatType::Yell | CMSG_MESSAGECHAT_ChatType::Emote => {
+            handle_world_proximity_message(&*character, world, packet).await?
+        }
+        CMSG_MESSAGECHAT_ChatType::Whisper { target_player } => handle_whisper(&*character, &target_player, client_manager, packet).await?,
+        _ => todo!(),
+    };
 
-    let (send_to_self, chat_type) = match packet.chat_type {
-        CMSG_MESSAGECHAT_ChatType::Say => (
-            true,
-            SMSG_MESSAGECHAT_ChatType::Say {
-                target6: character.get_guid(),
-            },
-        ),
-        CMSG_MESSAGECHAT_ChatType::Yell => (
-            true,
-            SMSG_MESSAGECHAT_ChatType::Yell {
-                target6: character.get_guid(),
-            },
-        ),
-        CMSG_MESSAGECHAT_ChatType::Emote => (
-            true,
-            SMSG_MESSAGECHAT_ChatType::Emote {
-                target6: character.get_guid(),
-            },
-        ),
-        _ => todo!("Unimplemented"),
+    Ok(())
+}
+
+//Chat messages that are meant to arrive to people nearby.
+async fn handle_world_proximity_message(sender: &Character, world: &World, packet: &CMSG_MESSAGECHAT) -> Result<()> {
+    let chat_type = match packet.chat_type {
+        CMSG_MESSAGECHAT_ChatType::Say => SMSG_MESSAGECHAT_ChatType::Say { target6: sender.get_guid() },
+        CMSG_MESSAGECHAT_ChatType::Yell => SMSG_MESSAGECHAT_ChatType::Yell { target6: sender.get_guid() },
+        CMSG_MESSAGECHAT_ChatType::Emote => SMSG_MESSAGECHAT_ChatType::Emote { target6: sender.get_guid() },
+        _ => bail!("This is not a world chat message type"),
     };
 
     let tag = PlayerChatTag::None;
@@ -84,13 +81,43 @@ pub async fn handle_cmsg_messagechat(client_manager: &ClientManager, world: &Wor
     SMSG_MESSAGECHAT {
         chat_type,
         language: packet.language,
-        sender: character.get_guid(),
+        sender: sender.get_guid(),
         flags: 0,
         message: packet.message.clone(),
         tag,
     }
-    .astd_send_to_all_in_range(&*character, send_to_self, world)
-    .await?;
+    .astd_send_to_all_in_range(&*sender, true, world)
+    .await
+}
 
+async fn handle_whisper(sender: &Character, receiver_name: &String, client_manager: &ClientManager, packet: &CMSG_MESSAGECHAT) -> Result<()> {
+    assert!(std::matches!(packet.chat_type, CMSG_MESSAGECHAT_ChatType::Whisper { .. }));
+
+    if let Some(receiving_client) = client_manager.find_client_from_active_character_name(&receiver_name).await? {
+        let chat_type = SMSG_MESSAGECHAT_ChatType::Whisper { target6: sender.get_guid() };
+        let tag = PlayerChatTag::None;
+
+        SMSG_MESSAGECHAT {
+            chat_type,
+            language: packet.language,
+            sender: sender.get_guid(),
+            flags: 0,
+            message: packet.message.clone(),
+            tag,
+        }
+        .astd_send_to_client(receiving_client)
+        .await?;
+    } else {
+        SMSG_MESSAGECHAT {
+            chat_type: SMSG_MESSAGECHAT_ChatType::System { target6: sender.get_guid() },
+            language: wow_world_base::wrath::Language::Universal,
+            sender: sender.get_guid(),
+            flags: 0,
+            message: "No player by that name".to_string(),
+            tag: PlayerChatTag::None,
+        }
+        .astd_send_to_character(sender)
+        .await?;
+    }
     Ok(())
 }

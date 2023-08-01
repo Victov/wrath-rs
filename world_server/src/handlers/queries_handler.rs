@@ -69,7 +69,13 @@ pub async fn handle_cmsg_name_query(client_manager: &ClientManager, client_id: u
                 bail!("There was a cmsg_name_query for a found object, but it was not a character");
             }
         } else {
-            bail!("There was a cmsg_name_query for a guid that is not on the same map as the requester")
+            //This character is not on the same map as whoever requested it, so we do a lookup via
+            //the client manager.
+            if let Some(found_client) = client_manager.find_client_from_active_character_guid(&packet.guid).await? {
+                let char_lock = found_client.get_active_character().await?;
+                let active_character = char_lock.read().await;
+                send_name_query_response(&*client, &*active_character).await?;
+            }
         }
     } else {
         bail!("Character that requested cmsg_name_query has invalid instance_id");
