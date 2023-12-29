@@ -12,7 +12,7 @@ use bit_field::BitField;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use wow_world_messages::wrath::{
-    Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UnitStandState, UpdateMask, UpdatePlayer,
+    ActionButton, Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UnitStandState, UpdateMask, UpdatePlayer,
 };
 use wrath_realm_db::RealmDatabase;
 
@@ -209,6 +209,10 @@ impl Character {
         //action_bars is a flags, no extra actionbars = 0, all bars (2 above default bar, 2 side
         //bars) is 15 when they are set visible in the Interface settings menu
         self.gameplay_data.set_player_features(a, b, action_bars, d);
+    }
+
+    pub fn set_action_bar_button(&mut self, slot: u8, action_button: ActionButton) {
+        self.action_bar.set_action_button(slot as usize, action_button);
     }
 
     fn set_rested_bytes(&mut self, rested: bool) -> Result<()> {

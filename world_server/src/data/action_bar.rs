@@ -12,4 +12,8 @@ impl ActionBar {
             data: [ActionButton::default(); MAXSLOTS],
         }
     }
+
+    pub fn set_action_button(&mut self, slot: usize, action_button: ActionButton) {
+        self.data[slot] = action_button;
+    }
 }
