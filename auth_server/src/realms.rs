@@ -74,14 +74,14 @@ async fn get_realm_list(auth_database: std::sync::Arc<AuthDatabase>, account_id:
         let mut flag = Realm_RealmFlag::new(realm.flags, None);
 
         if realm.online == 0 {
-            flag = flag.set_OFFLINE();
+            flag = flag.set_offline();
         }
 
         let realm_type: RealmType = RealmType::try_from(realm.realm_type).unwrap_or_default();
 
         realms.push(Realm {
             realm_type,
-            locked: 0,
+            locked: false,
             flag,
             name: realm.name,
             address: realm.ip,

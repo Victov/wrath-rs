@@ -22,7 +22,7 @@ pub async fn handle_logon_proof_srp(
     clients: ActiveClients,
     auth_database: std::sync::Arc<AuthDatabase>,
 ) -> Result<ClientState> {
-    let client_public_key = match PublicKey::from_le_bytes(&logon_proof.client_public_key) {
+    let client_public_key = match PublicKey::from_le_bytes(logon_proof.client_public_key) {
         Ok(key) => key,
         Err(_) => {
             reject_logon_proof(stream, CMD_AUTH_LOGON_PROOF_Server_LoginResult::FailIncorrectPassword).await?;
