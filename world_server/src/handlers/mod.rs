@@ -15,6 +15,7 @@ pub use account_data_handler::handle_csmg_update_account_data;
 pub use account_data_handler::send_character_account_data_times;
 
 mod bars_buttons_handler;
+pub use bars_buttons_handler::handle_cmsg_set_action_button;
 pub use bars_buttons_handler::handle_csmg_set_actionbar_toggles;
 
 mod character_handler;
