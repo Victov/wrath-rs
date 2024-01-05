@@ -33,6 +33,27 @@ pub struct DBCharacter {
     pub playtime_level: u32,
 }
 
+pub struct DBSaveableCharacterParameters {
+    pub id: u32,
+    pub level: u8,
+    pub map: u16,
+    pub zone: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub o: f32,
+    pub instance_id: u32,
+    pub bind_zone: u16,
+    pub bind_map: u16,
+    pub bind_x: f32,
+    pub bind_y: f32,
+    pub bind_z: f32,
+    pub guild_id: u32,
+    pub tutorial_data: Vec<u8>,
+    pub playtime_total: u32,
+    pub playtime_level: u32,
+}
+
 pub struct DBCharacterCreateParameters {
     pub account_id: u32,
     pub name: String,
@@ -107,6 +128,34 @@ impl super::RealmDatabase {
             .await?;
 
         Ok(result.last_insert_id())
+    }
+
+    pub async fn update_character_data(&self, params: &DBSaveableCharacterParameters) -> Result<()> {
+        sqlx::query!(
+            "UPDATE characters SET level = ?, map = ?, zone = ?, x = ?, y = ?, z = ?, o = ?, instance_id = ?, bind_zone = ?, bind_map = ?, bind_x = ?, bind_y = ?, bind_z = ?, guild_id = ?, tutorial_data = ?, playtime_total = ?, playtime_level = ? WHERE id = ?",
+            params.level,
+            params.map,
+            params.zone,
+            params.x,
+            params.y,
+            params.z,
+            params.o,
+            params.instance_id,
+            params.bind_zone,
+            params.bind_map,
+            params.bind_x,
+            params.bind_y,
+            params.bind_z,
+            params.guild_id,
+            params.tutorial_data,
+            params.playtime_total,
+            params.playtime_level,
+            params.id
+        )
+            .execute(&self.connection_pool)
+            .await?;
+
+        Ok(())
     }
 
     pub async fn get_character(&self, character_id: u32) -> Result<DBCharacter> {
