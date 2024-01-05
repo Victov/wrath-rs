@@ -14,7 +14,7 @@ use std::sync::{Arc, Weak};
 use wow_world_messages::wrath::{
     ActionButton, Area, Class, Gender, Map, MovementInfo, ObjectType, Power, Race, RelationType, UnitStandState, UpdateMask, UpdatePlayer,
 };
-use wrath_realm_db::RealmDatabase;
+use wrath_realm_db::{character::DBSaveableCharacterParameters, RealmDatabase};
 
 mod character_cinematic;
 mod character_database;
@@ -243,6 +243,29 @@ impl Character {
     //-------------------
     //END STUFF THAT NEEDS TO MOVE TO UpdateMaskExt
     //-------------------
+
+    pub fn saveable_character_data(&self) -> DBSaveableCharacterParameters {
+        DBSaveableCharacterParameters {
+            id: self.get_guid().guid() as u32,
+            level: self.gameplay_data.unit_level().unwrap_or(1) as u8,
+            map: self.map.as_int() as u16,
+            zone: self.area.as_int() as u16,
+            x: self.movement_info.position.x,
+            y: self.movement_info.position.y,
+            z: self.movement_info.position.z,
+            o: self.movement_info.orientation,
+            instance_id: self.instance_id,
+            bind_zone: self.bind_location.clone().map_or(0, |l| l.area.as_int() as u16),
+            bind_map: self.bind_location.clone().map_or(0, |l| l.map.as_int() as u16),
+            bind_x: self.bind_location.clone().map_or(0.0, |l| l.position.x),
+            bind_y: self.bind_location.clone().map_or(0.0, |l| l.position.y),
+            bind_z: self.bind_location.clone().map_or(0.0, |l| l.position.z),
+            guild_id: 0,
+            tutorial_data: self.tutorial_flags.flag_data.iter().map(|&flag| flag as u8).collect(),
+            playtime_total: self.seconds_played_total,
+            playtime_level: self.seconds_played_at_level,
+        }
+    }
 }
 
 #[async_trait::async_trait]

@@ -61,6 +61,10 @@ impl super::Character {
             return Ok(());
         }
 
+        let character_data = self.saveable_character_data();
+
+        world.get_realm_database().update_character_data(&character_data).await?;
+
         world
             .get_instance_manager()
             .try_get_map_for_character(self)

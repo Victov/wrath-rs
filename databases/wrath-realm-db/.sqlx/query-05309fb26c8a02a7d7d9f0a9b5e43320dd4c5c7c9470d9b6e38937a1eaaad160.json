@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE characters SET level = ?, map = ?, zone = ?, x = ?, y = ?, z = ?, o = ?, instance_id = ?, bind_zone = ?, bind_map = ?, bind_x = ?, bind_y = ?, bind_z = ?, guild_id = ?, tutorial_data = ?, playtime_total = ?, playtime_level = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 18
+    },
+    "nullable": []
+  },
+  "hash": "05309fb26c8a02a7d7d9f0a9b5e43320dd4c5c7c9470d9b6e38937a1eaaad160"
+}
