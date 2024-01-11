@@ -10,3 +10,4 @@ edition = "2021"
 async-std = {version="*", features=["attributes"] }
 anyhow = { version = "1.0.32" }
 sqlx = { version = "0.7", features=["mysql", "runtime-async-std", "tls-rustls"] }
+sea-orm ={ version = "0.12", features=["sqlx-mysql", "runtime-async-std-rustls", "debug-print"] }

@@ -69,6 +69,9 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
 async fn get_realm_list(auth_database: std::sync::Arc<AuthDatabase>, account_id: u32) -> Result<Vec<Realm>> {
     //TODO(wmxd): it will be good idea to cache the database stuff
     let db_realms = auth_database.get_all_realms_with_num_characters(account_id).await?;
+    warn!("DB realms: {:?}", db_realms);
+    let testing_query_result = auth_database.sea_get_all_realms_with_num_characters(account_id).await?;
+    warn!("Testing query result: {:?}", testing_query_result);
     let mut realms = Vec::with_capacity(db_realms.len());
     for realm in db_realms {
         let mut flag = Realm_RealmFlag::new(realm.flags, None);

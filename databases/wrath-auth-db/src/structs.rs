@@ -1,3 +1,5 @@
+use sea_orm::FromQueryResult;
+
 pub struct DBRealm {
     pub id: u32,
     pub name: String,
@@ -9,6 +11,9 @@ pub struct DBRealm {
     pub online: u8,
 }
 
+// The Derive `FromQueryResult` macro is used to convert the result of a query into a struct.
+// Helps a lot when needing to feed a complex query into a struct.
+#[derive(Debug, FromQueryResult)]
 pub struct DBRealmWithNumCharacters {
     pub id: u32,
     pub name: String,
