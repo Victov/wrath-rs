@@ -1,31 +1,49 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use sqlx::Row;
+use entity::{realm_characters, realms};
+use sea_orm::{
+    sea_query::Expr, Condition, ConnectOptions, Database, DatabaseConnection, DbBackend, EntityTrait, FromQueryResult, JoinType, QuerySelect,
+    QueryTrait, RelationTrait,
+};
 mod structs;
 pub use structs::{DBAccount, DBAccountData, DBRealm, DBRealmWithNumCharacters};
+mod entity;
+pub use entity::{accounts::Entity as Accounts, realm_characters::Entity as RealmCharacters, realms::Entity as Realms};
 
 pub struct AuthDatabase {
+    // I kept both the DatabaseConnection and the sqlx::MySqlPool so you can compare them
     connection_pool: sqlx::MySqlPool,
+    database: DatabaseConnection,
 }
 
 impl AuthDatabase {
     pub async fn new(conn_string: &String, timeout: Duration) -> Result<Self> {
+        let mut options = ConnectOptions::new(conn_string);
+
+        options
+            .max_connections(5)
+            .acquire_timeout(timeout)
+            .sqlx_logging(true)
+            .sqlx_logging_level(log::LevelFilter::Debug);
+
+        let database = Database::connect(options).await?;
+
         let pool = sqlx::mysql::MySqlPoolOptions::new()
             .max_connections(5)
             .acquire_timeout(timeout)
             .connect(conn_string.as_str())
             .await?;
 
-        Ok(Self { connection_pool: pool })
+        Ok(Self {
+            connection_pool: pool,
+            database,
+        })
     }
 
     pub async fn get_realm_bind_ip(&self, realm_id: i32) -> Result<String> {
-        let bind_ip = sqlx::query("SELECT ip FROM realms WHERE id = ?")
-            .bind(realm_id)
-            .fetch_one(&self.connection_pool)
-            .await?
-            .try_get("ip")?;
+        // simple example using the Entity API to find a single record
+        let bind_ip = Realms::find_by_id(realm_id as u32).one(&self.database).await?.unwrap().ip;
 
         Ok(bind_ip)
     }
@@ -39,6 +57,28 @@ impl AuthDatabase {
         )
         .fetch_all(&self.connection_pool)
         .await?)
+    }
+
+    // Here I kept both methods so you could compare or even interchange when running the code
+    pub async fn sea_get_all_realms_with_num_characters(&self, account_id: u32) -> Result<Vec<DBRealmWithNumCharacters>> {
+        let query_statement = Realms::find()
+            .column_as(realm_characters::Column::NumCharacters, "num_characters")
+            .join(
+                JoinType::LeftJoin,
+                realms::Relation::RealmCharacters.def().on_condition(move |_left, right| {
+                    Condition::all().add(Expr::col((right.clone(), realm_characters::Column::AccountId)).eq(account_id))
+                }),
+            )
+            .build(DbBackend::MySql);
+
+        // prints the generated query
+        println!("Query statement: {:?}", query_statement.to_string());
+
+        let fetch_data = DBRealmWithNumCharacters::find_by_statement(query_statement.clone())
+            .all(&self.database)
+            .await?;
+
+        Ok(fetch_data)
     }
 
     pub async fn get_all_realms(&self) -> Result<Vec<DBRealm>> {
