@@ -2,9 +2,11 @@ name: wrath-rs
 
 on:
   push:
-    branches: [ main, github_ci ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, github_ci ]
+    branches:
+      - main
 
 env:
   CARGO_TERM_COLOR: always
@@ -15,11 +17,13 @@ jobs:
     name: Wrath-rs on stable rust
     steps:
       - uses: actions/checkout@v2
-      - name: Install minimal stable with clippy and rustfmt
-        uses: actions-rs/toolchain@v1
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
           components: rustfmt, clippy
+      - name: fmt
+        run: cargo fmt --all
+      - name: clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
       - name: Build
         run: cargo build --all
