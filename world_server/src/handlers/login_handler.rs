@@ -47,7 +47,7 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
         .astd_send_to_client(client)
         .await?;
 
-        async_std::task::sleep(std::time::Duration::from_secs(2)).await;
+        async_io::Timer::after(std::time::Duration::from_secs(2)).await;
         bail!("Failed auth attempt, rejecting");
     }
 

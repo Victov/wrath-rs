@@ -5,8 +5,8 @@ use crate::handlers::login_handler::LogoutState;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::World;
-use async_std::net::TcpStream;
-use async_std::sync::{Mutex, RwLock};
+use smol::net::TcpStream;
+use smol::lock::{Mutex, RwLock};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use wow_srp::wrath_header::ProofSeed;
@@ -152,7 +152,7 @@ impl Client {
             let data = &mut self.data.write().await;
             data.client_state = ClientState::DisconnectPendingCleanup;
         }
-        self.read_socket.write().await.shutdown(async_std::net::Shutdown::Both)?;
+        self.read_socket.write().await.shutdown(smol::net::Shutdown::Both)?;
         self.write_socket.lock().await.shutdown(std::net::Shutdown::Both)?;
         //Save character to db?
         Ok(())

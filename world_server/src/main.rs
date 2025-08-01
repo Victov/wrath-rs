@@ -4,10 +4,14 @@ use std::{
 };
 
 use async_ctrlc::CtrlC;
-use async_std::task;
 use client_manager::ClientManager;
 use packet_handler::{PacketHandler, PacketToHandle};
 use time::macros::format_description;
+use futures::future::{select, Either};
+use futures::pin_mut;
+use futures_timer::Delay;
+use smol_macros::main;
+use macro_rules_attribute::apply;
 use tracing_subscriber::{fmt::time::UtcTime, EnvFilter};
 use wrath_auth_db::AuthDatabase;
 use wrath_realm_db::RealmDatabase;
@@ -33,7 +37,7 @@ pub mod prelude {
 }
 use prelude::*;
 
-#[async_std::main]
+#[apply(main!)]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
 
@@ -48,7 +52,7 @@ async fn main() -> Result<()> {
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     let ctrlc = CtrlC::new().expect("Failed to register ctrl+c abort handler");
-    task::spawn(async move {
+    let _ = smol::spawn(async move {
         ctrlc.await;
         info!("Detected Ctrl+C, starting graceful shutdown");
         r.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -65,7 +69,7 @@ async fn main() -> Result<()> {
     data_storage.load(realm_database_ref.clone()).await?;
     let data_storage = std::sync::Arc::new(data_storage);
 
-    task::spawn(auth::auth_server_heartbeats());
+    let _ = smol::spawn(auth::auth_server_heartbeats());
 
     let world = std::sync::Arc::new(world::World::new(realm_database_ref));
 
@@ -75,14 +79,14 @@ async fn main() -> Result<()> {
     let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), data_storage));
     let client_manager_for_acceptloop = client_manager.clone();
 
-    task::spawn(async move {
+    let _ = smol::spawn(async move {
         client_manager_for_acceptloop
             .accept_realm_connections(sender)
             .await
             .unwrap_or_else(|e| warn!("Error in realm_socket::accept_realm_connections: {:?}", e))
     });
 
-    task::spawn(console_input::process_console_commands(running.clone()));
+    let _ = smol::spawn(console_input::process_console_commands(running.clone()));
 
     let desired_timestep_sec: f32 = 1.0 / 10.0;
     let mut previous_loop_total: f32 = desired_timestep_sec;
@@ -95,12 +99,19 @@ async fn main() -> Result<()> {
         realm_packet_handler.handle_queue(client_manager.clone(), world.clone()).await?;
         #[cfg(debug_assertions)]
         {
-            use async_std::future;
-            let res = future::timeout(Duration::from_secs_f32(10.0f32), world.tick(previous_loop_total)).await?;
-            if res.is_err() {
-                panic!("deadlock: {:?}", res);
-            }
-        }
+            let tick_fut = world.tick(previous_loop_total);
+	    let timeout_fut = Delay::new(Duration::from_secs_f32(10.0));
+	    pin_mut!(tick_fut);
+	    pin_mut!(timeout_fut);
+
+	    match select(tick_fut, timeout_fut).await {
+    		Either::Left((result, _timeout)) => { 
+        	  result?;
+		}
+    Either::Right((_timeout, _unfinished_tick)) => {
+        panic!("deadlock: tick timeout");
+    }}
+   }   
         #[cfg(not(debug_assertions))]
         {
             world.tick(previous_loop_total).await?;
@@ -108,7 +119,7 @@ async fn main() -> Result<()> {
         let after = std::time::Instant::now();
         let update_duration = after.duration_since(before);
         if update_duration.as_secs_f32() < desired_timestep_sec {
-            task::sleep(std::time::Duration::from_secs_f32(desired_timestep_sec - update_duration.as_secs_f32())).await;
+            async_io::Timer::after(std::time::Duration::from_secs_f32(desired_timestep_sec - update_duration.as_secs_f32())).await;
         } else {
             warn!("Too long tick to keep up with desired timestep!");
         }

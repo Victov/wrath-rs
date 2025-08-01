@@ -1,4 +1,4 @@
-use async_std::sync::RwLock;
+use smol::lock::RwLock;
 use std::collections::HashMap;
 use std::time::Instant;
 use wow_srp::server::{SrpProof, SrpServer};

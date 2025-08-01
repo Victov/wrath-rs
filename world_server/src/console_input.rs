@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_std::task;
 use cmdparse::{parse, Parsable};
 use std::io::{self, BufRead};
 use std::sync::{atomic::AtomicBool, Arc};
@@ -18,7 +17,7 @@ pub async fn process_console_commands(running_bool: Arc<AtomicBool>) -> Result<(
                 let cmd = parse::<_, WrathRealmConsoleCommand>(&string, ());
                 match cmd {
                     Ok(parsed_cmd) => {
-                        task::spawn(handle_command(parsed_cmd, running_bool.clone()));
+                        let _ = smol::spawn(handle_command(parsed_cmd, running_bool.clone()));
                     }
                     Err(e) => warn!("Could not parse command. {}", e),
                 }

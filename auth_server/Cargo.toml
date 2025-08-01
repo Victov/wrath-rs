@@ -9,7 +9,6 @@ edition = "2021"
 [dependencies]
 wow_srp = '0.6.0'
 byteorder = { version = '1' }
-async-std = { version = "1.12", features = ["unstable", "attributes"] }
 anyhow = { version = "*" }
 dotenvy = { version = "*" }
 hex = { version = "0.4" }
@@ -21,3 +20,7 @@ async-trait = "0.1"
 byte = "0.2"
 cmdparse = { version = "0.1" }
 wow_login_messages = { version="0.3", features=["async-std"] }
+smol = "2.0.2"
+smol-macros = "0.1.0"
+macro_rules_attribute = "0.2.2"
+async-io = "2.5.0"

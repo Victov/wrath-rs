@@ -7,7 +7,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-std = {version="*", features=["attributes"] }
 async-trait = {version="0.1"}
 anyhow = { version = "1.0" }
 podio = { version = "0.2" } 
@@ -32,6 +31,12 @@ wow_dbc = { version = "0.2", features = ["wrath"] }
 wow_world_base = { git="https://github.com/gtker/wow_messages.git", rev="55c2b641b7dbd09ca1de882f5fce814e4a91c068", features=["extended"] }
 wow_world_messages = { git="https://github.com/gtker/wow_messages.git", rev="55c2b641b7dbd09ca1de882f5fce814e4a91c068", features=["wrath", "async-std", "chrono"] }
 wow_items = { git="https://github.com/gtker/wow_messages.git", rev="55c2b641b7dbd09ca1de882f5fce814e4a91c068", features = ["wrath"] }
+smol-macros = "0.1.1"
+macro_rules_attribute = "0.2.2"
+smol = "2.0.2"
+async-io = "2.5.0"
+futures-timer = "3.0.3"
+futures = "0.3.31"
 
 #For local testing purposes, one may want to switch to this local path version of wow_world_messages. Do not commit with this though
 #wow_world_messages = { path = "../../wow_messages/wow_world_messages", features=["wrath", "async-std", "chrono"] }

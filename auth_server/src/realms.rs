@@ -1,8 +1,9 @@
 use crate::ClientState;
 
 use anyhow::{anyhow, Result};
-use async_std::stream::StreamExt;
+use async_io::Timer;
 use byteorder::{BigEndian, ReadBytesExt};
+use smol::stream::StreamExt;
 use std::time::Instant;
 use tracing::warn;
 
@@ -17,7 +18,7 @@ const REALM_MAX_POPULATION: f32 = 1000.0;
 
 pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Result<()> {
     let realms = (*auth_db).get_all_realms().await?;
-    let socket = async_std::net::UdpSocket::bind("127.0.0.1:1234").await?;
+    let socket = smol::net::UdpSocket::bind("127.0.0.1:1234").await?;
     let mut buffer = Vec::<u8>::new();
     buffer.resize(128, 0);
 
@@ -28,8 +29,8 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
     let heartbeats_rwlock = std::sync::Arc::new(std::sync::RwLock::new(latest_heartbeats));
     let hbwrlock_copy = heartbeats_rwlock.clone();
     let auth_db_handle = auth_db.clone();
-    async_std::task::spawn(async move {
-        let mut heartbeat_interval = async_std::stream::interval(std::time::Duration::from_secs(5));
+    let _ = smol::spawn(async move {
+        let mut heartbeat_interval = Timer::interval(std::time::Duration::from_secs(5));
         while (heartbeat_interval.next().await).is_some() {
             let hashtable = hbwrlock_copy.read().unwrap().clone();
             for (&realm_id, &heartbeat) in &hashtable {
@@ -97,7 +98,7 @@ async fn get_realm_list(auth_database: std::sync::Arc<AuthDatabase>, account_id:
 }
 
 pub async fn handle_realm_list_request(
-    stream: &mut async_std::net::TcpStream,
+    stream: &mut smol::net::TcpStream,
     username: String,
     auth_database: std::sync::Arc<AuthDatabase>,
 ) -> Result<ClientState> {

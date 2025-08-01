@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use async_std::net::UdpSocket;
+use smol::net::UdpSocket;
 use podio::{BigEndian, WritePodExt};
 
 pub async fn auth_server_heartbeats() -> Result<()> {

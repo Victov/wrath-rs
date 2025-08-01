@@ -4,10 +4,9 @@ use crate::data::DataStorage;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
-use async_std::net::TcpListener;
-use async_std::stream::StreamExt;
-use async_std::sync::{Mutex, RwLock};
-use async_std::task;
+use smol::net::TcpListener;
+use smol::stream::StreamExt;
+use smol::lock::{Mutex, RwLock};
 use rand::{thread_rng, RngCore};
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
@@ -97,7 +96,7 @@ impl ClientManager {
                 let client = client.clone();
                 let packet_handle_sender = packet_handle_sender.clone();
                 let auth_db = self.auth_db.clone();
-                task::spawn(async move {
+                let _ = smol::spawn(async move {
                     let p = packet_handle_sender.clone();
                     let a_db = auth_db.clone();
                     client.authenticate_and_start_receiving_data(p, a_db).await;

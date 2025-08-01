@@ -5,7 +5,7 @@ use crate::packet::ServerMessageExt;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
-use async_std::sync::RwLockUpgradableReadGuard;
+use smol::lock::RwLockUpgradableReadGuard;
 use std::sync::Arc;
 use wow_world_messages::wrath::{
     Area, ClientMessage, MSG_MOVE_TELEPORT_ACK_Client, MSG_MOVE_TELEPORT_ACK_Server, Map, MovementInfo, ServerMessage, UnitStandState, Vector3d,

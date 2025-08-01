@@ -1,7 +1,9 @@
 use anyhow::Result;
-use async_std::net::{TcpListener, TcpStream};
-use async_std::sync::RwLock;
-use async_std::task;
+use async_io::Timer;
+use macro_rules_attribute::apply;
+use smol::lock::RwLock;
+use smol::net::{TcpListener, TcpStream};
+use smol_macros::main;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,7 +24,7 @@ use crate::auth::{handle_logon_challenge_srp, handle_logon_proof_srp, handle_rec
 use crate::realms::handle_realm_list_request;
 use crate::state::{ActiveClients, ClientState};
 
-#[async_std::main]
+#[apply(main!)]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
 
@@ -43,14 +45,14 @@ async fn main() -> Result<()> {
         .unwrap_or(500);
     let clients = Arc::new(RwLock::new(HashMap::new()));
 
-    task::spawn(reconnect_clients_cleaner(clients.clone(), Duration::from_secs(auth_reconnect_lifetime)));
-    task::spawn(realms::receive_realm_pings(auth_db.clone()));
-    task::spawn(console_input::process_console_commands(auth_db.clone()));
+    let _ = smol::spawn(reconnect_clients_cleaner(clients.clone(), Duration::from_secs(auth_reconnect_lifetime)));
+    let _ = smol::spawn(realms::receive_realm_pings(auth_db.clone()));
+    let _ = smol::spawn(console_input::process_console_commands(auth_db.clone()));
 
     let tcp_listener = TcpListener::bind("127.0.0.1:3724").await?;
     loop {
         let (stream, _) = tcp_listener.accept().await?;
-        task::spawn(handle_incoming_connection(stream, clients.clone(), auth_db.clone()));
+        let _ = smol::spawn(handle_incoming_connection(stream, clients.clone(), auth_db.clone()));
     }
 }
 
@@ -60,7 +62,7 @@ async fn reconnect_clients_cleaner(clients: ActiveClients, timeout: Duration) ->
             let mut clients = clients.write().await;
             clients.retain(|_, srp_time| srp_time.created_at.elapsed() < timeout);
         }
-        task::sleep(timeout).await;
+        Timer::after(timeout).await;
     }
 }
 
@@ -74,7 +76,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
         let read_len = stream.peek(&mut buf).await?;
         if read_len < 1 {
             info!("disconnect");
-            stream.shutdown(async_std::net::Shutdown::Both)?;
+            stream.shutdown(smol::net::Shutdown::Both)?;
             break;
         }
 
@@ -91,7 +93,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
             }
             (_, ClientOpcodeMessage::CMD_AUTH_LOGON_PROOF(_)) => {
                 info!("LogOnProof disconnect");
-                stream.shutdown(async_std::net::Shutdown::Both)?;
+                stream.shutdown(smol::net::Shutdown::Both)?;
                 break;
             }
             (Some(ClientState::LogOnProof { username }), ClientOpcodeMessage::CMD_REALM_LIST(_)) => {
@@ -99,7 +101,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
             }
             (_, ClientOpcodeMessage::CMD_REALM_LIST(_)) => {
                 info!("RealmListRequest disconnect");
-                stream.shutdown(async_std::net::Shutdown::Both)?;
+                stream.shutdown(smol::net::Shutdown::Both)?;
                 break;
             }
             (_, ClientOpcodeMessage::CMD_AUTH_RECONNECT_CHALLENGE(challenge)) => {
@@ -110,7 +112,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
             }
             (_, ClientOpcodeMessage::CMD_AUTH_RECONNECT_PROOF(_)) => {
                 info!("ReconnectProof disconnect");
-                stream.shutdown(async_std::net::Shutdown::Both)?;
+                stream.shutdown(smol::net::Shutdown::Both)?;
                 break;
             }
         };
@@ -120,7 +122,7 @@ async fn handle_incoming_connection(mut stream: TcpStream, clients: ActiveClient
             Err(e) => {
                 error!("Error {}", e);
                 info!("disconnect!");
-                stream.shutdown(async_std::net::Shutdown::Both)?;
+                stream.shutdown(smol::net::Shutdown::Both)?;
                 break;
             }
         }

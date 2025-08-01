@@ -1,6 +1,6 @@
 use super::client::Client;
 use crate::{character::*, prelude::*, world::game_object::GameObject, world::World};
-use async_std::prelude::*;
+use smol::prelude::*;
 use std::{borrow::Borrow, pin::Pin};
 use wow_world_messages::wrath::ServerMessage;
 
