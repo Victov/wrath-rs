@@ -1,7 +1,7 @@
 use crate::character::Character;
 use crate::client::Client;
 use crate::prelude::*;
-use async_std::sync::{RwLock, RwLockUpgradableReadGuard};
+use smol::lock::{RwLock, RwLockUpgradableReadGuard};
 use std::collections::HashMap;
 use std::sync::Arc;
 use wow_world_messages::wrath::Map;

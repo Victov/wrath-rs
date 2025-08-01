@@ -7,7 +7,7 @@ use std::sync::Weak;
 
 use super::prelude::GameObject;
 use crate::prelude::*;
-use async_std::sync::{Mutex, RwLock};
+use smol::lock::{Mutex, RwLock};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 use wow_world_messages::wrath::UpdateMask;
 

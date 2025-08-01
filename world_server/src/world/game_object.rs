@@ -1,6 +1,6 @@
 use std::sync::Weak;
 
-use async_std::sync::RwLock;
+use smol::lock::RwLock;
 use wow_world_messages::wrath::{MovementInfo, ObjectType, UpdateMask};
 use wow_world_messages::Guid;
 

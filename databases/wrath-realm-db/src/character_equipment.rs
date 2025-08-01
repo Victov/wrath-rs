@@ -1,6 +1,6 @@
+use crate::item_instance::DBItemInstance;
 use anyhow::Result;
 use sqlx::{MySql, QueryBuilder};
-use crate::item_instance::DBItemInstance;
 #[derive(Debug)]
 pub struct DBCharacterEquipmentDisplayInfo {
     pub slot_id: u8,
@@ -10,7 +10,6 @@ pub struct DBCharacterEquipmentDisplayInfo {
 }
 
 impl super::RealmDatabase {
-
     pub async fn get_all_character_equipment_display_info(&self, character_id: u32) -> Result<Vec<DBCharacterEquipmentDisplayInfo>> {
         let res = sqlx::query_as!(
             DBCharacterEquipmentDisplayInfo,

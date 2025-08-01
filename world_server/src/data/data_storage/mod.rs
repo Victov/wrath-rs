@@ -1,9 +1,6 @@
 use crate::prelude::*;
-use async_std::{
-    io::{BufReader, ReadExt},
-    path::PathBuf,
-};
-use std::sync::Arc;
+use smol::io::{BufReader, AsyncReadExt};
+use std::{path::PathBuf, sync::Arc};
 use wow_dbc::wrath_tables::{area_trigger::AreaTriggerKey, chr_classes::ChrClasses, chr_races::ChrRaces};
 use wrath_realm_db::RealmDatabase;
 
@@ -26,7 +23,7 @@ async fn load_standard_dbc<T: wow_dbc::DbcTable>(folder_path: impl Into<&str>, t
     let filename = T::filename();
     let path: PathBuf = [folder_path.into(), filename].iter().collect();
     info!("loading {}", path.to_str().unwrap());
-    let file_handle = async_std::fs::File::open(path).await?;
+    let file_handle = smol::fs::File::open(path).await?;
     let mut reader = BufReader::new(file_handle);
     let mut bytes = vec![];
     reader.read_to_end(&mut bytes).await?;

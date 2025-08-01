@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use async_std::net::TcpStream;
+use smol::net::TcpStream;
 use std::time::Instant;
 
 use wrath_auth_db::AuthDatabase;
