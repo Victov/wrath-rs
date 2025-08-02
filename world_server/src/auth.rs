@@ -1,6 +1,6 @@
 use crate::prelude::*;
-use smol::net::UdpSocket;
 use podio::{BigEndian, WritePodExt};
+use smol::net::UdpSocket;
 
 pub async fn auth_server_heartbeats() -> Result<()> {
     let socket = UdpSocket::bind("127.0.0.1:0").await?;

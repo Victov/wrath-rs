@@ -45,14 +45,14 @@ async fn main() -> Result<()> {
         .unwrap_or(500);
     let clients = Arc::new(RwLock::new(HashMap::new()));
 
-    let _ = smol::spawn(reconnect_clients_cleaner(clients.clone(), Duration::from_secs(auth_reconnect_lifetime)));
-    let _ = smol::spawn(realms::receive_realm_pings(auth_db.clone()));
-    let _ = smol::spawn(console_input::process_console_commands(auth_db.clone()));
+    smol::spawn(reconnect_clients_cleaner(clients.clone(), Duration::from_secs(auth_reconnect_lifetime))).detach();
+    smol::spawn(realms::receive_realm_pings(auth_db.clone())).detach();
+    smol::spawn(console_input::process_console_commands(auth_db.clone())).detach();
 
     let tcp_listener = TcpListener::bind("127.0.0.1:3724").await?;
     loop {
         let (stream, _) = tcp_listener.accept().await?;
-        let _ = smol::spawn(handle_incoming_connection(stream, clients.clone(), auth_db.clone()));
+        smol::spawn(handle_incoming_connection(stream, clients.clone(), auth_db.clone())).detach();
     }
 }
 

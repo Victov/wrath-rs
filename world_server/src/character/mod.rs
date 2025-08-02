@@ -7,8 +7,8 @@ use crate::handlers::login_handler::LogoutState;
 use crate::handlers::movement_handler::TeleportationState;
 use crate::prelude::*;
 use crate::world::prelude::unit_flags::UnitFlagIndex;
-use smol::lock::RwLock;
 use bit_field::BitField;
+use smol::lock::RwLock;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 use wow_world_messages::wrath::{

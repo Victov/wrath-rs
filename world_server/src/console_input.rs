@@ -17,7 +17,7 @@ pub async fn process_console_commands(running_bool: Arc<AtomicBool>) -> Result<(
                 let cmd = parse::<_, WrathRealmConsoleCommand>(&string, ());
                 match cmd {
                     Ok(parsed_cmd) => {
-                        let _ = smol::spawn(handle_command(parsed_cmd, running_bool.clone()));
+                        smol::spawn(handle_command(parsed_cmd, running_bool.clone())).detach();
                     }
                     Err(e) => warn!("Could not parse command. {}", e),
                 }

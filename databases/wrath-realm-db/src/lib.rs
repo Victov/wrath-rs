@@ -6,8 +6,8 @@ pub mod areatrigger_teleport;
 pub mod character;
 pub mod character_account_data;
 pub mod character_equipment;
-pub mod item_template;
 pub mod item_instance;
+pub mod item_template;
 pub mod player_create_info;
 
 pub struct RealmDatabase {

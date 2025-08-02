@@ -4,10 +4,10 @@ use crate::data::DataStorage;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
+use rand::{thread_rng, RngCore};
+use smol::lock::{Mutex, RwLock};
 use smol::net::TcpListener;
 use smol::stream::StreamExt;
-use smol::lock::{Mutex, RwLock};
-use rand::{thread_rng, RngCore};
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -96,11 +96,12 @@ impl ClientManager {
                 let client = client.clone();
                 let packet_handle_sender = packet_handle_sender.clone();
                 let auth_db = self.auth_db.clone();
-                let _ = smol::spawn(async move {
+                smol::spawn(async move {
                     let p = packet_handle_sender.clone();
                     let a_db = auth_db.clone();
                     client.authenticate_and_start_receiving_data(p, a_db).await;
-                });
+                })
+                .detach();
             }
         }
 
@@ -122,7 +123,7 @@ impl ClientManager {
     }
 
     //Attempts to find a client based on the character's name that they are currently playing.
-    pub async fn find_client_from_active_character_name(&self, character_name: &String) -> Result<Option<Arc<Client>>> {
+    pub async fn find_client_from_active_character_name(&self, character_name: &str) -> Result<Option<Arc<Client>>> {
         let clients = self.clients.read().await;
         for (_, client) in clients.iter() {
             let client_data = client.data.read().await;
