@@ -67,7 +67,7 @@ pub async fn handle_logon_proof_srp(
     Ok(ClientState::LogOnProof { username })
 }
 
-pub async fn handle_logon_challenge_srp<'a>(
+pub async fn handle_logon_challenge_srp(
     stream: &mut TcpStream,
     challenge: &CMD_AUTH_LOGON_CHALLENGE_Client,
     auth_database: std::sync::Arc<AuthDatabase>,
@@ -120,7 +120,7 @@ pub async fn handle_logon_challenge_srp<'a>(
     })
 }
 
-pub async fn handle_reconnect_challenge_srp<'a>(
+pub async fn handle_reconnect_challenge_srp(
     stream: &mut TcpStream,
     challenge: &CMD_AUTH_RECONNECT_CHALLENGE_Client,
     clients: ActiveClients,
@@ -154,7 +154,7 @@ pub async fn handle_reconnect_challenge_srp<'a>(
     })
 }
 
-pub async fn handle_reconnect_proof_srp<'a>(
+pub async fn handle_reconnect_proof_srp(
     stream: &mut TcpStream,
     reconnect_proof: &CMD_AUTH_RECONNECT_PROOF_Client,
     username: String,

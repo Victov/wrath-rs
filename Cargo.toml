@@ -5,3 +5,4 @@ members = [
     "databases/wrath-realm-db",
     "world_server"
 ]
+resolver = "2"
