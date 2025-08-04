@@ -6,6 +6,7 @@ use super::Item;
 
 //generic, index based item container, could represent a bag, bank, loot,
 //everything that doesn't require more logic to item placement
+#[allow(unused)]
 pub trait ItemContainer<T>: Index<T, Output = Option<Item>> + IndexMut<T, Output = Option<Item>> + Default
 where
     T: Into<usize>,
