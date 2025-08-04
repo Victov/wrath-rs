@@ -27,6 +27,12 @@ pub struct CharacterInventory<ItemType: InventoryStorable> {
     items: HashMap<EquipmentSlot, ItemType>,
 }
 
+impl<ItemType: InventoryStorable> Default for CharacterInventory<ItemType> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<ItemType: InventoryStorable> CharacterInventory<ItemType> {
     pub fn new() -> Self {
         Self { items: HashMap::new() }
@@ -38,8 +44,8 @@ impl<ItemType: InventoryStorable> CharacterInventory<ItemType> {
         let possible_slots = get_compatible_equipment_slots_for_inventory_type(&inventory_type);
 
         for &possible_slot in possible_slots {
-            if self.items.get(&possible_slot).is_none() {
-                self.items.insert(possible_slot, item);
+            if let std::collections::hash_map::Entry::Vacant(e) = self.items.entry(possible_slot) {
+                e.insert(item);
                 return Ok(possible_slot);
             }
         }
@@ -88,13 +94,9 @@ impl InventoryStorable for SimpleItemDescription {
 pub type SimpleCharacterInventory = CharacterInventory<SimpleItemDescription>;
 pub type GameplayCharacterInventory = CharacterInventory<Item>;
 
+#[derive(Default)]
 pub struct BagInventory {
     items: [Option<Item>; 16],
-}
-impl Default for BagInventory {
-    fn default() -> Self {
-        Self { items: Default::default() }
-    }
 }
 impl Index<BagSlot> for BagInventory {
     type Output = Option<Item>;
@@ -115,9 +117,8 @@ impl BagInventory {
     }
     fn take_item(&mut self, index: BagSlot) -> Option<Item> {
         let index = Self::to_index(&index);
-        if self.items[index as usize].is_some() {
-            let item = self.items[index as usize].take();
-            item
+        if self.items[index].is_some() {
+            self.items[index].take()
         } else {
             None
         }
@@ -127,10 +128,8 @@ impl BagInventory {
 impl ItemContainer<BagSlot> for BagInventory {
     fn get_items_update_state(&self) -> Vec<UpdateItem> {
         let mut updates = Vec::new();
-        for item in &self.items {
-            if let Some(item) = item {
-                updates.push(item.update_state.clone());
-            }
+        for item in self.items.iter().flatten() {
+            updates.push(item.update_state.clone());
         }
         updates
     }
@@ -147,23 +146,22 @@ impl crate::character::Character {
                 if let Ok(equipment_slot) = EquipmentSlot::try_from(slot) {
                     let previous_item = self.equipped_items.take_item(equipment_slot);
                     if let Some(item) = item {
-                        if (slot as u8) <= inventory::EQUIPMENT_SLOTS_END {
+                        if slot <= inventory::EQUIPMENT_SLOTS_END {
                             //TODO: add display enchants
                             self.gameplay_data.set_player_visible_item(
                                 VisibleItem::new(item.update_state.object_entry().unwrap() as u32, [0u16; 2]),
-                                VisibleItemIndex::try_from(slot as u8).unwrap(),
+                                VisibleItemIndex::try_from(slot).unwrap(),
                             );
                         }
                         self.gameplay_data
-                            .set_player_field_inv(ItemSlot::try_from(slot as u8).unwrap(), item.update_state.object_guid().unwrap());
+                            .set_player_field_inv(ItemSlot::try_from(slot).unwrap(), item.update_state.object_guid().unwrap());
                         self.equipped_items.try_insert_item(item)?;
                     } else {
-                        if (slot as u8) <= inventory::EQUIPMENT_SLOTS_END {
+                        if slot <= inventory::EQUIPMENT_SLOTS_END {
                             self.gameplay_data
-                                .set_player_visible_item(VisibleItem::new(0u32, [0u16; 2]), VisibleItemIndex::try_from(slot as u8).unwrap());
+                                .set_player_visible_item(VisibleItem::new(0u32, [0u16; 2]), VisibleItemIndex::try_from(slot).unwrap());
                         }
-                        self.gameplay_data
-                            .set_player_field_inv(ItemSlot::try_from(slot as u8).unwrap(), Guid::zero());
+                        self.gameplay_data.set_player_field_inv(ItemSlot::try_from(slot).unwrap(), Guid::zero());
                     }
                     Ok(previous_item)
                 } else if let Ok(bag_slot) = inventory::BagSlot::try_from(slot) {
@@ -171,11 +169,10 @@ impl crate::character::Character {
                     let previous_item = self.bag_items.take_item(bag_slot);
                     if let Some(item) = item {
                         self.gameplay_data
-                            .set_player_field_inv(ItemSlot::try_from(slot as u8).unwrap(), item.update_state.object_guid().unwrap());
+                            .set_player_field_inv(ItemSlot::try_from(slot).unwrap(), item.update_state.object_guid().unwrap());
                         self.bag_items[bag_slot] = Some(item);
                     } else {
-                        self.gameplay_data
-                            .set_player_field_inv(ItemSlot::try_from(slot as u8).unwrap(), Guid::zero());
+                        self.gameplay_data.set_player_field_inv(ItemSlot::try_from(slot).unwrap(), Guid::zero());
                         self.bag_items[bag_slot] = None;
                     }
                     Ok(previous_item)

@@ -54,10 +54,10 @@ impl Default for DBItemSpellProc {
             spell_id: 0,
             trigger_type: 0,
             charges: 0,
-            cooldown: u32::max_value(),
+            cooldown: u32::MAX,
             procs_per_minute: 0.0f32,
             category: 0,
-            category_cooldown: u32::max_value(),
+            category_cooldown: u32::MAX,
         }
     }
 }
@@ -165,11 +165,11 @@ impl super::RealmDatabase {
             inventory_type: res.inventory_type,
             allowed_races_mask: match res.AllowableRace {
                 -1 => None,
-                val => Some(val.try_into().unwrap_or(u32::max_value())),
+                val => Some(val.try_into().unwrap_or(u32::MAX)),
             },
             allowed_classes_mask: match res.AllowableClass {
                 -1 => None,
-                val => Some(val.try_into().unwrap_or(u32::max_value())),
+                val => Some(val.try_into().unwrap_or(u32::MAX)),
             },
             item_level: res.ItemLevel,
             required_level: match res.RequiredLevel {

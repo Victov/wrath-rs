@@ -57,14 +57,14 @@ pub async fn handle_cmsg_name_query(client_manager: &ClientManager, client_id: u
     //Stop early if we are requesting our own information
     let character = character_lock.read().await;
     if character.get_guid() == packet.guid {
-        return send_name_query_response(&*client, &*character).await;
+        return send_name_query_response(&client, &character).await;
     }
 
     //We are requesting somebody else. Search the map
-    if let Some(map) = world.get_instance_manager().try_get_map_for_character(&*character).await {
+    if let Some(map) = world.get_instance_manager().try_get_map_for_character(&character).await {
         if let Some(found_character_lock) = map.try_get_object(packet.guid).await.and_then(|a| a.upgrade()) {
             if let Some(found_character) = found_character_lock.read().await.as_character() {
-                send_name_query_response(&*client, found_character).await?;
+                send_name_query_response(&client, found_character).await?;
             } else {
                 bail!("There was a cmsg_name_query for a found object, but it was not a character");
             }
@@ -74,7 +74,7 @@ pub async fn handle_cmsg_name_query(client_manager: &ClientManager, client_id: u
             if let Some(found_client) = client_manager.find_client_from_active_character_guid(&packet.guid).await? {
                 let char_lock = found_client.get_active_character().await?;
                 let active_character = char_lock.read().await;
-                send_name_query_response(&*client, &*active_character).await?;
+                send_name_query_response(&client, &active_character).await?;
             }
         }
     } else {

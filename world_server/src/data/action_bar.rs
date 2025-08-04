@@ -6,6 +6,12 @@ pub struct ActionBar {
     pub data: [ActionButton; MAXSLOTS],
 }
 
+impl Default for ActionBar {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ActionBar {
     pub fn new() -> Self {
         Self {

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use smol::io::{BufReader, AsyncReadExt};
+use smol::io::{AsyncReadExt, BufReader};
 use std::{path::PathBuf, sync::Arc};
 use wow_dbc::wrath_tables::{area_trigger::AreaTriggerKey, chr_classes::ChrClasses, chr_races::ChrRaces};
 use wrath_realm_db::RealmDatabase;

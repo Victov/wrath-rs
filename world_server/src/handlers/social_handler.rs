@@ -16,7 +16,7 @@ pub async fn handle_cmsg_contact_list(client_manager: &ClientManager, client_id:
 
     let requested_social_mask = RelationType::new(packet.flags);
     let character = character_lock.write().await;
-    send_contact_list(&*character, requested_social_mask).await
+    send_contact_list(&character, requested_social_mask).await
 }
 
 pub async fn handle_cmsg_calendar_get_num_pending(client_manager: &ClientManager, client_id: u64) -> Result<()> {
@@ -58,9 +58,9 @@ pub async fn handle_cmsg_messagechat(client_manager: &ClientManager, world: &Wor
 
     match &packet.chat_type {
         CMSG_MESSAGECHAT_ChatType::Say | CMSG_MESSAGECHAT_ChatType::Yell | CMSG_MESSAGECHAT_ChatType::Emote => {
-            handle_world_proximity_message(&*character, world, packet).await?
+            handle_world_proximity_message(&character, world, packet).await?
         }
-        CMSG_MESSAGECHAT_ChatType::Whisper { target_player } => handle_whisper(&*character, &target_player, client_manager, packet).await?,
+        CMSG_MESSAGECHAT_ChatType::Whisper { target_player } => handle_whisper(&character, target_player, client_manager, packet).await?,
         _ => todo!(),
     };
 
@@ -86,14 +86,14 @@ async fn handle_world_proximity_message(sender: &Character, world: &World, packe
         message: packet.message.clone(),
         tag,
     }
-    .astd_send_to_all_in_range(&*sender, true, world)
+    .astd_send_to_all_in_range(sender, true, world)
     .await
 }
 
-async fn handle_whisper(sender: &Character, receiver_name: &String, client_manager: &ClientManager, packet: &CMSG_MESSAGECHAT) -> Result<()> {
+async fn handle_whisper(sender: &Character, receiver_name: &str, client_manager: &ClientManager, packet: &CMSG_MESSAGECHAT) -> Result<()> {
     assert!(std::matches!(packet.chat_type, CMSG_MESSAGECHAT_ChatType::Whisper { .. }));
 
-    if let Some(receiving_client) = client_manager.find_client_from_active_character_name(&receiver_name).await? {
+    if let Some(receiving_client) = client_manager.find_client_from_active_character_name(receiver_name).await? {
         let chat_type = SMSG_MESSAGECHAT_ChatType::Whisper { target6: sender.get_guid() };
         let tag = PlayerChatTag::None;
 

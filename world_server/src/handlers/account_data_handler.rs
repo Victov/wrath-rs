@@ -80,7 +80,7 @@ async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: 
 }
 
 async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAccountData>) -> Result<()> {
-    let mask = CacheMask::GlobalCache.as_int() as u32;
+    let mask = CacheMask::GlobalCache.as_int();
     let mut masked_data = vec![];
     for row in data {
         if mask & (1 << row.data_type) > 0 {

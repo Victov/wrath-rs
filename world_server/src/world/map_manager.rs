@@ -7,8 +7,8 @@ use std::sync::Weak;
 
 use super::prelude::GameObject;
 use crate::prelude::*;
-use smol::lock::{Mutex, RwLock};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
+use smol::lock::{Mutex, RwLock};
 use wow_world_messages::wrath::UpdateMask;
 
 const VISIBILITY_RANGE: f32 = 5000.0f32;
@@ -59,7 +59,7 @@ impl MapManager {
     }
 
     pub async fn should_shutdown(&self) -> bool {
-        self.objects_on_map.read().await.len() == 0 && self.add_queue.lock().await.len() == 0
+        self.objects_on_map.read().await.is_empty() && self.add_queue.lock().await.is_empty()
     }
 
     pub async fn try_get_object(&self, guid: Guid) -> Option<Weak<RwLock<dyn GameObject>>> {

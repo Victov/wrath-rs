@@ -20,7 +20,7 @@ pub async fn process_console_commands(auth_db: std::sync::Arc<AuthDatabase>) -> 
                 let cmd = parse::<_, WrathConsoleCommand>(&string, ());
                 match cmd {
                     Ok(parsed_cmd) => {
-                        let _ = smol::spawn(handle_command(parsed_cmd, auth_db.clone()));
+                        smol::spawn(handle_command(parsed_cmd, auth_db.clone())).detach();
                     }
                     Err(e) => warn!("Could not parse command. {}", e),
                 }

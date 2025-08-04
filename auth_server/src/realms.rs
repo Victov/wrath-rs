@@ -19,8 +19,7 @@ const REALM_MAX_POPULATION: f32 = 1000.0;
 pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Result<()> {
     let realms = (*auth_db).get_all_realms().await?;
     let socket = smol::net::UdpSocket::bind("127.0.0.1:1234").await?;
-    let mut buffer = Vec::<u8>::new();
-    buffer.resize(128, 0);
+    let mut buffer = vec![0; 128];
 
     let mut latest_heartbeats = std::collections::HashMap::new();
     for realm in realms {
@@ -29,7 +28,7 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
     let heartbeats_rwlock = std::sync::Arc::new(std::sync::RwLock::new(latest_heartbeats));
     let hbwrlock_copy = heartbeats_rwlock.clone();
     let auth_db_handle = auth_db.clone();
-    let _ = smol::spawn(async move {
+    smol::spawn(async move {
         let mut heartbeat_interval = Timer::interval(std::time::Duration::from_secs(5));
         while (heartbeat_interval.next().await).is_some() {
             let hashtable = hbwrlock_copy.read().unwrap().clone();
@@ -41,7 +40,8 @@ pub async fn receive_realm_pings(auth_db: std::sync::Arc<AuthDatabase>) -> Resul
                 }
             }
         }
-    });
+    })
+    .detach();
 
     loop {
         let _ = socket.recv(&mut buffer).await?;

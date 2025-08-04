@@ -65,7 +65,7 @@ pub enum FactionReputationIndex {
     TheKaluAk = 79,
     ShatteredSunOffensive = 80,
     WarsongOffensive = 81,
-    REUSE = 82,
+    Reuse = 82,
     TheWyrmrestAccord = 83,
     KirinTor = 84,
     TestFaction1 = 85,

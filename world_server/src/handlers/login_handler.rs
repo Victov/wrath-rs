@@ -77,8 +77,7 @@ pub async fn handle_cmsg_auth_session(client: &Client, proof_seed: ProofSeed, pa
     let mut addon_reader = std::io::Cursor::new(addon_info);
     let num_addons = addon_reader.read_u32::<LittleEndian>()?;
     info!("num addons = {}", num_addons);
-    let mut addons: Vec<Addon> = Vec::new();
-    addons.reserve(num_addons as usize);
+    let mut addons: Vec<Addon> = Vec::with_capacity(num_addons as usize);
 
     for _ in 0..num_addons {
         use std::io::BufRead;
