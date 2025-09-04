@@ -19,6 +19,9 @@
                     "kind": "bin"
                 }
             },
+            "env": {
+                "SMOL_THREADS": "4"
+            },
             "args": [],
             "cwd": "${workspaceFolder}/auth_server"
         },
@@ -37,6 +40,9 @@
                     "kind": "bin"
                 }
             },
+            "env": {
+                "SMOL_THREADS": "8"
+            },
             "args": [],
             "cwd": "${workspaceFolder}/world_server"
         },
@@ -46,7 +52,8 @@
             "name": "Debug 'wrath-authserver' and 'wrath-worldserver'",
             "configurations": [
                 "Debug executable 'wrath-authserver'",
-                "Debug executable 'wrath-worldserver'"]
+                "Debug executable 'wrath-worldserver'"
+            ]
         }
     ]
 }

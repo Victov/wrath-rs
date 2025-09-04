@@ -1,10 +1,12 @@
+use std::net::SocketAddr;
+
 use crate::client::Client;
 use crate::packet_handler::PacketToHandle;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
 use crate::ClientManager;
-use crate::{character::*, packet::ServerMessageExt};
+use crate::{character::*, connection::events::ServerEvent};
 use wow_world_messages::wrath::{
     CacheMask, CMSG_REQUEST_ACCOUNT_DATA, CMSG_UPDATE_ACCOUNT_DATA, SMSG_ACCOUNT_DATA_TIMES, SMSG_UPDATE_ACCOUNT_DATA,
     SMSG_UPDATE_ACCOUNT_DATA_COMPLETE,
@@ -13,16 +15,9 @@ use wrath_auth_db::DBAccountData;
 use wrath_realm_db::RealmDatabase;
 
 pub async fn handle_csmg_ready_for_account_data_times(client_manager: &ClientManager, packet: &PacketToHandle) -> Result<()> {
-    let client = client_manager.get_authenticated_client(packet.client_id).await?;
+    let client = client_manager.get_authenticated_client(packet.client_id)?;
 
-    let account_id = {
-        client
-            .data
-            .read()
-            .await
-            .account_id
-            .ok_or_else(|| anyhow!("Failed to get account_id but client was authenticated. This should never happen"))?
-    };
+    let account_id = client.data.account_id;
 
     let mut db_account_data;
     loop {
@@ -33,8 +28,7 @@ pub async fn handle_csmg_ready_for_account_data_times(client_manager: &ClientMan
         }
         break;
     }
-    let db_account_data = db_account_data;
-    send_account_wide_account_data_times(&client, &db_account_data).await
+    send_account_wide_account_data_times(client, &db_account_data).await
 }
 
 async fn create_empty_account_data_rows(client_manager: &ClientManager, account_id: u32) -> Result<()> {
@@ -61,20 +55,20 @@ pub async fn create_empty_character_account_data_rows(realm_database: &RealmData
 
 //Don't call directly but instead call send_account_wide_account_data_times or
 //send_character_account_data_times
-async fn send_account_data_times(client: &Client, mask: CacheMask, masked_data: impl Into<Vec<u32>>) -> Result<()> {
+async fn send_account_data_times(connection_sender: &flume::Sender<ServerEvent>, mask: CacheMask, masked_data: impl Into<Vec<u32>>) -> Result<()> {
     let unix_time = {
         use std::time::{SystemTime, UNIX_EPOCH};
         SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as u32
     };
 
-    SMSG_ACCOUNT_DATA_TIMES {
+    let msg = SMSG_ACCOUNT_DATA_TIMES {
         unix_time,
         unknown1: 1,
         mask,
         data: masked_data.into(),
-    }
-    .astd_send_to_client(client)
-    .await?;
+    };
+    let event = ServerEvent::AccountDataTimes(msg);
+    connection_sender.send_async(event).await?;
 
     Ok(())
 }
@@ -88,15 +82,10 @@ async fn send_account_wide_account_data_times(client: &Client, data: &Vec<DBAcco
         }
     }
 
-    send_account_data_times(client, CacheMask::GlobalCache, masked_data).await
+    send_account_data_times(&client.connection_sender, CacheMask::GlobalCache, masked_data).await
 }
 
 pub async fn send_character_account_data_times(realm_database: &RealmDatabase, character: &Character) -> Result<()> {
-    let client = character
-        .client
-        .upgrade()
-        .ok_or_else(|| anyhow!("couldn't upgrade client from character"))?;
-
     let data = realm_database.get_character_account_data(character.get_guid().guid() as u32).await?;
 
     let mask = CacheMask::PerCharacterCache.as_int();
@@ -107,24 +96,19 @@ pub async fn send_character_account_data_times(realm_database: &RealmDatabase, c
         }
     }
 
-    send_account_data_times(&client, CacheMask::PerCharacterCache, masked_data).await
+    send_account_data_times(&character.connection_sender, CacheMask::PerCharacterCache, masked_data).await
 }
 
 pub async fn handle_csmg_update_account_data(
     client_manager: &ClientManager,
-    client_id: u64,
+    client_id: SocketAddr,
     world: &World,
     data: &CMSG_UPDATE_ACCOUNT_DATA,
 ) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
+    let client = client_manager.get_authenticated_client(client_id)?;
 
     if 1 << data.data_type & CacheMask::GlobalCache.as_int() > 0 {
-        let account_id = client
-            .data
-            .read()
-            .await
-            .account_id
-            .ok_or_else(|| anyhow!("Failed to get account_id from client even though authenticated"))?;
+        let account_id = client.data.account_id;
         client_manager
             .auth_db
             .update_account_data(
@@ -135,8 +119,8 @@ pub async fn handle_csmg_update_account_data(
                 data.compressed_data.as_slice(),
             )
             .await?;
-    } else if let Some(character_lock) = &client.data.read().await.active_character {
-        let character_id = character_lock.read().await.get_guid().guid() as u32;
+    } else if let Some(character_guid) = client.data.active_character {
+        let character_id = character_guid.guid() as u32;
         world
             .get_realm_database()
             .update_character_account_data(
@@ -149,30 +133,26 @@ pub async fn handle_csmg_update_account_data(
             .await?;
     }
 
-    SMSG_UPDATE_ACCOUNT_DATA_COMPLETE {
+    let msg = SMSG_UPDATE_ACCOUNT_DATA_COMPLETE {
         data_type: data.data_type,
         unknown1: 0,
-    }
-    .astd_send_to_client(client)
-    .await
+    };
+    let event = ServerEvent::UpdateAccountDataComplete(msg);
+    client.connection_sender.send_async(event).await?;
+    Ok(())
 }
 
 pub async fn handle_cmsg_request_account_data(
     client_manager: &ClientManager,
-    client_id: u64,
+    client_id: SocketAddr,
     world: &World,
     data: &CMSG_REQUEST_ACCOUNT_DATA,
 ) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
+    let client = client_manager.get_authenticated_client(client_id)?;
 
     let (decompressed_size, account_data_bytes) = {
         if 1 << data.data_type & CacheMask::GlobalCache.as_int() > 0 {
-            let account_id = client
-                .data
-                .read()
-                .await
-                .account_id
-                .ok_or_else(|| anyhow!("Account had no account_id even though it is authenticated"))?;
+            let account_id = client.data.account_id;
 
             let db_data = client_manager.auth_db.get_account_data_of_type(account_id, data.data_type as u8).await?;
             if let Some(bytes) = db_data.data {
@@ -180,8 +160,8 @@ pub async fn handle_cmsg_request_account_data(
             } else {
                 (0, vec![])
             }
-        } else if let Some(active_character_lock) = &client.data.read().await.active_character {
-            let character_id = active_character_lock.read().await.get_guid().guid() as u32;
+        } else if let Some(character_guid) = &client.data.active_character {
+            let character_id = character_guid.guid() as u32;
             let db_data = world
                 .get_realm_database()
                 .get_character_account_data_of_type(character_id, data.data_type as u8)
@@ -196,11 +176,12 @@ pub async fn handle_cmsg_request_account_data(
         }
     };
 
-    SMSG_UPDATE_ACCOUNT_DATA {
+    let msg = SMSG_UPDATE_ACCOUNT_DATA {
         data_type: data.data_type,
         decompressed_size,
         compressed_data: account_data_bytes,
-    }
-    .astd_send_to_client(client)
-    .await
+    };
+    let event = ServerEvent::UpdateAccountData(msg);
+    client.connection_sender.send_async(event).await?;
+    Ok(())
 }

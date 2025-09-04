@@ -1,8 +1,10 @@
-use crate::{client_manager::ClientManager, packet::ServerMessageExt, prelude::*};
+use std::net::SocketAddr;
+
+use crate::{client_manager::ClientManager, connection::events::ServerEvent, prelude::*};
 use wow_world_messages::wrath::{CMSG_GMTICKET_CREATE, SMSG_GMTICKET_GETTICKET, SMSG_GMTICKET_SYSTEMSTATUS};
 
-pub async fn handle_cmsg_gmticket_getticket(client_manager: &ClientManager, client_id: u64) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
+pub async fn handle_cmsg_gmticket_getticket(client_manager: &ClientManager, client_id: SocketAddr) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
 
     /*
     //Commented away because this adds an annoying bar to the client in the top-right corner
@@ -21,23 +23,27 @@ pub async fn handle_cmsg_gmticket_getticket(client_manager: &ClientManager, clie
     */
 
     let ticket_status = wow_world_messages::wrath::SMSG_GMTICKET_GETTICKET_GmTicketStatus::Default;
-    SMSG_GMTICKET_GETTICKET { status: ticket_status }.astd_send_to_client(client).await
+    let msg = SMSG_GMTICKET_GETTICKET { status: ticket_status };
+    let event = ServerEvent::GMTicketGetTicket(msg);
+    client.connection_sender.send_async(event).await?;
+    Ok(())
 }
 
-pub async fn handle_cmsg_gmticket_create(client_manager: &ClientManager, client_id: u64, _packet: &CMSG_GMTICKET_CREATE) -> Result<()> {
-    let _client = client_manager.get_authenticated_client(client_id).await?;
+pub async fn handle_cmsg_gmticket_create(client_manager: &ClientManager, client_id: SocketAddr, _packet: &CMSG_GMTICKET_CREATE) -> Result<()> {
+    let _client = client_manager.get_authenticated_client(client_id)?;
 
     //Creating GM tickets is unhandled, there is no system in place. This function exists to
     //prevent warning spam until a GM ticketing system is made
     Ok(())
 }
 
-pub async fn handle_cmsg_gmticket_system_status(client_manager: &ClientManager, client_id: u64) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
+pub async fn handle_cmsg_gmticket_system_status(client_manager: &ClientManager, client_id: SocketAddr) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
 
-    SMSG_GMTICKET_SYSTEMSTATUS {
+    let msg = SMSG_GMTICKET_SYSTEMSTATUS {
         will_accept_tickets: wow_world_messages::wrath::GmTicketQueueStatus::Disabled,
-    }
-    .astd_send_to_client(client)
-    .await
+    };
+    let event = ServerEvent::GMTicketSystemStatus(msg);
+    client.connection_sender.send_async(event).await?;
+    Ok(())
 }

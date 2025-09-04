@@ -1,11 +1,10 @@
 use crate::handlers::{login_handler::LogoutState, movement_handler::TeleportationState};
 use crate::prelude::*;
 use crate::world::prelude::*;
-use std::sync::Arc;
 use wow_world_messages::wrath::{LogoutResult, LogoutSpeed, UnitStandState};
 
 impl super::Character {
-    pub(super) async fn tick_logout_state(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
+    pub(super) async fn tick_logout_state(&mut self, delta_time: f32, world: &mut World) -> Result<()> {
         match &mut self.logout_state {
             LogoutState::Pending(duration_left) => {
                 *duration_left = duration_left.saturating_sub(std::time::Duration::from_secs_f32(delta_time));
@@ -56,18 +55,16 @@ impl super::Character {
     }
 
     //This function will trigger every tick as long as the state is LogoutState::Executing
-    async fn execute_logout(&mut self, world: Arc<World>) -> Result<()> {
+    async fn execute_logout(&mut self, world: &mut World) -> Result<()> {
         if self.teleportation_state != TeleportationState::None {
             return Ok(());
         }
 
         world
-            .get_instance_manager()
-            .try_get_map_for_character(self)
-            .await
+            .get_instance_manager_mut()
+            .try_get_map_for_character_mut(self)
             .ok_or_else(|| anyhow!("Invalid map during logout"))?
-            .remove_object_by_guid(self.get_guid())
-            .await;
+            .remove_object_by_guid(self.get_guid());
 
         handlers::send_smsg_logout_complete(self).await?;
 

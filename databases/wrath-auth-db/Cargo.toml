@@ -7,5 +7,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = { version = "1.0.32" }
-sqlx = { version = "0.7", features=["mysql", "runtime-async-std", "tls-rustls"] }
+anyhow = { workspace = true }
+sqlx = { workspace = true }

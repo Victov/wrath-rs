@@ -7,3 +7,16 @@ members = [
     "tools/dbc-extractor",
 ]
 resolver = "2"
+
+[workspace.dependencies]
+anyhow = { version = "*" }
+sqlx = { version = "0.7", features=["mysql", "runtime-async-std", "tls-rustls"] }
+flume = "0.11.1"
+smol = "2.0.2"
+tracing = { version = "0.1" }
+wow_login_messages = { version = "0.3", features = [ "async-std" ] }
+
+[workspace.dependencies.wow_world_messages]
+git = "https://github.com/gtker/wow_messages.git"
+rev = "55c2b641b7dbd09ca1de882f5fce814e4a91c068"
+features = [ "wrath", "async-std", "chrono" ]

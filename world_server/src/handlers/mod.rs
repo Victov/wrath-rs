@@ -24,6 +24,7 @@ pub use character_handler::handle_cmsg_char_create;
 pub use character_handler::handle_cmsg_char_delete;
 pub use character_handler::handle_cmsg_char_enum;
 pub use character_handler::handle_cmsg_player_login;
+pub use character_handler::handle_cmsg_player_logout;
 pub use character_handler::handle_cmsg_standstate_change;
 pub use character_handler::handle_cmsg_swap_inv_item;
 pub use character_handler::send_action_buttons;
@@ -71,7 +72,7 @@ pub use social_handler::handle_cmsg_calendar_get_num_pending;
 pub use social_handler::handle_cmsg_contact_list;
 pub use social_handler::handle_cmsg_join_channel;
 pub use social_handler::handle_cmsg_messagechat;
-pub use social_handler::handle_csmg_set_selection;
+pub use social_handler::handle_cmsg_set_selection;
 pub use social_handler::send_contact_list;
 
 mod queries_handler;

@@ -1,7 +1,7 @@
 use self::character_inventory::{BagInventory, GameplayCharacterInventory};
 
 use super::world::prelude::*;
-use crate::client::Client;
+use crate::connection::events::ServerEvent;
 use crate::data::{ActionBar, DataStorage, PositionAndOrientation, TutorialFlags, WorldZoneLocation};
 use crate::handlers::login_handler::LogoutState;
 use crate::handlers::movement_handler::TeleportationState;
@@ -21,11 +21,19 @@ mod character_database;
 mod character_first_login;
 pub mod character_inventory;
 mod character_logout;
+pub mod character_manager;
 mod character_movement;
 mod character_rested;
 
 pub struct Character {
-    pub client: Weak<Client>,
+    // Both client and character have a sender to the connection
+    pub connection_sender: flume::Sender<ServerEvent>,
+
+    /// This sender is cloned an used to send world updates to the character
+    pub sender: flume::Sender<wow_world_messages::wrath::Object>,
+    /// This receives world updates that are sent to the character
+    pub receiver: flume::Receiver<wow_world_messages::wrath::Object>,
+
     pub gameplay_data: UpdatePlayer,
     pub name: String,
     pub movement_info: MovementInfo,
@@ -47,6 +55,7 @@ pub struct Character {
 
     //things required make GameObject working
     in_range_objects: HashMap<Guid, Weak<RwLock<dyn GameObject>>>,
+    in_range_characters: Vec<Guid>,
     recently_removed_guids: Vec<Guid>,
 
     //time sync
@@ -69,9 +78,12 @@ pub struct Character {
 }
 
 impl Character {
-    pub fn new(client: Weak<Client>, guid: Guid) -> Self {
+    pub fn new(connection_sender: flume::Sender<ServerEvent>, guid: Guid) -> Self {
+        let (sender, receiver) = flume::unbounded();
         Self {
-            client,
+            connection_sender,
+            sender,
+            receiver,
             gameplay_data: UpdatePlayer::builder().set_object_guid(guid).finalize(),
             name: String::new(),
             movement_info: MovementInfo::default(),
@@ -86,6 +98,7 @@ impl Character {
             last_playtime_calculation_timestamp: 0,
             pending_object_updates: vec![],
             in_range_objects: HashMap::new(),
+            in_range_characters: vec![],
             recently_removed_guids: vec![],
             time_sync_counter: 0,
             time_sync_cooldown: 0f32,
@@ -99,8 +112,12 @@ impl Character {
         }
     }
 
-    pub async fn load(client: Weak<Client>, guid: Guid, world: &World, data_storage: &DataStorage) -> Result<Self> {
-        let mut character = Self::new(client, guid);
+    pub fn get_sender(&self) -> flume::Sender<wow_world_messages::wrath::Object> {
+        self.sender.clone()
+    }
+
+    pub async fn load(connection_sender: flume::Sender<ServerEvent>, guid: Guid, world: &World, data_storage: &DataStorage) -> Result<Self> {
+        let mut character = Self::new(connection_sender, guid);
         character.load_from_database_internal(world, data_storage).await?;
         Ok(character)
     }
@@ -139,10 +156,10 @@ impl Character {
         self.time_sync_counter = 0;
     }
 
-    pub async fn tick(&mut self, delta_time: f32, world: Arc<World>) -> Result<()> {
+    pub async fn tick(&mut self, delta_time: f32, world: &mut World) -> Result<()> {
         self.try_perform_first_time_login_if_required().await?;
         self.tick_time_sync(delta_time).await?;
-        self.tick_logout_state(delta_time, world.clone()).await?;
+        self.tick_logout_state(delta_time, world).await?;
 
         self.handle_queued_teleport(world)
             .await
@@ -160,13 +177,13 @@ impl Character {
         Ok(())
     }
 
-    pub async fn try_get_self_arc(&self) -> Result<Arc<RwLock<Self>>> {
-        let client = self
-            .client
-            .upgrade()
-            .ok_or_else(|| anyhow!("Could not get an Arc to the character because the owning client does not exist"))?;
-        client.get_active_character().await
-    }
+    //pub async fn try_get_self_arc(&self) -> Result<Arc<RwLock<Self>>> {
+    //    let client = self
+    //        .client
+    //        .upgrade()
+    //        .ok_or_else(|| anyhow!("Could not get an Arc to the character because the owning client does not exist"))?;
+    //    client.get_active_character().await
+    //}
 
     pub fn set_selection(&mut self, new_selection: Option<Guid>) {
         let guid = new_selection.unwrap_or_else(Guid::zero);
@@ -263,7 +280,7 @@ impl GameObject for Character {
         self.gameplay_data.dirty_reset();
     }
 
-    async fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
+    fn on_pushed_to_map(&mut self, _map_manager: &MapManager) -> Result<()> {
         let create_block = build_create_update_block_for_player(self, self)?;
         self.push_object_update(create_block);
         Ok(())
@@ -294,8 +311,19 @@ impl GameObject for Character {
         Ok(())
     }
 
+    fn add_in_range_character(&mut self, guid: Guid) -> Result<()> {
+        if !self.in_range_characters.contains(&guid) {
+            self.in_range_characters.push(guid);
+        }
+        Ok(())
+    }
+
     fn get_in_range_guids(&self) -> Vec<Guid> {
         self.in_range_objects.keys().copied().collect()
+    }
+
+    fn get_in_range_characters(&self) -> &[Guid] {
+        &self.in_range_characters
     }
 
     fn remove_in_range_object(&mut self, guid: Guid) -> Result<()> {

@@ -2,7 +2,6 @@ use crate::data::{PositionAndOrientation, WorldZoneLocation};
 use crate::handlers::movement_handler::{TeleportationDistance, TeleportationState};
 use crate::prelude::*;
 use crate::world::{game_object::GameObject, World};
-use std::sync::Arc;
 use wow_world_messages::wrath::{MovementInfo, MovementInfo_MovementFlags};
 
 impl super::Character {
@@ -23,7 +22,7 @@ impl super::Character {
         self.teleportation_state = TeleportationState::Queued(destination);
     }
 
-    pub(super) async fn handle_queued_teleport(&mut self, world: Arc<World>) -> Result<()> {
+    pub(super) async fn handle_queued_teleport(&mut self, world: &mut World) -> Result<()> {
         //TODO: Handle the possibility that the player may have logged out
         //between queuing and handling the teleport
 
@@ -45,7 +44,7 @@ impl super::Character {
         Ok(())
     }
 
-    async fn execute_far_teleport(&mut self, destination: WorldZoneLocation, world: Arc<World>) -> Result<()> {
+    async fn execute_far_teleport(&mut self, destination: WorldZoneLocation, world: &mut World) -> Result<()> {
         if self.map == destination.map {
             //This was not actually a far teleport. It should have been a near teleport since we're
             //on the same map.
@@ -57,12 +56,11 @@ impl super::Character {
         self.reset_move_flags();
 
         let old_map = world
-            .get_instance_manager()
-            .try_get_map_for_character(self)
-            .await
+            .get_instance_manager_mut()
+            .try_get_map_for_character_mut(self)
             .ok_or_else(|| anyhow!("Player is teleporting away from an invalid map"))?;
 
-        old_map.remove_object_by_guid(self.get_guid()).await;
+        old_map.remove_object_by_guid(self.get_guid());
 
         let wzl = destination.clone().into();
         handlers::send_smsg_new_world(self, destination.map, wzl).await?;

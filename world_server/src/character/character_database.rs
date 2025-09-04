@@ -1,6 +1,6 @@
+use crate::connection::events::ServerEvent;
 use crate::data::{DataStorage, TutorialFlags, WorldZoneLocation};
 use crate::item::Item;
-use crate::packet::ServerMessageExt;
 use crate::prelude::*;
 use crate::world::prelude::*;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -100,7 +100,7 @@ impl super::Character {
         //TODO: learning some skills might learn spells, those need to be checked too?
 
         //TODO: this should be loaded from the DB, it's a placeholder
-        SMSG_INITIAL_SPELLS {
+        let msg = SMSG_INITIAL_SPELLS {
             unknown1: 0,
             initial_spells: race_class
                 .starter_spells()
@@ -108,9 +108,9 @@ impl super::Character {
                 .map(|x| InitialSpell { spell_id: *x, unknown1: 0 })
                 .collect(),
             cooldowns: vec![],
-        }
-        .astd_send_to_character(&mut *self)
-        .await?;
+        };
+        let event = ServerEvent::InitialSpells(msg);
+        self.connection_sender.send_async(event).await?;
 
         //TODO: load invetory here
         realm_database.get_all_character_equipment(character_id).await?.iter().for_each(|x| {
@@ -133,7 +133,9 @@ impl super::Character {
                 },
             })
             .collect::<Vec<Object>>();
-        SMSG_UPDATE_OBJECT { objects: equiped_items }.astd_send_to_character(&mut *self).await?;
+        let msg = SMSG_UPDATE_OBJECT { objects: equiped_items };
+        let event = ServerEvent::UpdateObject(msg);
+        self.connection_sender.send_async(event).await?;
         Ok(())
     }
 }

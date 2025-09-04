@@ -9,19 +9,19 @@ edition = "2021"
 [dependencies]
 wow_srp = '0.6.0'
 byteorder = { version = '1' }
-anyhow = { version = "*" }
+anyhow = { workspace = true }
 dotenvy = { version = "*" }
 hex = { version = "0.4" }
 wrath-auth-db = { path = "../databases/wrath-auth-db" }
 time = { version = "0.3", features = ["macros"] }
-tracing = { version = "0.1" }
+tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 async-trait = "0.1"
 byte = "0.2"
 cmdparse = { version = "0.1" }
-wow_login_messages = { version="0.3", features=["async-std"] }
-smol = "2.0.2"
+wow_login_messages = { workspace = true }
+smol = { workspace = true}
 smol-macros = "0.1.0"
 macro_rules_attribute = "0.2.2"
 async-io = "2.5.0"
-flume = "0.11.1"
+flume = { workspace = true }

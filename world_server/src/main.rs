@@ -9,7 +9,6 @@ use futures::future::{select, Either};
 use futures::pin_mut;
 use futures_timer::Delay;
 use macro_rules_attribute::apply;
-use packet_handler::{PacketHandler, PacketToHandle};
 use smol_macros::main;
 use time::macros::format_description;
 use tracing_subscriber::{fmt::time::UtcTime, EnvFilter};
@@ -20,6 +19,8 @@ mod auth;
 mod character;
 mod client;
 mod client_manager;
+mod connection;
+mod connections;
 mod console_input;
 mod constants;
 mod data;
@@ -36,6 +37,8 @@ pub mod prelude {
     pub use wow_world_messages::Guid;
 }
 use prelude::*;
+
+use crate::character::character_manager::CharacterManager;
 
 #[apply(main!)]
 async fn main() -> Result<()> {
@@ -72,21 +75,13 @@ async fn main() -> Result<()> {
 
     smol::spawn(auth::auth_server_heartbeats()).detach();
 
-    let world = std::sync::Arc::new(world::World::new(realm_database_ref));
+    let mut world = world::World::new(realm_database_ref);
+    let mut character_manager = CharacterManager::new();
 
-    let (sender, receiver) = std::sync::mpsc::channel::<PacketToHandle>();
-    let realm_packet_handler = PacketHandler::new(receiver, world.clone());
+    let mut client_manager = ClientManager::new(auth_database_ref.clone(), data_storage);
+    let client_manager_sender = client_manager.get_sender();
 
-    let client_manager = std::sync::Arc::new(ClientManager::new(auth_database_ref.clone(), data_storage));
-    let client_manager_for_acceptloop = client_manager.clone();
-
-    smol::spawn(async move {
-        client_manager_for_acceptloop
-            .accept_realm_connections(sender)
-            .await
-            .unwrap_or_else(|e| warn!("Error in realm_socket::accept_realm_connections: {:?}", e))
-    })
-    .detach();
+    smol::spawn(connections::accept_realm_connections(auth_database_ref.clone(), client_manager_sender)).detach();
 
     smol::spawn(console_input::process_console_commands(running.clone())).detach();
 
@@ -95,13 +90,16 @@ async fn main() -> Result<()> {
 
     while running.load(std::sync::atomic::Ordering::Relaxed) {
         let before = std::time::Instant::now();
-        client_manager.tick(previous_loop_total, world.clone()).await.unwrap_or_else(|e| {
-            error!("Error while ticking clients: {}", e);
-        });
-        realm_packet_handler.handle_queue(client_manager.clone(), world.clone()).await?;
+        client_manager
+            .tick(previous_loop_total, &mut character_manager, &mut world)
+            .await
+            .unwrap_or_else(|e| {
+                error!("Error while ticking clients: {}", e);
+            });
+        //realm_packet_handler.handle_queue(&client_manager, world.clone()).await?;
         #[cfg(debug_assertions)]
         {
-            let tick_fut = world.tick(previous_loop_total);
+            let tick_fut = world.tick(&mut character_manager, previous_loop_total);
             let timeout_fut = Delay::new(Duration::from_secs_f32(10.0));
             pin_mut!(tick_fut);
             pin_mut!(timeout_fut);

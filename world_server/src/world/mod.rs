@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{character::character_manager::CharacterManager, prelude::*};
 use instance_manager::InstanceManager;
 use std::sync::Arc;
 use wrath_realm_db::RealmDatabase;
@@ -17,28 +17,32 @@ pub mod prelude {
 }
 
 pub struct World {
-    instance_manager: Arc<InstanceManager>,
+    instance_manager: InstanceManager,
     realm_db: Arc<RealmDatabase>,
 }
 
 impl World {
     pub fn new(realm_db: Arc<RealmDatabase>) -> Self {
         Self {
-            instance_manager: Arc::new(InstanceManager::new()),
+            instance_manager: InstanceManager::new(),
             realm_db,
         }
     }
 
-    pub fn get_instance_manager(&self) -> Arc<InstanceManager> {
-        self.instance_manager.clone()
+    pub fn get_instance_manager(&self) -> &InstanceManager {
+        &self.instance_manager
+    }
+
+    pub fn get_instance_manager_mut(&mut self) -> &mut InstanceManager {
+        &mut self.instance_manager
     }
 
     pub fn get_realm_database(&self) -> Arc<RealmDatabase> {
         self.realm_db.clone()
     }
 
-    pub async fn tick(&self, delta_time: f32) -> Result<()> {
-        self.instance_manager.tick(delta_time).await?;
+    pub async fn tick(&mut self, character_manager: &mut CharacterManager, delta_time: f32) -> Result<()> {
+        self.instance_manager.tick(character_manager, delta_time).await?;
         Ok(())
     }
 }

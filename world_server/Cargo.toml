@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = {version="0.1"}
-anyhow = { version = "1.0" }
+anyhow = { workspace = true }
 podio = { version = "0.2" } 
 dotenvy = { version="*" }
 rand = { version = "0.8" } 
@@ -20,7 +20,7 @@ chrono = { version = "0.4" }
 bit_field = { version = "0.10" }
 async-ctrlc = {version="1.2", features=["termination"] }
 time = { version = "0.3", features = ["macros"] }
-tracing = {version="0.1"}
+tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 rstar = { version = "0.9" }
 hex = { version = "0.4" }
@@ -33,10 +33,11 @@ wow_world_messages = { git="https://github.com/gtker/wow_messages.git", rev="55c
 wow_items = { git="https://github.com/gtker/wow_messages.git", rev="55c2b641b7dbd09ca1de882f5fce814e4a91c068", features = ["wrath"] }
 smol-macros = "0.1.1"
 macro_rules_attribute = "0.2.2"
-smol = "2.0.2"
+smol = { workspace = true }
 async-io = "2.5.0"
 futures-timer = "3.0.3"
 futures = "0.3.31"
+flume = { workspace = true }
 
 #For local testing purposes, one may want to switch to this local path version of wow_world_messages. Do not commit with this though
 #wow_world_messages = { path = "../../wow_messages/wow_world_messages", features=["wrath", "async-std", "chrono"] }

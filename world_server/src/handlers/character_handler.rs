@@ -1,17 +1,19 @@
 use crate::character::character_inventory::SimpleCharacterInventory;
 use crate::character::character_inventory::SimpleItemDescription;
 use crate::character::character_inventory::INVENTORY_SLOT_BAG_0;
+use crate::character::character_manager::CharacterManager;
 use crate::character::Character;
 use crate::client_manager::ClientManager;
+use crate::connection::events::ServerEvent;
 use crate::constants::inventory::*;
 use crate::data::DataStorage;
-use crate::packet::*;
 use crate::prelude::*;
 use crate::world::prelude::GameObject;
 use crate::world::World;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
+use std::net::SocketAddr;
 use wow_dbc::DbcTable;
 use wow_world_messages::wrath::WorldResult;
 use wow_world_messages::wrath::CMSG_AUTOEQUIP_ITEM;
@@ -29,13 +31,10 @@ use wow_world_messages::wrath::{Area, CharacterGear, Class, Gender, InventoryTyp
 use wrath_realm_db::character::DBCharacterCreateParameters;
 use wrath_realm_db::RealmDatabase;
 
-pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, client_id: u64) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
+pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World, client_id: SocketAddr) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
 
-    let db_characters = world
-        .get_realm_database()
-        .get_characters_for_account(client.data.read().await.account_id.unwrap())
-        .await?;
+    let db_characters = world.get_realm_database().get_characters_for_account(client.data.account_id).await?;
 
     let mut characters_to_send = Vec::<wow_world_messages::wrath::Character>::new();
     for character in db_characters {
@@ -105,18 +104,17 @@ pub async fn handle_cmsg_char_enum(client_manager: &ClientManager, world: &World
         });
     }
 
-    SMSG_CHAR_ENUM {
+    let msg = SMSG_CHAR_ENUM {
         characters: characters_to_send,
-    }
-    .astd_send_to_client(client)
-    .await?;
-
+    };
+    let event = ServerEvent::CharEnum(msg);
+    client.connection_sender.send_async(event).await?;
     Ok(())
 }
 
-pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: u64, world: &World, data: &CMSG_CHAR_CREATE) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
-    let account_id = client.data.read().await.account_id.unwrap();
+pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: SocketAddr, world: &World, data: &CMSG_CHAR_CREATE) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
+    let account_id = client.data.account_id;
     let realm_db = world.get_realm_database();
 
     let create_params = {
@@ -151,22 +149,21 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
     };
 
     if !realm_db.is_character_name_available(&create_params.name).await? {
-        SMSG_CHAR_CREATE {
+        let msg = SMSG_CHAR_CREATE {
             result: WorldResult::CharCreateNameInUse,
-        }
-        .astd_send_to_client(client)
-        .await?;
-
+        };
+        let event = ServerEvent::CharCreate(msg);
+        client.connection_sender.send_async(event).await?;
         return Ok(());
     }
 
     let insert_result = realm_db.create_character(&create_params).await;
     if insert_result.is_err() {
-        SMSG_CHAR_CREATE {
+        let msg = SMSG_CHAR_CREATE {
             result: WorldResult::CharCreateFailed,
-        }
-        .astd_send_to_client(client)
-        .await?;
+        };
+        let event = ServerEvent::CharCreate(msg);
+        client.connection_sender.send_async(event).await?;
 
         return Err(anyhow!("Failed to insert character into database"));
     }
@@ -191,16 +188,17 @@ pub async fn handle_cmsg_char_create(client_manager: &ClientManager, client_id: 
     )
     .await?;
 
-    SMSG_CHAR_CREATE {
+    let msg = SMSG_CHAR_CREATE {
         result: WorldResult::CharCreateSuccess,
-    }
-    .astd_send_to_client(client)
-    .await
+    };
+    let event = ServerEvent::CharCreate(msg);
+    client.connection_sender.send_async(event).await?;
+    Ok(())
 }
 
-pub async fn handle_cmsg_char_delete(client_manager: &ClientManager, client_id: u64, world: &World, data: &CMSG_CHAR_DELETE) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
-    let account_id = client.data.read().await.account_id.unwrap();
+pub async fn handle_cmsg_char_delete(client_manager: &ClientManager, client_id: SocketAddr, world: &World, data: &CMSG_CHAR_DELETE) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
+    let account_id = client.data.account_id;
     let realm_db = world.get_realm_database();
 
     let character_id = data.guid.guid() as u32;
@@ -211,7 +209,10 @@ pub async fn handle_cmsg_char_delete(client_manager: &ClientManager, client_id: 
         Err(_) => WorldResult::CharDeleteFailed,
     };
 
-    SMSG_CHAR_DELETE { result }.astd_send_to_client(client).await
+    let msg = SMSG_CHAR_DELETE { result };
+    let event = ServerEvent::CharDelete(msg);
+    client.connection_sender.send_async(event).await?;
+    Ok(())
 }
 
 async fn give_character_start_equipment(
@@ -249,29 +250,45 @@ async fn give_character_start_equipment(
 
     realm_db
         .give_character_start_equipment(character_id, start_outfit_info.item_id, slot_ids)
-        .await?;
+        .await
+}
 
+pub async fn handle_cmsg_player_login(
+    client_manager: &mut ClientManager,
+    character_manager: &mut CharacterManager,
+    world: &mut World,
+    client_id: SocketAddr,
+    data: &CMSG_PLAYER_LOGIN,
+) -> Result<()> {
+    let connection_sender = client_manager.get_authenticated_client(client_id)?.connection_sender.clone();
+    let character = Character::load(connection_sender, data.guid, world, &client_manager.data_storage).await?;
+    character_manager.add_character(character);
+    let client = client_manager.get_authenticated_client_mut(client_id).await?;
+    client.set_active_character(data.guid);
+    client.login_active_character(world, character_manager).await
+}
+
+pub async fn handle_cmsg_player_logout(
+    client_manager: &mut ClientManager,
+    character_manager: &mut CharacterManager,
+    client_id: SocketAddr,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
+    let character_id = client.get_active_character();
+    let character = character_manager.get_character_mut(character_id)?;
+    character.try_logout().await?;
     Ok(())
 }
 
-pub async fn handle_cmsg_player_login(client_manager: &ClientManager, world: &World, client_id: u64, data: &CMSG_PLAYER_LOGIN) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
-    let guid = data.guid;
-
-    client.load_and_set_active_character(client_manager, world, guid).await?;
-    client.login_active_character(world).await?;
-
-    Ok(())
-}
-
-pub async fn handle_cmsg_standstate_change(client_manager: &ClientManager, client_id: u64, data: &CMSG_STANDSTATECHANGE) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
-    let character_lock = client.get_active_character().await?;
-    let mut character = character_lock.write().await;
-
-    character.set_stand_state(data.animation_state).await?;
-
-    Ok(())
+pub async fn handle_cmsg_standstate_change(
+    client_manager: &ClientManager,
+    character_manager: &mut CharacterManager,
+    client_id: SocketAddr,
+    data: &CMSG_STANDSTATECHANGE,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
+    let character = character_manager.get_character_mut(client.get_active_character())?;
+    character.set_stand_state(data.animation_state).await
 }
 
 pub async fn send_verify_world(character: &Character) -> Result<()> {
@@ -279,43 +296,45 @@ pub async fn send_verify_world(character: &Character) -> Result<()> {
         .get_position()
         .ok_or_else(|| anyhow!("Characters should always have a position"))?;
 
-    SMSG_LOGIN_VERIFY_WORLD {
+    let msg = SMSG_LOGIN_VERIFY_WORLD {
         map: character.map,
         position: position.position,
         orientation: position.orientation,
-    }
-    .astd_send_to_character(character)
-    .await
+    };
+    ServerEvent::LoginVerifyWorld(msg).send_to_character(character).await
 }
 
 pub async fn send_bind_update(character: &Character) -> Result<()> {
     if let Some(bind_location) = &character.bind_location {
-        SMSG_BINDPOINTUPDATE {
+        let msg = SMSG_BINDPOINTUPDATE {
             position: bind_location.position,
             map: bind_location.map,
             area: bind_location.area,
-        }
-        .astd_send_to_character(character)
-        .await
+        };
+        ServerEvent::BindPointUpdate(msg).send_to_character(character).await
     } else {
         bail!("Requested to send Bind Update but character has no bind location")
     }
 }
 
 pub async fn send_action_buttons(character: &Character) -> Result<()> {
-    SMSG_ACTION_BUTTONS {
+    let msg = SMSG_ACTION_BUTTONS {
         behavior: wow_world_messages::wrath::SMSG_ACTION_BUTTONS_ActionBarBehavior::Initial {
             data: character.action_bar.data,
         },
-    }
-    .astd_send_to_character(character)
-    .await
+    };
+    ServerEvent::ActionButtons(msg).send_to_character(character).await
 }
 
-pub async fn handle_cmsg_swap_inv_item(client_manager: &ClientManager, _world: &World, client_id: u64, data: &CMSG_SWAP_INV_ITEM) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
-    let character_lock = client.get_active_character().await?;
-    let mut character = character_lock.write().await;
+pub async fn handle_cmsg_swap_inv_item(
+    client_manager: &ClientManager,
+    character_manager: &mut CharacterManager,
+    _world: &World,
+    client_id: SocketAddr,
+    data: &CMSG_SWAP_INV_ITEM,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
+    let character = character_manager.get_character_mut(client.get_active_character())?;
 
     //TODO: Add checks here
     let src = data.destination_slot.as_int();
@@ -327,10 +346,15 @@ pub async fn handle_cmsg_swap_inv_item(client_manager: &ClientManager, _world: &
     Ok(())
 }
 
-pub async fn handle_cmsg_autoequip_item(client_manager: &ClientManager, _world: &World, client_id: u64, data: &CMSG_AUTOEQUIP_ITEM) -> Result<()> {
-    let client = client_manager.get_authenticated_client(client_id).await?;
-    let character_lock = client.get_active_character().await?;
-    let mut character = character_lock.write().await;
+pub async fn handle_cmsg_autoequip_item(
+    client_manager: &mut ClientManager,
+    character_manager: &mut CharacterManager,
+    _world: &World,
+    client_id: SocketAddr,
+    data: &CMSG_AUTOEQUIP_ITEM,
+) -> Result<()> {
+    let client = client_manager.get_authenticated_client(client_id)?;
+    let character = character_manager.get_character_mut(client.get_active_character())?;
 
     let previously_equipped_item = character.auto_equip_item_from_bag((data.source_slot, data.source_bag))?;
 
