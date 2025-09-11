@@ -50,7 +50,7 @@ macro_rules! define_dbc_getter {
 }
 
 impl DataStorage {
-    pub async fn load(&mut self, realm_db: Arc<RealmDatabase>) -> Result<()> {
+    pub async fn load(&mut self, realm_db: &RealmDatabase) -> Result<()> {
         let dbc_path = &*std::env::var("DBC_FOLDER_PATH")?;
         info!("Loading DBC files from folder: {}", dbc_path);
         load_standard_dbc(dbc_path, &mut self.dbc_chr_races).await?;

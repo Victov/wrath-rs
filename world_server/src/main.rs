@@ -65,9 +65,7 @@ fn main() {
 
     /*
 
-    let mut data_storage = data::DataStorage::default();
-    data_storage.load(realm_database_ref.clone()).await?;
-    let data_storage = std::sync::Arc::new(data_storage);
+    EVERYTHING BELOW THIS POINT IS OLD CODE THAT HAS TO BE PORTED TO BEVY-STYLE ECS
 
     smol::spawn(auth::auth_server_heartbeats()).detach();
 

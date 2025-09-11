@@ -41,7 +41,7 @@ pub struct AreaTrigger {
 }
 
 impl super::DataStorage {
-    pub(super) async fn load_area_triggers(&mut self, dbc_path: impl Into<&str>, realm_db: Arc<RealmDatabase>) -> Result<()> {
+    pub(super) async fn load_area_triggers(&mut self, dbc_path: impl Into<&str>, realm_db: &RealmDatabase) -> Result<()> {
         let mut area_triggers_local: Option<wow_dbc::wrath_tables::area_trigger::AreaTrigger> = None;
         super::load_standard_dbc(dbc_path, &mut area_triggers_local).await?;
 
