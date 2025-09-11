@@ -4,7 +4,7 @@ use crate::world::prelude::*;
 use wow_world_messages::wrath::{LogoutResult, LogoutSpeed, UnitStandState};
 
 impl super::Character {
-    pub(super) async fn tick_logout_state(&mut self, delta_time: f32, world: &mut World) -> Result<()> {
+    pub(super) async fn tick_logout_state(&mut self, delta_time: f32, world: &mut crate::world::World) -> Result<()> {
         match &mut self.logout_state {
             LogoutState::Pending(duration_left) => {
                 *duration_left = duration_left.saturating_sub(std::time::Duration::from_secs_f32(delta_time));
@@ -55,7 +55,7 @@ impl super::Character {
     }
 
     //This function will trigger every tick as long as the state is LogoutState::Executing
-    async fn execute_logout(&mut self, world: &mut World) -> Result<()> {
+    async fn execute_logout(&mut self, world: &mut crate::world::World) -> Result<()> {
         if self.teleportation_state != TeleportationState::None {
             return Ok(());
         }

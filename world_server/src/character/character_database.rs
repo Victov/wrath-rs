@@ -13,7 +13,7 @@ use wow_world_messages::wrath::{
 
 use super::character_inventory::INVENTORY_SLOT_BAG_0;
 impl super::Character {
-    pub(super) async fn load_from_database_internal(&mut self, world: &World, data_storage: &DataStorage) -> Result<()> {
+    pub(super) async fn load_from_database_internal(&mut self, world: &crate::world::World, data_storage: &DataStorage) -> Result<()> {
         let character_id = self.get_guid().guid() as u32;
         let realm_database = world.get_realm_database();
 

@@ -116,7 +116,12 @@ impl Character {
         self.sender.clone()
     }
 
-    pub async fn load(connection_sender: flume::Sender<ServerEvent>, guid: Guid, world: &World, data_storage: &DataStorage) -> Result<Self> {
+    pub async fn load(
+        connection_sender: flume::Sender<ServerEvent>,
+        guid: Guid,
+        world: &crate::world::World,
+        data_storage: &DataStorage,
+    ) -> Result<Self> {
         let mut character = Self::new(connection_sender, guid);
         character.load_from_database_internal(world, data_storage).await?;
         Ok(character)
@@ -156,7 +161,7 @@ impl Character {
         self.time_sync_counter = 0;
     }
 
-    pub async fn tick(&mut self, delta_time: f32, world: &mut World) -> Result<()> {
+    pub async fn tick(&mut self, delta_time: f32, world: &mut crate::world::World) -> Result<()> {
         self.try_perform_first_time_login_if_required().await?;
         self.tick_time_sync(delta_time).await?;
         self.tick_logout_state(delta_time, world).await?;
