@@ -39,7 +39,7 @@ pub mod prelude {
 }
 use prelude::*;
 
-use crate::{character::character_manager::CharacterManager, startup_procedure::StartupProcedurePlugin};
+use crate::{auth::AuthServerHeartbeatPlugin, character::character_manager::CharacterManager, startup_procedure::StartupProcedurePlugin};
 
 fn main() {
     // Read environment variables
@@ -60,14 +60,13 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f32(1.0f32 / 30.0f32))),
             StartupProcedurePlugin,
+            AuthServerHeartbeatPlugin,
         ))
         .run();
 
     /*
 
     EVERYTHING BELOW THIS POINT IS OLD CODE THAT HAS TO BE PORTED TO BEVY-STYLE ECS
-
-    smol::spawn(auth::auth_server_heartbeats()).detach();
 
     let mut world = world::World::new(realm_database_ref);
     let mut character_manager = CharacterManager::new();
